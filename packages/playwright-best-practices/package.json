@@ -1,0 +1,36 @@
+{
+  "name": "@playwright-labs/playwright-best-practices",
+  "version": "1.0.0",
+  "description": "Comprehensive best practices guide for Playwright TypeScript, optimized for AI agents and LLMs",
+  "main": "AGENTS.md",
+  "scripts": {
+    "build": "tsx src/build.ts",
+    "validate": "tsx src/validate.ts",
+    "extract-tests": "tsx src/extract-tests.ts",
+    "dev": "pnpm build && pnpm validate"
+  },
+  "keywords": [
+    "playwright",
+    "typescript",
+    "best-practices",
+    "testing",
+    "e2e",
+    "automation",
+    "ai",
+    "llm",
+    "agents"
+  ],
+  "author": "vitalicset <vitalicset@yandex.ru>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "20.19.30",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3"
+  },
+  "files": [
+    "AGENTS.md",
+    "test-cases.json",
+    "metadata.json",
+    "README.md"
+  ]
+}
