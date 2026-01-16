@@ -10,22 +10,32 @@ A structured repository for creating and maintaining Playwright TypeScript Best 
   - `area-description.md` - Individual rule files
 - `src/` - Build scripts and utilities
 - `metadata.json` - Document metadata (version, organization, abstract)
-- __`AGENTS.md`__ - Compiled output (generated)
-- __`test-cases.json`__ - Test cases for LLM evaluation (generated)
+- **`AGENTS.md`** - Compiled output (generated)
+- **`test-cases.json`** - Test cases for LLM evaluation (generated)
 
 ## Getting Started
 
+```bash
+pnpx add-skill https://github.com/vitalics/playwright-labs/tree/main/packages/playwright-best-practices # pnpm
+npx add-skill https://github.com/vitalics/playwright-labs/tree/main/packages/playwright-best-practices # npm
+```
+
+## Getting Started (contributing)
+
 1. Install dependencies:
+
    ```bash
    pnpm install
    ```
 
 2. Build AGENTS.md from rules:
+
    ```bash
    pnpm build
    ```
 
 3. Validate rule files:
+
    ```bash
    pnpm validate
    ```
@@ -55,7 +65,7 @@ A structured repository for creating and maintaining Playwright TypeScript Best 
 
 Each rule file should follow this structure:
 
-```markdown
+````markdown
 ---
 title: Rule Title Here
 impact: MEDIUM
@@ -72,6 +82,7 @@ Brief explanation of the rule and why it matters.
 ```typescript
 // Bad code example
 ```
+````
 
 **Correct (description of what's right):**
 
@@ -82,7 +93,6 @@ Brief explanation of the rule and why it matters.
 Optional explanatory text after examples.
 
 Reference: [Link](https://example.com)
-```
 
 ## File Naming Convention
 
@@ -122,27 +132,35 @@ When adding or modifying rules:
 ## Categories Overview
 
 ### 1. Test Stability & Reliability (CRITICAL)
+
 The foundation of reliable test automation. Flaky tests undermine confidence and waste developer time.
 
 ### 2. Test Execution Speed (CRITICAL)
+
 Fast feedback loops are essential for developer productivity and CI/CD pipelines.
 
 ### 3. Locator Best Practices (HIGH)
+
 Robust locators are the backbone of maintainable tests that survive UI changes.
 
 ### 4. Assertions & Waiting (HIGH)
+
 Proper assertions and waiting strategies prevent flakiness and ensure tests validate the right things.
 
 ### 5. Parallel Execution (MEDIUM-HIGH)
+
 Efficient parallel test execution dramatically reduces total test suite runtime.
 
 ### 6. Fixtures & Test Organization (MEDIUM)
+
 Well-organized tests with proper fixtures improve maintainability and reusability.
 
 ### 7. Debugging & Maintenance (MEDIUM)
+
 Good debugging practices and maintainable test code reduce time spent fixing tests.
 
 ### 8. Advanced Patterns (LOW)
+
 Advanced patterns for specific cases that require careful implementation.
 
 ## Acknowledgments
