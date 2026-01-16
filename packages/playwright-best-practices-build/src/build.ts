@@ -85,10 +85,10 @@ function readMetadata(metadataPath: string): any {
 
 // Build AGENTS.md
 function build() {
-  const rulesDir = join(process.cwd(), 'rules');
+  const rulesDir = join(process.cwd(), '../playwright-best-practices/rules');
   const sectionsPath = join(rulesDir, '_sections.md');
   const metadataPath = join(process.cwd(), 'metadata.json');
-  const outputPath = join(process.cwd(), 'AGENTS.md');
+  const outputPath = join(process.cwd(), '../playwright-best-practices/AGENTS.md');
 
   console.log('📖 Reading sections...');
   const sections = parseSections(sectionsPath);

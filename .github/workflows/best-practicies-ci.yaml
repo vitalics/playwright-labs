@@ -1,0 +1,33 @@
+name: Playwright Best Practices CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/playwright-best-practices/**"
+      - "packages/playwright-best-practices-build/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/playwright-best-practices/**"
+      - "packages/playwright-best-practices-build/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/playwright-best-practices-build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10.24.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: packages/playwright-best-practices-build/pnpm-lock.yaml
+      - run: pnpm install
+      - run: pnpm validate
+      - run: pnpm build

@@ -91,7 +91,7 @@ function validateFrontmatter(content: string, filename: string): ValidationError
 }
 
 function validate() {
-  const rulesDir = join(process.cwd(), 'rules');
+  const rulesDir = join(process.cwd(), '../playwright-best-practices/rules');
   const ruleFiles = readdirSync(rulesDir)
     .filter(file => file.endsWith('.md') && !file.startsWith('_'))
     .sort();
