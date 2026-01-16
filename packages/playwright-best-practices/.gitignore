@@ -7,7 +7,7 @@ dist/
 *.tsbuildinfo
 
 # Generated files
-AGENTS.md
+# AGENTS.md
 test-cases.json
 
 # Test artifacts
