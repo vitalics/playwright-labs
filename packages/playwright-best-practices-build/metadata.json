@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "organization": "vitalics <vitalicset@yandex.ru>",
+  "date": "January 2025",
+  "abstract": "Comprehensive best practices guide for Playwright TypeScript test automation, designed for AI agents and LLMs. Contains 40+ rules across 8 categories, prioritized by impact from critical (test stability, execution speed) to incremental (advanced patterns). Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated test writing and refactoring.",
+  "references": [
+    "https://playwright.dev",
+    "https://playwright.dev/docs/best-practices",
+    "https://playwright.dev/docs/api/class-test",
+    "https://playwright.dev/docs/test-assertions",
+    "https://playwright.dev/docs/locators",
+    "https://playwright.dev/docs/test-parallel",
+    "https://playwright.dev/docs/test-sharding",
+    "https://playwright.dev/docs/trace-viewer",
+    "https://playwright.dev/docs/test-fixtures",
+    "https://playwright.dev/docs/test-fixtures#custom-fixture-title"
+  ]
+}
