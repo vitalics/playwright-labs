@@ -1,0 +1,1 @@
+./packages/playwright-best-practices/SKILL.md
