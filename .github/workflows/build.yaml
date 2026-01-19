@@ -1,0 +1,27 @@
+name: Build workspace packages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/fixture-ajv-ts/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/fixture-ajv-ts/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10.24.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: packages/playwright-best-practices-build/pnpm-lock.yaml
+      - run: pnpm install
+      - run: pnpm build

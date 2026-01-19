@@ -1,0 +1,9 @@
+onlyBuiltDependencies:
+  - esbuild
+
+savePrefix: ""
+
+packages:
+  - packages/*
+  - "!packages/playwright-best-practices"
+  - "!packages/playwright-best-practices-build"

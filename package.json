@@ -1,13 +1,22 @@
 {
   "name": "playwright-labs",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "description": "Playwright Labs is a collection of packages that extend Playwright's functionality.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "pnpm run -r --stream --parallel --color --if-present test",
+    "build": "pnpm run -r --stream --color --if-present build",
+    "ci:release": "changeset",
+    "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
+    "ci:publish": "changeset publish"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.11.0"
+  "packageManager": "pnpm@10.11.0",
+  "devDependencies": {
+    "@changesets/cli": "^2.29.8",
+    "@types/node": "^25.0.9",
+    "tsup": "^8.5.1"
+  }
 }
