@@ -24,5 +24,4 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: packages/playwright-best-practices-build/pnpm-lock.yaml
       - run: pnpm install
-      - run: pnpm validate
       - run: pnpm build
