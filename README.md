@@ -23,7 +23,7 @@ npx add-skill https://github.com/vitalics/playwright-labs/tree/main/packages/pla
 - 📊 Impact-driven organization (CRITICAL to LOW)
 - 💡 Real-world code examples (incorrect vs correct)
 
-### [@playwright-tools/fixture-schema-ajv-ts](./packages/fixture-ajv-ts)
+### [@playwright-tools/fixture-ajv-ts](./packages/fixture-ajv-ts)
 
 Playwright fixture for schema validation using [ajv-ts](https://npmjs.com/package/ajv-ts). Validate API responses and data structures in your tests with type-safe schemas.
 
