@@ -13,7 +13,10 @@
     "playwright",
     "fixture",
     "allure",
-    "automation"
+    "automation",
+    "testing",
+    "fixture",
+    "playwright-labs"
   ],
   "author": "Vitali Haradkou <vitalicset@yandex.ru>",
   "license": "MIT",
