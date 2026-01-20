@@ -1,0 +1,32 @@
+{
+  "name": "@playwright-labs/fixture-allure",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.cjs",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsup"
+  },
+  "keywords": [
+    "playwright",
+    "fixture",
+    "allure",
+    "automation"
+  ],
+  "author": "Vitali Haradkou <vitalicset@yandex.ru>",
+  "license": "MIT",
+  "packageManager": "pnpm@10.11.0",
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "allure-js-commons": "3.4.5"
+  },
+  "peerDependencies": {
+    "@playwright/test": "1.57.0",
+    "allure-js-commons": "3.4.5"
+  },
+  "dependencies": {
+    "@rslike/std": "3.2.0"
+  }
+}
