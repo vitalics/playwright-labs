@@ -9,7 +9,16 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsup"
   },
-  "keywords": [],
+  "keywords": [
+    "playwright",
+    "ajv-ts",
+    "schema",
+    "json-schema",
+    "testing",
+    "fixture",
+    "playwright-labs",
+    "automation"
+  ],
   "author": "Vitali Haradkou <vitalicset@yandex.ru>",
   "license": "MIT",
   "packageManager": "pnpm@10.11.0",
