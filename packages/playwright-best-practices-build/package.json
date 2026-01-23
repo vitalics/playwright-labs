@@ -7,7 +7,11 @@
     "build": "tsx src/build.ts",
     "validate": "tsx src/validate.ts",
     "extract-tests": "tsx src/extract-tests.ts",
-    "dev": "pnpm build && pnpm validate"
+    "dev": "pnpm build && pnpm validate",
+    "release:patch": "tsx ./src/release.mts --patch",
+    "release:minor": "tsx ./src/release.mts --minor",
+    "release:major": "tsx ./src/release.mts --major",
+    "release": "pnpm release:patch && pnpm build && pnpm validate"
   },
   "keywords": [
     "playwright",
