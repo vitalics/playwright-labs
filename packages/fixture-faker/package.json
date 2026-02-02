@@ -1,7 +1,7 @@
 {
-  "name": "@playwright-labs/fixture-allure",
-  "version": "1.0.1",
-  "description": "Allure fixture for Playwright",
+  "name": "@playwright-labs/fixture-faker",
+  "version": "1.0.0",
+  "description": "Faker fixture integration for Playwright",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -12,15 +12,16 @@
   "keywords": [
     "playwright",
     "fixture",
-    "allure",
+    "faker",
+    "fake",
+    "fake-data",
+    "data",
+    "mocking",
     "automation",
     "testing",
     "fixture",
     "playwright-labs"
   ],
-  "author": "Vitali Haradkou <vitalicset@yandex.ru>",
-  "license": "MIT",
-  "packageManager": "pnpm@10.11.0",
   "exports": {
     ".": {
       "import": {
@@ -33,13 +34,16 @@
       }
     }
   },
+  "author": "Vitali Haradkou <vitalicset@yandex.ru>",
+  "license": "MIT",
+  "packageManager": "pnpm@10.11.0",
   "devDependencies": {
-    "@playwright/test": "1.57.0",
-    "allure-js-commons": "3.4.5"
+    "@faker-js/faker": "10.2.0",
+    "@playwright/test": "1.57.0"
   },
   "peerDependencies": {
-    "@playwright/test": "1.57.0",
-    "allure-js-commons": "3.4.5"
+    "@faker-js/faker": "10.2.0",
+    "@playwright/test": "1.57.0"
   },
   "dependencies": {
     "@rslike/std": "3.2.0"
