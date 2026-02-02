@@ -1,7 +1,7 @@
 {
-  "name": "@playwright-labs/fixture-allure",
-  "version": "1.0.1",
-  "description": "Allure fixture for Playwright",
+  "name": "@playwright-labs/reporter-email",
+  "version": "1.0.0",
+  "description": "Email reporter for Playwright",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -11,12 +11,14 @@
   },
   "keywords": [
     "playwright",
-    "fixture",
-    "allure",
     "automation",
     "testing",
-    "fixture",
-    "playwright-labs"
+    "playwright-labs",
+    "reporter",
+    "email",
+    "notification",
+    "nodemailer",
+    "email-reporter"
   ],
   "author": "Vitali Haradkou <vitalicset@yandex.ru>",
   "license": "MIT",
@@ -35,13 +37,12 @@
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",
-    "allure-js-commons": "3.4.5"
+    "@types/nodemailer": "7.0.9"
   },
   "peerDependencies": {
-    "@playwright/test": "1.57.0",
-    "allure-js-commons": "3.4.5"
+    "@playwright/test": "1.57.0"
   },
   "dependencies": {
-    "@rslike/std": "3.2.0"
+    "nodemailer": "7.0.13"
   }
 }
