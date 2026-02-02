@@ -181,3 +181,121 @@ export default defineConfig({
   reporter: [["html"], REPORTER_DESCRIPTION],
 });
 ```
+
+### [@playwright-labs/fixture-faker](./packages/fixture-faker)
+
+Playwright fixture for generating fake data using [@faker-js/faker](https://npmjs.com/package/@faker-js/faker). Generate realistic test data directly in your Playwright tests.
+
+**Installation:**
+
+```bash
+npm i @playwright-labs/fixture-faker @faker-js/faker # npm
+pnpm add @playwright-labs/fixture-faker @faker-js/faker # pnpm
+yarn add @playwright-labs/fixture-faker @faker-js/faker # yarn
+```
+
+**Features:**
+
+- 🎲 Seamless integration with @faker-js/faker
+- 🌍 Multi-locale support via `useFaker` function
+- 🧩 Easy integration with Playwright fixtures
+- ✨ Generate realistic emails, passwords, names, and more
+
+**Usage:**
+
+1. Basic test setup:
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-faker";
+
+test("my test", async ({ page, faker }) => {
+  await page.goto("https://example.com");
+
+  await page.fill("#username", faker.internet.email());
+  await page.fill("#password", faker.internet.password());
+  await page.click("#submit");
+});
+```
+
+2. Using different locale:
+
+```typescript
+import { test } from "@playwright-labs/fixture-faker";
+
+test("simple test", async ({ page, useFaker }) => {
+  const faker = await useFaker({ locale: "fr" });
+
+  await page.fill("#username", faker.internet.email());
+  await page.fill("#password", faker.internet.password());
+  await page.click("#submit");
+});
+```
+
+### [@playwright-labs/reporter-email](./packages/reporter-email)
+
+Playwright reporter that sends email notifications after test runs using nodemailer.
+
+**Installation:**
+
+```bash
+npm i @playwright-labs/reporter-email # npm
+pnpm add @playwright-labs/reporter-email # pnpm
+yarn add @playwright-labs/reporter-email # yarn
+```
+
+**Features:**
+
+- 📧 Send email reports after test runs
+- 🎯 Configurable send conditions (always, on-failure, on-success, never)
+- 📝 Dynamic subject and HTML body based on test results
+- 📎 Support for file attachments
+- 🔧 Built-in support for 50+ email services (Gmail, Outlook, AWS SES, etc.)
+
+**Usage:**
+
+1. Basic configuration:
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+import { type ReporterOptions } from "@playwright-labs/reporter-email";
+
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-email",
+      {
+        from: "your-email@example.com",
+        to: "recipient-email@example.com",
+        subject: "Playwright Test Report",
+        html: "<p>Test report</p>",
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+```
+
+2. Dynamic content based on results:
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+import { type ReporterOptions } from "@playwright-labs/reporter-email";
+
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-email",
+      {
+        send: "always",
+        from: "your-email@example.com",
+        to: "recipient-email@example.com",
+        subject: (result) =>
+          `Playwright Test Report - ${result.status === "success" ? "Success" : "Failure"}`,
+        html: (result, testCases) =>
+          `<p>Total tests: ${testCases.length}</p>`,
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+```
