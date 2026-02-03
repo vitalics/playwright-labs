@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/reporter-email",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Email reporter for Playwright",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
