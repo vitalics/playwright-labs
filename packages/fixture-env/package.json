@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/fixture-env",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "environment variables fixture support for Playwright",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",

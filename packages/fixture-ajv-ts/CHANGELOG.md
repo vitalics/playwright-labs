@@ -1,5 +1,12 @@
 # @playwright-labs/fixture-ajv-ts
 
+## 1.0.2
+
+### Patch Changes
+
+- 851a8d8: [CI]: make tests do not failed by default
+- 851a8d8: [CI]: self update pnpm.
+
 ## 1.0.1
 
 ### Patch Changes
