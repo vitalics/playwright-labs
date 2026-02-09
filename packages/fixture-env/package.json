@@ -1,0 +1,67 @@
+{
+  "name": "@playwright-labs/fixture-env",
+  "version": "1.0.0",
+  "description": "environment variables fixture support for Playwright",
+  "main": "dist/index.cjs",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "build": "tsup"
+  },
+  "keywords": [
+    "playwright",
+    "automation",
+    "testing",
+    "playwright-labs",
+    "environment",
+    "dotenv",
+    "process"
+  ],
+  "author": "Vitali Haradkou <vitalicset@yandex.ru>",
+  "license": "MIT",
+  "packageManager": "pnpm@10.11.0",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./zod": {
+      "import": {
+        "types": "./dist/zod.d.mts",
+        "default": "./dist/zod.mjs"
+      },
+      "require": {
+        "types": "./dist/zod.d.ts",
+        "default": "./dist/zod.cjs"
+      }
+    },
+    "./ajv-ts": {
+      "import": {
+        "types": "./dist/ajv-ts.d.mts",
+        "default": "./dist/ajv-ts.mjs"
+      },
+      "require": {
+        "types": "./dist/ajv-ts.d.ts",
+        "default": "./dist/ajv-ts.cjs"
+      }
+    }
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "ajv-ts": "0.9.0",
+    "zod": "4.3.6"
+  },
+  "peerDependencies": {
+    "@playwright/test": "1.57.0",
+    "ajv-ts": "0.9.0",
+    "zod": "4.3.6"
+  },
+  "dependencies": {}
+}
