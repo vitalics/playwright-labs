@@ -44,17 +44,10 @@ importers:
         version: 3.4.5
 
   packages/fixture-env:
-    dependencies:
-      nodemailer:
-        specifier: 7.0.13
-        version: 7.0.13
     devDependencies:
       '@playwright/test':
         specifier: 1.57.0
         version: 1.57.0
-      '@types/nodemailer':
-        specifier: 7.0.9
-        version: 7.0.9
       ajv-ts:
         specifier: 0.9.0
         version: 0.9.0(typescript@5.9.3)
