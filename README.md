@@ -231,6 +231,67 @@ test("simple test", async ({ page, useFaker }) => {
 });
 ```
 
+### [@playwright-labs/fixture-env](./packages/fixture-env)
+
+Playwright fixture for type-safe environment variable management with schema validation using ajv-ts or zod.
+
+**Installation:**
+
+```bash
+npm i @playwright-labs/fixture-env # npm
+pnpm add @playwright-labs/fixture-env # pnpm
+yarn add @playwright-labs/fixture-env # yarn
+```
+
+**Features:**
+
+- 🔒 Type-safe environment variable validation
+- 🎨 Support for both ajv-ts and zod schemas
+- 🧩 Fixtures for environment manipulation and testing
+- 🔧 Predefined schemas for GitHub Actions and GitLab CI
+- ✅ Custom assertions for environment variables
+
+**Usage:**
+
+1. Define your schema (ajv-ts):
+
+```typescript
+// env.ts
+import { s } from "ajv-ts";
+import { createEnv } from "@playwright-labs/fixture-env/ajv-ts";
+
+export const env = createEnv({
+  prefix: "PW_",
+  schema: {
+    DATABASE_URL: s.string().format("uri"),
+    OPEN_AI_API_KEY: s.string().min(1),
+  },
+  env: process.env,
+});
+```
+
+2. Use in Playwright config:
+
+```typescript
+// playwright.config.ts
+import { env } from "./env";
+
+export default defineConfig({
+  use: { env },
+});
+```
+
+3. Use fixtures and assertions:
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-env";
+
+test("env test", async ({ useEnv, setEnv }) => {
+  await setEnv({ MY_VAR: "value" });
+  expect("MY_VAR").toBeInEnvWithValue("value");
+});
+```
+
 ### [@playwright-labs/reporter-email](./packages/reporter-email)
 
 Playwright reporter that sends email notifications after test runs using nodemailer.
