@@ -666,8 +666,8 @@ test.describe("createEnv", () => {
       });
 
       // Extended keys get the prefix applied
-      expect(env.STAGING_APP_NAME).toBe("my-app");
-      expect(env.STAGING_APP_VERSION).toBe("1.0.0");
+      expect(env.APP_NAME).toBe("my-app");
+      expect(env.APP_VERSION).toBe("1.0.0");
       expect(env.STAGING_API_URL).toBe("https://api.staging.example.com");
       expect(env.STAGING_DEBUG).toBe("true");
     });
