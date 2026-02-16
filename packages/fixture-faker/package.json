@@ -7,7 +7,9 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 0",
-    "build": "tsup"
+    "build": "tsup",
+    "package:pack": "pnpm exec npm pack",
+    "package:pack:dry-run": "pnpm package:pack --dry-run"
   },
   "keywords": [
     "playwright",

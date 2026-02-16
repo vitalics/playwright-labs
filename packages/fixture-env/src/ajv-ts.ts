@@ -75,11 +75,10 @@ export function createEnv<
 
   const output: Record<string, unknown> = {};
 
-  // Process extended env objects first
+  // Process extended env objects first (prefix should not affect extends)
   for (const extendedEnv of extendsOptions) {
     for (const [key, value] of Object.entries(extendedEnv)) {
-      const outputKey = `${prefix}${key}`;
-      output[outputKey] = value;
+      output[key] = value;
     }
   }
 

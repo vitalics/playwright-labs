@@ -267,7 +267,7 @@ test.describe("createEnv (zod)", () => {
       expect(env).toHaveProperty("DB_HOST", "localhost");
     });
 
-    test("should apply prefix to extended env keys", () => {
+    test("should not apply prefix to extended env keys", () => {
       const baseEnv = createEnv({
         schema: {
           URL: z.string(),
@@ -289,7 +289,7 @@ test.describe("createEnv (zod)", () => {
       });
 
       expect(env).toHaveProperty("APP_KEY", "my-key");
-      expect(env).toHaveProperty("APP_URL", "https://example.com");
+      expect(env).toHaveProperty("URL", "https://example.com");
     });
   });
 
@@ -817,9 +817,10 @@ test.describe("createEnv (zod)", () => {
         extends: [baseConfig],
       });
 
-      // Extended keys get the prefix applied
-      expect(env.STAGING_APP_NAME).toBe("my-app");
-      expect(env.STAGING_APP_VERSION).toBe("1.0.0");
+      // Extended keys should not have the prefix applied
+      expect(env.APP_NAME).toBe("my-app");
+      expect(env.APP_VERSION).toBe("1.0.0");
+      // Own schema keys get the prefix applied
       expect(env.STAGING_API_URL).toBe("https://api.staging.example.com");
       expect(env.STAGING_DEBUG).toBe("true");
     });

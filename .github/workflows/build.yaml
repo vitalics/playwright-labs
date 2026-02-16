@@ -25,4 +25,8 @@ jobs:
           cache-dependency-path: packages/playwright-best-practices-build/pnpm-lock.yaml
       - run: pnpm install
       - run: pnpm build
+      - run: pnpm ci:pretest
       - run: pnpm test
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+      - run: pnpm package:pack:dry-run

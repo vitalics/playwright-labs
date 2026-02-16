@@ -21,6 +21,21 @@ importers:
         specifier: 4.21.0
         version: 4.21.0
 
+  packages/decorators:
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+      playwright-core:
+        specifier: 1.57.0
+        version: 1.57.0
+
+  packages/fixture-abort:
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
   packages/fixture-ajv-ts:
     dependencies:
       '@playwright/test':
@@ -64,6 +79,12 @@ importers:
       '@faker-js/faker':
         specifier: 10.2.0
         version: 10.2.0
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
+  packages/fixture-timers:
+    devDependencies:
       '@playwright/test':
         specifier: 1.57.0
         version: 1.57.0
