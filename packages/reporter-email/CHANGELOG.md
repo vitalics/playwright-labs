@@ -1,5 +1,11 @@
 # @playwright-labs/reporter-email
 
+## 1.0.3
+
+### Patch Changes
+
+- 4d0253d: CI: add new scripts
+
 ## 1.0.2
 
 ### Patch Changes
