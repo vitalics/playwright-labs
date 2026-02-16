@@ -1,5 +1,11 @@
 # @playwright-labs/fixture-env
 
+## 1.0.2
+
+### Patch Changes
+
+- 4d0253d: CI: add new scripts
+
 ## 1.0.1
 
 ### Patch Changes
