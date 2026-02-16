@@ -1,15 +1,18 @@
-import { test, expect } from "../src/abortController";
+import { test, expect } from "../src/abort";
 
 test.describe("Custom expect matchers", () => {
   test.describe("toBeAborted", () => {
-    test("should pass when signal is aborted", ({ signal, abortController }) => {
+    test("should pass when signal is aborted", ({
+      signal,
+      abortController,
+    }) => {
       abortController.abort();
       expect(signal).toBeAborted();
     });
 
     test("should fail when signal is not aborted", ({ signal }) => {
       expect(() => expect(signal).toBeAborted()).toThrow(
-        "Expected AbortSignal to be aborted, but it was not aborted"
+        "Expected AbortSignal to be aborted, but it was not aborted",
       );
     });
 
@@ -23,10 +26,13 @@ test.describe("Custom expect matchers", () => {
       expect(signal).toBeActive();
     });
 
-    test("should fail when signal is aborted", ({ signal, abortController }) => {
+    test("should fail when signal is aborted", ({
+      signal,
+      abortController,
+    }) => {
       abortController.abort();
       expect(() => expect(signal).toBeActive()).toThrow(
-        "Expected AbortSignal to be active (not aborted), but it was aborted"
+        "Expected AbortSignal to be active (not aborted), but it was aborted",
       );
     });
 
@@ -37,7 +43,10 @@ test.describe("Custom expect matchers", () => {
   });
 
   test.describe("toBeAbortedWithReason", () => {
-    test("should pass when signal is aborted with matching reason", ({ signal, abortController }) => {
+    test("should pass when signal is aborted with matching reason", ({
+      signal,
+      abortController,
+    }) => {
       const reason = "User cancelled";
       abortController.abort(reason);
       expect(signal).toBeAbortedWithReason(reason);
@@ -45,14 +54,17 @@ test.describe("Custom expect matchers", () => {
 
     test("should fail when signal is not aborted", ({ signal }) => {
       expect(() => expect(signal).toBeAbortedWithReason("test")).toThrow(
-        'Expected AbortSignal to be aborted with reason "test", but it was not aborted'
+        'Expected AbortSignal to be aborted with reason "test", but it was not aborted',
       );
     });
 
-    test("should fail when reason does not match", ({ signal, abortController }) => {
+    test("should fail when reason does not match", ({
+      signal,
+      abortController,
+    }) => {
       abortController.abort("Reason A");
       expect(() => expect(signal).toBeAbortedWithReason("Reason B")).toThrow(
-        'Expected AbortSignal to be aborted with reason "Reason B", but got "Reason A"'
+        'Expected AbortSignal to be aborted with reason "Reason B", but got "Reason A"',
       );
     });
 
@@ -64,14 +76,18 @@ test.describe("Custom expect matchers", () => {
   });
 
   test.describe("toHaveAbortedSignal", () => {
-    test("should pass when controller's signal is aborted", ({ abortController }) => {
+    test("should pass when controller's signal is aborted", ({
+      abortController,
+    }) => {
       abortController.abort();
       expect(abortController).toHaveAbortedSignal();
     });
 
-    test("should fail when controller's signal is not aborted", ({ abortController }) => {
+    test("should fail when controller's signal is not aborted", ({
+      abortController,
+    }) => {
       expect(() => expect(abortController).toHaveAbortedSignal()).toThrow(
-        "Expected AbortController's signal to be aborted, but it was not aborted"
+        "Expected AbortController's signal to be aborted, but it was not aborted",
       );
     });
 
@@ -81,14 +97,18 @@ test.describe("Custom expect matchers", () => {
   });
 
   test.describe("toHaveActiveSignal", () => {
-    test("should pass when controller's signal is active", ({ abortController }) => {
+    test("should pass when controller's signal is active", ({
+      abortController,
+    }) => {
       expect(abortController).toHaveActiveSignal();
     });
 
-    test("should fail when controller's signal is aborted", ({ abortController }) => {
+    test("should fail when controller's signal is aborted", ({
+      abortController,
+    }) => {
       abortController.abort();
       expect(() => expect(abortController).toHaveActiveSignal()).toThrow(
-        "Expected AbortController's signal to be active, but it was aborted"
+        "Expected AbortController's signal to be active, but it was aborted",
       );
     });
 
@@ -104,16 +124,18 @@ test.describe("Custom expect matchers", () => {
       await expect(signal).toAbortWithin(200);
     });
 
-    test("should pass immediately if signal is already aborted", async ({ abortController }) => {
+    test("should pass immediately if signal is already aborted", async ({
+      abortController,
+    }) => {
       abortController.abort();
       await expect(abortController.signal).toAbortWithin(100);
     });
 
     test("should fail when signal does not abort within timeout", async () => {
       const signal = AbortSignal.timeout(500);
-      await expect(
-        expect(signal).toAbortWithin(100)
-      ).rejects.toThrow("AbortSignal did not abort within 100ms");
+      await expect(expect(signal).toAbortWithin(100)).rejects.toThrow(
+        "AbortSignal did not abort within 100ms",
+      );
     });
 
     test("should work with custom timeout signals", async () => {
@@ -132,18 +154,24 @@ test.describe("Custom expect matchers", () => {
 
     test("should fail when signal is not aborted", ({ signal }) => {
       expect(() => expect(signal).toHaveAbortReason(Error)).toThrow(
-        "Expected AbortSignal to be aborted with reason of type Error, but it was not aborted"
+        "Expected AbortSignal to be aborted with reason of type Error, but it was not aborted",
       );
     });
 
-    test("should fail when reason is not instance of expected type", ({ abortController, signal }) => {
+    test("should fail when reason is not instance of expected type", ({
+      abortController,
+      signal,
+    }) => {
       abortController.abort("string reason");
       expect(() => expect(signal).toHaveAbortReason(Error)).toThrow(
-        "Expected AbortSignal reason to be instance of Error, but got String"
+        "Expected AbortSignal reason to be instance of Error, but got String",
       );
     });
 
-    test("should work with custom error types", ({ abortController, signal }) => {
+    test("should work with custom error types", ({
+      abortController,
+      signal,
+    }) => {
       class CustomError extends Error {
         constructor(message: string) {
           super(message);
@@ -283,7 +311,10 @@ test.describe("Custom expect matchers", () => {
       expect(signal).toHaveAbortReason(Error);
     });
 
-    test("should work in API request simulation", async ({ abortController, signal }) => {
+    test("should work in API request simulation", async ({
+      abortController,
+      signal,
+    }) => {
       const fetchSimulation = new Promise((resolve, reject) => {
         if (signal.aborted) {
           reject(new Error("Already aborted"));

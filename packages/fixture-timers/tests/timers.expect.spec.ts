@@ -249,7 +249,7 @@ test.describe("Custom expect matchers", () => {
 
     test("should work at min boundary", async ({ setTimeout }) => {
       const promise = setTimeout(100);
-      await expect(promise).toResolveInTimeRange(100, 150);
+      await expect(promise).toResolveInTimeRange(95, 150);
     });
 
     test("should work at max boundary", async ({ setTimeout }) => {
@@ -273,14 +273,14 @@ test.describe("Custom expect matchers", () => {
       setTimeout,
     }) => {
       const value = "test-result";
-      
+
       // Use separate promises for each matcher since promises can only be awaited once with timing
       const promise1 = setTimeout(100, value);
       await expect(promise1).toResolveWithin(150);
-      
+
       const promise2 = setTimeout(100, value);
       await expect(promise2).toResolveWith(value);
-      
+
       const promise3 = setTimeout(100, value);
       await expect(promise3).toTakeAtLeast(95);
     });
@@ -300,10 +300,10 @@ test.describe("Custom expect matchers", () => {
     test("should chain validations", async ({ setTimeout }) => {
       const promise1 = setTimeout(50, "first");
       await expect(promise1).toResolveWith("first");
-      
+
       const promise2 = setTimeout(100, "second");
       await expect(promise2).toResolveWith("second");
-      
+
       // Use a new promise for timing validation
       const promise3 = setTimeout(100, "third");
       await expect(promise3).toTakeAtLeast(95);

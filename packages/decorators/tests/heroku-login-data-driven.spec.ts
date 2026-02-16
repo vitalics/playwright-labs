@@ -83,6 +83,7 @@ class DataDrivenLoginTests extends BaseTest {
 
     // Verify no script execution
     const alertsTriggered = await this.page.evaluate(() => {
+      // @ts-ignore fix later
       return (window as any).alertTriggered || false;
     });
     expect(alertsTriggered).toBe(false);

@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "test": "playwright test",
+    "test": "pnpm playwright test",
     "build": "tsup",
     "package:pack": "pnpm exec npm pack",
     "package:pack:dry-run": "pnpm package:pack --dry-run"

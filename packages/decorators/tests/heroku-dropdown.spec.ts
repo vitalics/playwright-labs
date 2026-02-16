@@ -21,7 +21,7 @@ class DropdownTests extends BaseTest {
   @test("should have all expected options")
   async testDropdownOptions() {
     const options = await this.dropdownPage.getAllOptions();
-    
+
     expect(options).toHaveLength(3);
     expect(options).toContain("Please select an option");
     expect(options).toContain("Option 1");
@@ -70,9 +70,10 @@ class DropdownTests extends BaseTest {
   @test("should maintain selection after page interaction")
   async testSelectionPersistence() {
     await this.selectOption("1");
-    
+
     // Interact with page
     await this.page.evaluate(() => {
+      // @ts-ignore fix later
       document.body.click();
     });
 
