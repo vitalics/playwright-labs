@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/decorators",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "decorators support for Playwright for your OOP style testing",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
