@@ -31,7 +31,7 @@ jobs:
       - if: ${{ steps.cache-node.outputs.cache-hit != 'true' }}
         run: pnpm install
       - run: pnpm build
-      # - run: pnpm ci:pretest
+      - run: pnpm ci:pretest
       - run: pnpm test
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1

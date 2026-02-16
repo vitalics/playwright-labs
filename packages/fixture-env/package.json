@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
-    "ci:pretest": "playwright install --with-deps",
+    "ci:pretest": "playwright install",
     "build": "tsup",
     "package:pack": "pnpm exec npm pack",
     "package:pack:dry-run": "pnpm package:pack --dry-run"
