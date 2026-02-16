@@ -7,6 +7,7 @@
     "test": "pnpm run -r --stream --parallel --color --if-present test",
     "build": "pnpm run -r --stream --color --if-present build",
     "package:pack:dry-run": "pnpm run -r --stream --color --if-present package:pack:dry-run",
+    "pretest": "pnpm run -r --stream --color --if-present ci:pretest",
     "ci:release": "changeset",
     "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
     "ci:publish": "changeset publish"

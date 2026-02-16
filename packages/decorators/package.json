@@ -6,8 +6,9 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "test": "pnpm playwright test",
+    "test": "playwright test",
     "build": "tsup",
+    "ci:pretest": "playwright install --with-deps",
     "package:pack": "pnpm exec npm pack",
     "package:pack:dry-run": "pnpm package:pack --dry-run"
   },
