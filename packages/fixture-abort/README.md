@@ -1,13 +1,13 @@
-# @playwright-labs/fixture-generic
+# @playwright-labs/fixture-abort
 
 A collection of generic Playwright fixtures and utilities for enhanced test functionality including abort controllers, decorators, and custom matchers.
 
 ## Installation
 
 ```sh
-npm install @playwright/test @playwright-labs/fixture-generic # npm
-pnpm add @playwright/test @playwright-labs/fixture-generic # pnpm
-yarn add @playwright/test @playwright-labs/fixture-generic # yarn
+npm install @playwright/test @playwright-labs/fixture-abort # npm
+pnpm add @playwright/test @playwright-labs/fixture-abort # pnpm
+yarn add @playwright/test @playwright-labs/fixture-abort # yarn
 ```
 
 ## Features
