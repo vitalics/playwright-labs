@@ -1,0 +1,3 @@
+src/*
+tsup.config.ts
+tsconfig.json

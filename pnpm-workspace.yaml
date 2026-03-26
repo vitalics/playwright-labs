@@ -1,9 +1,12 @@
-onlyBuiltDependencies:
-  - esbuild
-
-savePrefix: ""
-
 packages:
   - packages/*
-  - "!packages/playwright-best-practices"
-  - "!packages/playwright-best-practices-build"
+  - '!packages/playwright-best-practices'
+  - '!packages/playwright-best-practices-build'
+
+onlyBuiltDependencies:
+  - cpu-features
+  - esbuild
+  - protobufjs
+  - ssh2
+
+savePrefix: ''
