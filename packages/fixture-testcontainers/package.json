@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/fixture-testcontainers",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Playwright fixture for Testcontainers — start Docker containers in tests with automatic cleanup",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
