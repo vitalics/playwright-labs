@@ -45,6 +45,6 @@
     "@playwright/test": "1.57.0"
   },
   "dependencies": {
-    "nodemailer": "7.0.13"
+    "nodemailer": "8.0.4"
   }
 }
