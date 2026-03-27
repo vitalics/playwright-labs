@@ -37,11 +37,12 @@ export default defineConfig({
 
 ## Reporter Options
 
-- `send`: `'always' | 'on-failure' | 'on-success' | 'never'`. Default is `'on-failure'`
-- `from`: string. Who sends the email. Default is `process.env.PLAYWRIGHT_EMAIL_FROM` or `playwright@reporter.com`
-- `to`: string | string[]. Default is `process.env.PLAYWRIGHT_EMAIL_TO` or `playwright@reporter.com`
-- `subject`: string | ((result: TestResult) => string). Subject of the email. Default is `process.env.PLAYWRIGHT_EMAIL_SUBJECT` or `Playwright Test Report`
-- `html`: string | ((result: TestResult) => string)
+- `send`: `'always' | 'on-failure' | 'never'`. Default is `'on-failure'`
+- `from`: string. Who sends the email.
+- `to`: string | string[]. Recipient email address.
+- `subject`: string | ((result: FullResult) => string). Subject of the email.
+- `html`: string | ReactElement | ((result: FullResult, testCases: TestCases) => string | ReactElement | Promise<string | ReactElement>). HTML body of the email. Mutually exclusive with `text`.
+- `text`: string | ((result: FullResult, testCases: TestCases) => string | Promise<string>). Plain-text body. Mutually exclusive with `html`.
 
 ## Dynamic message (depends on the test results)
 
@@ -76,6 +77,289 @@ export default defineConfig({
   ],
 });
 ```
+
+## Built-in templates
+
+The package ships ready-made email templates under the `@playwright-labs/reporter-email/templates` subpath. All templates are built with [React Email](https://react.email) for maximum email-client compatibility.
+
+### Available templates
+
+All templates accept the same props: `result: FullResult` and `testCases: TestCases`.
+
+| Name | Description |
+|------|-------------|
+| `PlaywrightReportEmail` | Default template — bold colour-coded header, stats row, per-test table with inline styles |
+| `PlaywrightReportTailwindEmail` | Same layout built with Tailwind CSS utility classes via the `<Tailwind>` React Email component |
+| `PlaywrightReportShadcnEmail` | shadcn/ui-inspired design — status badge, top accent bar, card border, monochromatic palette |
+
+All templates are exported from the same subpath:
+
+```ts
+import {
+  PlaywrightReportEmail,
+  PlaywrightReportTailwindEmail,
+  PlaywrightReportShadcnEmail,
+} from "@playwright-labs/reporter-email/templates";
+```
+
+### Quick start
+
+Install the required peer dependencies:
+
+```bash
+npm install react react-dom @react-email/components @react-email/render
+pnpm add react react-dom @react-email/components @react-email/render
+```
+
+Add to your `playwright.config.ts`:
+
+```ts
+import { defineConfig } from "@playwright/test";
+import React from "react";
+import { type ReporterOptions } from "@playwright-labs/reporter-email";
+import { PlaywrightReportEmail } from "@playwright-labs/reporter-email/templates";
+
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-email",
+      {
+        from: "reporter@example.com",
+        to: "team@example.com",
+        send: "on-failure",
+        subject: (result) =>
+          `[Playwright] ${result.status.toUpperCase()} — ${new Date().toLocaleDateString()}`,
+        // Swap the component to change the design:
+        //   PlaywrightReportEmail         — default (inline styles)
+        //   PlaywrightReportTailwindEmail — Tailwind CSS
+        //   PlaywrightReportShadcnEmail   — shadcn/ui-inspired
+        html: (result, testCases) =>
+          React.createElement(PlaywrightReportEmail, { result, testCases }),
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+```
+
+When `@react-email/render` is installed, the reporter uses its `render()` function automatically — the resulting HTML has inlined CSS and is compatible with Gmail, Outlook, Apple Mail, and Yahoo. Without it, the reporter falls back to `react-dom/server`'s `renderToString`.
+
+### Preview template in the browser
+
+The `examples/` directory contains a fully runnable setup. It includes the React Email dev server so you can inspect the template visually without sending a real email.
+
+```bash
+cd examples
+pnpm install
+pnpm email:preview   # starts http://localhost:3000
+```
+
+The `emails/playwright-report.tsx` file inside `examples/` provides mock data and is picked up automatically by the React Email dev server.
+
+To run the actual tests and receive an email (requires local [Maildev](https://github.com/maildev/maildev)):
+
+```bash
+docker run -p 1080:1080 -p 1025:1025 maildev/maildev
+pnpm test            # from examples/
+open http://localhost:1080
+```
+
+A full working example is in [`examples/`](./examples/).
+
+## React Email templates
+
+[React Email](https://react.email) provides battle-tested components that render correctly across all major email clients (Gmail, Outlook, Apple Mail, Yahoo, etc.). The reporter has built-in support for React Email via `@react-email/render`.
+
+### Installation
+
+Install the optional peer dependencies:
+
+```bash
+npm install react react-dom @react-email/components @react-email/render
+pnpm add react react-dom @react-email/components @react-email/render
+```
+
+### Built-in template
+
+The package ships a ready-made `PlaywrightReportEmail` template built with React Email. It displays:
+- Overall run status with colour-coded header
+- Passed / Failed / Skipped counters
+- Per-test table with title, suite name, status and duration
+
+```ts
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+import React from "react";
+import {
+  type ReporterOptions,
+  PlaywrightReportEmail,
+} from "@playwright-labs/reporter-email";
+
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-email",
+      {
+        from: "reporter@example.com",
+        to: "team@example.com",
+        subject: (result) => `Playwright Report — ${result.status}`,
+        html: (result, testCases) =>
+          React.createElement(PlaywrightReportEmail, { result, testCases }),
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+```
+
+If `@react-email/render` is installed, the reporter uses its `render()` function automatically — producing email-compatible HTML with inline CSS. Without it, the reporter falls back to `react-dom/server`'s `renderToString`.
+
+### Custom React Email template
+
+You can build your own template using any `@react-email/components` and pass it the same way:
+
+```tsx
+// my-template.tsx
+import React from "react";
+import { Html, Head, Body, Container, Heading, Text, Hr } from "@react-email/components";
+import type { FullResult } from "@playwright/test/reporter";
+import type { TestCases } from "@playwright-labs/reporter-email";
+
+export function MyTemplate({ result, testCases }: { result: FullResult; testCases: TestCases }) {
+  return (
+    <Html lang="en">
+      <Head />
+      <Body>
+        <Container>
+          <Heading>Status: {result.status}</Heading>
+          <Hr />
+          {testCases.map(([tc, r], i) => (
+            <Text key={i}>{tc.title} — {r.status}</Text>
+          ))}
+        </Container>
+      </Body>
+    </Html>
+  );
+}
+```
+
+```ts
+// playwright.config.ts
+import React from "react";
+import { defineConfig } from "@playwright/test";
+import { type ReporterOptions } from "@playwright-labs/reporter-email";
+import { MyTemplate } from "./my-template";
+
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-email",
+      {
+        from: "reporter@example.com",
+        to: "team@example.com",
+        subject: "Playwright Report",
+        html: (result, testCases) =>
+          React.createElement(MyTemplate, { result, testCases }),
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+```
+
+> **Note:** To use JSX syntax in your config, rename `playwright.config.ts` → `playwright.config.tsx` and ensure `tsconfig.json` includes `"jsx": "react-jsx"`.
+
+## React (JSX) templates
+
+The `html` option also accepts a React element — the reporter calls `react-dom/server`'s `renderToString` internally. Install the optional peer dependencies first:
+
+```bash
+npm install react react-dom      # npm
+pnpm add react react-dom         # pnpm
+```
+
+### Static element
+
+```tsx
+// playwright.config.tsx
+import { defineConfig } from "@playwright/test";
+import React from "react";
+import { type ReporterOptions } from "@playwright-labs/reporter-email";
+
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-email",
+      {
+        from: "reporter@example.com",
+        to: "team@example.com",
+        subject: "Playwright Report",
+        html: <p>Test run finished.</p>,
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+```
+
+### Dynamic element using test results
+
+```tsx
+// playwright.config.tsx
+import { defineConfig } from "@playwright/test";
+import React from "react";
+import type { FullResult } from "@playwright/test/reporter";
+import {
+  type ReporterOptions,
+  type TestCases,
+} from "@playwright-labs/reporter-email";
+
+function Report({
+  result,
+  testCases,
+}: {
+  result: FullResult;
+  testCases: TestCases;
+}) {
+  return (
+    <div>
+      <h1>Playwright Report — {result.status}</h1>
+      <table>
+        <thead>
+          <tr>
+            <th>Test</th>
+            <th>Status</th>
+            <th>Duration</th>
+          </tr>
+        </thead>
+        <tbody>
+          {testCases.map(([testCase, testResult], i) => (
+            <tr key={i}>
+              <td>{testCase.title}</td>
+              <td>{testResult.status}</td>
+              <td>{testResult.duration}ms</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-email",
+      {
+        from: "reporter@example.com",
+        to: "team@example.com",
+        subject: (result) => `Playwright Report — ${result.status}`,
+        html: (result, testCases) => (
+          <Report result={result} testCases={testCases} />
+        ),
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+```
+
+> **Note:** To use JSX syntax in your config, rename `playwright.config.ts` → `playwright.config.tsx` and ensure your `tsconfig.json` includes `"jsx": "react-jsx"` (or `"react"`).
 
 ## HTML Templates
 
@@ -357,11 +641,28 @@ Options for the email reporter.
 - `from` (required) - `string` - Sender email address.
 - `to` (required) - `string` - Recipient email address.
 - `subject` (required) - `string` - Email subject.
-- `html` (optional, required if no `text`) - `string` - HTML body.
-- `text` (optional, required if no `html`) - `string` - Text body. Recommended to use `html` instead of `text`
+- `html` (optional, required if no `text`) - `string | ReactElement | ((result, testCases) => string | ReactElement | Promise<string | ReactElement>)` - HTML body. Accepts a plain string, a React element (rendered via `renderToString`), or a function returning either.
+- `text` (optional, required if no `html`) - `string | ((result, testCases) => string | Promise<string>)` - Plain-text body. Recommended to use `html` instead.
 - `cc` (optional) - `string` - Recipient email address.
 - `bcc` (optional) - `string` - Recipient email address.
 - `attachments` (optional) - `Attachment[]` - Array of attachments.
+
+### PlaywrightReportEmail
+
+A built-in React Email template component. Exported from the `./templates` subpath.
+
+```ts
+import { PlaywrightReportEmail } from "@playwright-labs/reporter-email/templates";
+```
+
+**Props:**
+
+- `result` — `FullResult` from `@playwright/test/reporter`
+- `testCases` — `TestCases` (array of `[TestCase, TestResult]` pairs)
+
+Renders a responsive email with a status header, passed/failed/skipped counters, and a per-test results table.
+
+Requires `@react-email/components` and `@react-email/render` to be installed.
 
 ### type Attachment
 

@@ -1,4 +1,5 @@
 import nodemailer, { type TransportOptions } from "nodemailer";
+import type { ReactElement } from "react";
 import type {
   FullResult,
   Reporter,
@@ -258,12 +259,37 @@ export type NodemailerReporterOptions = {
        */
       html:
         | string
+        | ReactElement
         | ((
             result: FullResult,
             testCases: NodemailerTestCases,
-          ) => string | Promise<string>);
+          ) => string | ReactElement | Promise<string | ReactElement>);
     }
 );
+
+function isReactElement(value: unknown): value is ReactElement {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "$$typeof" in value &&
+    typeof (value as Record<string, unknown>).$$typeof === "symbol"
+  );
+}
+
+/**
+ * Renders a ReactElement to an HTML string.
+ * Prefers `@react-email/render` when available (better email-client compatibility),
+ * falls back to `react-dom/server` renderToString.
+ */
+async function renderElement(element: ReactElement): Promise<string> {
+  try {
+    const { render } = await import("@react-email/render");
+    return await render(element);
+  } catch {
+    const { renderToString } = await import("react-dom/server");
+    return renderToString(element);
+  }
+}
 
 export default class EmailReporter implements Reporter {
   readonly #options: Readonly<NodemailerReporterOptions>;
@@ -348,28 +374,29 @@ export default class EmailReporter implements Reporter {
     return preparedSubject;
   }
 
-  async resolveHtml(result: FullResult) {
-    var preparedHtml: string;
+  async resolveHtml(result: FullResult): Promise<string | undefined> {
     if ("html" in this.#options) {
+      let htmlValue: string | ReactElement;
       if (typeof this.#options.html === "function") {
-        preparedHtml = await this.#options.html(result, this.#testCases);
-        if (typeof preparedHtml !== "string") {
-          throw new TypeError(
-            `"html" function should return a string. Got ${typeof preparedHtml}`,
-          );
-        }
-      } else if (typeof this.#options.html === "string") {
-        preparedHtml = this.#options.html;
+        htmlValue = await this.#options.html(result, this.#testCases);
+      } else {
+        htmlValue = this.#options.html;
+      }
+
+      if (typeof htmlValue === "string") {
+        this.#html = htmlValue;
+      } else if (isReactElement(htmlValue)) {
+        this.#html = await renderElement(htmlValue);
       } else {
         throw new TypeError(
-          `Invalid html type. Expected string or function. Got ${typeof this.#options.html}`,
+          `Invalid html type. Expected string, ReactElement, or function returning one of those. Got ${typeof htmlValue}`,
         );
       }
-      this.#html = preparedHtml;
+      return this.#html;
     }
   }
 
-  async resolveText(result: FullResult) {
+  async resolveText(result: FullResult): Promise<string | undefined> {
     var preparedText: string;
     if ("text" in this.#options) {
       if (typeof this.#options.text === "function") {
@@ -387,6 +414,7 @@ export default class EmailReporter implements Reporter {
         );
       }
       this.#text = preparedText;
+      return this.#text;
     }
   }
 

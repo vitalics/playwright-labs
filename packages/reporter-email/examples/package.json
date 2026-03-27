@@ -1,0 +1,24 @@
+{
+  "name": "reporter-email-example",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Example: @playwright-labs/reporter-email with the built-in React Email template",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "ci:pretest": "playwright install --with-deps chromium",
+    "email:preview": "email dev --dir emails"
+  },
+  "dependencies": {
+    "@playwright-labs/reporter-email": "workspace:*",
+    "@react-email/components": "1.0.10",
+    "@react-email/render": "2.0.4",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-email": "5.2.10"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "@react-email/preview-server": "5.2.10"
+  }
+}

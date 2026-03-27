@@ -3,19 +3,14 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    "module": "ESNext",
     "moduleResolution": "bundler",
-    "preserveWatchOutput": true,
+    "module": "ESNext",
     "skipLibCheck": true,
-    "noEmit": true,
     "strict": true,
     "lib": ["ES2022"],
     "target": "ES2020",
     "jsx": "react-jsx",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "jsxImportSource": "react"
   },
-  "exclude": ["node_modules"],
+  "exclude": ["node_modules"]
 }
