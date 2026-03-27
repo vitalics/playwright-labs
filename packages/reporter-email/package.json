@@ -6,7 +6,8 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 0",
+    "test": "playwright test",
+    "ci:pretest": "playwright install",
     "build": "tsup",
     "package:pack": "pnpm exec npm pack",
     "package:pack:dry-run": "pnpm package:pack --dry-run"
@@ -28,23 +29,130 @@
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/index.d.mts",
+        "types": "./dist/index.d.ts",
         "default": "./dist/index.mjs"
       },
       "require": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
+      }
+    },
+    "./templates": {
+      "import": {
+        "types": "./dist/templates/index.d.ts",
+        "default": "./dist/templates/index.mjs"
+      },
+      "require": {
+        "types": "./dist/templates/index.d.cts",
+        "default": "./dist/templates/index.cjs"
+      }
+    },
+    "./templates/base": {
+      "import": {
+        "types": "./dist/templates/base.d.ts",
+        "default": "./dist/templates/base.mjs"
+      },
+      "require": {
+        "types": "./dist/templates/base.d.cts",
+        "default": "./dist/templates/base.cjs"
+      }
+    },
+    "./templates/tailwind-base": {
+      "import": {
+        "types": "./dist/templates/tailwind-base.d.ts",
+        "default": "./dist/templates/tailwind-base.mjs"
+      },
+      "require": {
+        "types": "./dist/templates/tailwind-base.d.cts",
+        "default": "./dist/templates/tailwind-base.cjs"
+      }
+    },
+    "./templates/shadcn": {
+      "import": {
+        "types": "./dist/templates/shadcn/index.d.ts",
+        "default": "./dist/templates/shadcn/index.mjs"
+      },
+      "require": {
+        "types": "./dist/templates/shadcn/index.d.cts",
+        "default": "./dist/templates/shadcn/index.cjs"
+      }
+    },
+    "./templates/shadcn/base": {
+      "import": {
+        "types": "./dist/templates/shadcn/base.d.ts",
+        "default": "./dist/templates/shadcn/base.mjs"
+      },
+      "require": {
+        "types": "./dist/templates/shadcn/base.d.cts",
+        "default": "./dist/templates/shadcn/base.cjs"
+      }
+    },
+    "./templates/shadcn/base-chart": {
+      "import": {
+        "types": "./dist/templates/shadcn/base-chart.d.ts",
+        "default": "./dist/templates/shadcn/base-chart.mjs"
+      },
+      "require": {
+        "types": "./dist/templates/shadcn/base-chart.d.cts",
+        "default": "./dist/templates/shadcn/base-chart.cjs"
+      }
+    },
+    "./templates/shadcn/base-button": {
+      "import": {
+        "types": "./dist/templates/shadcn/base-button.d.ts",
+        "default": "./dist/templates/shadcn/base-button.mjs"
+      },
+      "require": {
+        "types": "./dist/templates/shadcn/base-button.d.cts",
+        "default": "./dist/templates/shadcn/base-button.cjs"
+      }
+    },
+    "./templates/shadcn/base-themes": {
+      "import": {
+        "types": "./dist/templates/shadcn/base-themes.d.ts",
+        "default": "./dist/templates/shadcn/base-themes.mjs"
+      },
+      "require": {
+        "types": "./dist/templates/shadcn/base-themes.d.cts",
+        "default": "./dist/templates/shadcn/base-themes.cjs"
       }
     }
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",
-    "@types/nodemailer": "7.0.9"
+    "@react-email/components": "1.0.10",
+    "@react-email/render": "2.0.4",
+    "@types/nodemailer": "7.0.9",
+    "@types/react": "19.1.2",
+    "@types/react-dom": "19.1.2",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
   },
   "peerDependencies": {
-    "@playwright/test": "1.57.0"
+    "@playwright/test": "1.57.0",
+    "@react-email/components": ">=1",
+    "@react-email/render": ">=2",
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@react-email/components": {
+      "optional": true
+    },
+    "@react-email/render": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
   },
   "dependencies": {
-    "nodemailer": "8.0.4"
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "nodemailer": "8.0.4",
+    "tailwind-merge": "^3.3.0"
   }
 }

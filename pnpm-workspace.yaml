@@ -1,5 +1,6 @@
 packages:
   - packages/*
+  - packages/reporter-email/examples
   - '!packages/playwright-best-practices'
   - '!packages/playwright-best-practices-build'
 
