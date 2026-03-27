@@ -101,8 +101,8 @@ importers:
   packages/reporter-email:
     dependencies:
       nodemailer:
-        specifier: 7.0.13
-        version: 7.0.13
+        specifier: 8.0.4
+        version: 8.0.4
     devDependencies:
       '@playwright/test':
         specifier: 1.57.0
@@ -1187,8 +1187,8 @@ packages:
   nan@2.26.2:
     resolution: {integrity: sha512-0tTvBTYkt3tdGw22nrAy50x7gpbGCCFH3AFcyS5WiUu7Eu4vWlri1woE6qHBSfy11vksDqkiwjOnlR7WV8G1Hw==}
 
-  nodemailer@7.0.13:
-    resolution: {integrity: sha512-PNDFSJdP+KFgdsG3ZzMXCgquO7I6McjY2vlqILjtJd0hy8wEvtugS9xKRF2NWlPNGxvLCXlTNIae4serI7dinw==}
+  nodemailer@8.0.4:
+    resolution: {integrity: sha512-k+jf6N8PfQJ0Fe8ZhJlgqU5qJU44Lpvp2yvidH3vp1lPnVQMgi4yEEMPXg5eJS1gFIJTVq1NHBk7Ia9ARdSBdQ==}
     engines: {node: '>=6.0.0'}
 
   normalize-path@3.0.0:
@@ -2668,7 +2668,7 @@ snapshots:
   nan@2.26.2:
     optional: true
 
-  nodemailer@7.0.13: {}
+  nodemailer@8.0.4: {}
 
   normalize-path@3.0.0: {}
 
