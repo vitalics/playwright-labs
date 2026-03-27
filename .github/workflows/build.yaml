@@ -4,11 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - "packages/fixture-ajv-ts/**"
+      - "packages/fixture-*/**"
+      - "packages/reporter-*/**"
   pull_request:
     branches: [main]
     paths:
-      - "packages/fixture-ajv-ts/**"
+      - "packages/fixture-*/**"
+      - "packages/reporter-*/**"
 
 jobs:
   build:
