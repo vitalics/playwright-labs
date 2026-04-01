@@ -1,5 +1,11 @@
 # @playwright-labs/reporter-email
 
+## 1.1.1
+
+### Patch Changes
+
+- d9262c5: Added paths into .npmignore for npm publishing
+
 ## 1.1.0
 
 ### Minor Changes
