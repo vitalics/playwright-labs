@@ -11,13 +11,9 @@ test.describe("NgHtmlElement fixture — e2e", () => {
 
   test.describe("isComponent", () => {
     test("returns true for Angular component hosts", async ({ $ng }) => {
-      expect(await $ng("app-button").first().isComponent()).resolves.toBe(true);
-      expect(await $ng("app-counter").first().isComponent()).resolves.toBe(
-        true,
-      );
-      expect(await $ng("app-user-card").first().isComponent()).resolves.toBe(
-        true,
-      );
+      expect(await $ng("app-button").first().isComponent()).toBe(true);
+      expect(await $ng("app-counter").first().isComponent()).toBe(true);
+      expect(await $ng("app-user-card").first().isComponent()).toBe(true);
     });
 
     test("returns false for plain DOM elements", async ({ $ng }) => {
