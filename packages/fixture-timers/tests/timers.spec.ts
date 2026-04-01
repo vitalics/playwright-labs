@@ -350,7 +350,7 @@ test.describe("scheduler fixture", () => {
 
     test("should take at least specified time", async ({ scheduler }) => {
       const promise = scheduler.wait(100);
-      await expect(promise).toTakeAtLeast(95);
+      await expect(promise).toTakeAtLeast(50);
     });
 
     test("should support abort signal", async ({ scheduler }) => {

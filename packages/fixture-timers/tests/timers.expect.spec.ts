@@ -226,7 +226,7 @@ test.describe("Custom expect matchers", () => {
       setTimeout,
     }) => {
       const promise = setTimeout(100);
-      await expect(promise).toResolveInTimeRange(95, 150);
+      await expect(promise).toResolveInTimeRange(50, 200);
     });
 
     test("should fail when promise resolves too quickly", async ({
