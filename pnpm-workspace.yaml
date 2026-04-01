@@ -1,12 +1,14 @@
 packages:
   - packages/*
   - packages/reporter-email/examples
+  - packages/selectors-angular/examples
   - '!packages/playwright-best-practices'
   - '!packages/playwright-best-practices-build'
 
 onlyBuiltDependencies:
   - cpu-features
   - esbuild
+  - nice-napi
   - protobufjs
   - ssh2
 

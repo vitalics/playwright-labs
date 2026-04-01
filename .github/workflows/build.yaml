@@ -6,11 +6,13 @@ on:
     paths:
       - "packages/fixture-*/**"
       - "packages/reporter-*/**"
+      - "packages/selectors-*/**"
   pull_request:
     branches: [main]
     paths:
       - "packages/fixture-*/**"
       - "packages/reporter-*/**"
+      - "packages/selectors-*/**"
 
 jobs:
   build:
