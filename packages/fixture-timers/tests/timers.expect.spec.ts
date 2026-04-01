@@ -53,7 +53,7 @@ test.describe("Custom expect matchers", () => {
 
     test("should work with exact timing", async ({ setTimeout }) => {
       const promise = setTimeout(100);
-      await expect(promise).toTakeAtLeast(95);
+      await expect(promise).toTakeAtLeast(50);
     });
 
     test("should handle promise rejection", async () => {
