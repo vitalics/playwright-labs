@@ -1,7 +1,7 @@
 .claude/*
 examples/*
 src/*
-test_results/*
+test-results/*
 tests/*
 tsconfig.json
 tsup.config.ts
