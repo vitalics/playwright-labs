@@ -2,6 +2,8 @@ packages:
   - packages/*
   - packages/reporter-email/examples
   - '!packages/selectors-angular/examples'
+  - '!packages/selectors-react/examples'
+  - '!packages/selectors-vue/examples'
   - '!packages/fixture-sql-example'
   - '!packages/playwright-best-practices'
   - '!packages/playwright-best-practices-build'

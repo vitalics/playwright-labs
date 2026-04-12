@@ -1,6 +1,6 @@
 {
-  "name": "@playwright-labs/selectors-angular",
-  "version": "1.0.1",
+  "name": "@playwright-labs/selectors-vue",
+  "version": "1.0.0",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -18,7 +18,8 @@
     "automation",
     "testing",
     "playwright-labs",
-    "angular",
+    "vue",
+    "vue3",
     "selector",
     "selector-engine",
     "component"

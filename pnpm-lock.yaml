@@ -186,6 +186,36 @@ importers:
         version: 5.2.10(@playwright/test@1.57.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(sass@1.71.1)
 
   packages/selectors-angular:
+    dependencies:
+      '@playwright-labs/selectors-core':
+        specifier: workspace:*
+        version: link:../selectors-core
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
+  packages/selectors-core:
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
+  packages/selectors-react:
+    dependencies:
+      '@playwright-labs/selectors-core':
+        specifier: workspace:*
+        version: link:../selectors-core
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
+  packages/selectors-vue:
+    dependencies:
+      '@playwright-labs/selectors-core':
+        specifier: workspace:*
+        version: link:../selectors-core
     devDependencies:
       '@playwright/test':
         specifier: 1.57.0
