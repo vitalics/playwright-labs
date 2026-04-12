@@ -1,7 +1,15 @@
 import { test, expect } from "@playwright/test";
-import { AngularEngine } from "../src/index";
+import { matchesAttributePart } from "@playwright-labs/selectors-core";
+import type { AttributeSelectorPart } from "@playwright-labs/selectors-core";
 
-const engine = AngularEngine();
+function matchesComponentAttribute(obj: any, attr: AttributeSelectorPart) {
+  let value = obj;
+  for (const token of attr.jsonPath) {
+    if (value !== undefined && value !== null) value = value[token];
+    else break;
+  }
+  return matchesAttributePart(value, attr);
+}
 
 /** Build a minimal AttributeSelectorPart for testing */
 function part(op: string, value: any, caseSensitive = true) {
@@ -11,59 +19,59 @@ function part(op: string, value: any, caseSensitive = true) {
     op,
     value,
     caseSensitive,
-  } as Parameters<typeof engine.matchesAttributePart>[1];
+  } as Parameters<typeof matchesAttributePart>[1];
 }
 
 test.describe("matchesAttributePart", () => {
   test.describe("<truthy>", () => {
     test("non-empty string → true", () => {
-      expect(engine.matchesAttributePart("hello", part("<truthy>", null))).toBe(
+      expect(matchesAttributePart("hello", part("<truthy>", null))).toBe(
         true,
       );
     });
 
     test("empty string → false", () => {
-      expect(engine.matchesAttributePart("", part("<truthy>", null))).toBe(
+      expect(matchesAttributePart("", part("<truthy>", null))).toBe(
         false,
       );
     });
 
     test("0 → false", () => {
-      expect(engine.matchesAttributePart(0, part("<truthy>", null))).toBe(
+      expect(matchesAttributePart(0, part("<truthy>", null))).toBe(
         false,
       );
     });
 
     test("positive number → true", () => {
-      expect(engine.matchesAttributePart(1, part("<truthy>", null))).toBe(true);
+      expect(matchesAttributePart(1, part("<truthy>", null))).toBe(true);
     });
 
     test("null → false", () => {
-      expect(engine.matchesAttributePart(null, part("<truthy>", null))).toBe(
+      expect(matchesAttributePart(null, part("<truthy>", null))).toBe(
         false,
       );
     });
 
     test("undefined → false", () => {
       expect(
-        engine.matchesAttributePart(undefined, part("<truthy>", null)),
+        matchesAttributePart(undefined, part("<truthy>", null)),
       ).toBe(false);
     });
 
     test("non-empty object → true", () => {
-      expect(engine.matchesAttributePart({}, part("<truthy>", null))).toBe(
+      expect(matchesAttributePart({}, part("<truthy>", null))).toBe(
         true,
       );
     });
 
     test("boolean true → true", () => {
-      expect(engine.matchesAttributePart(true, part("<truthy>", null))).toBe(
+      expect(matchesAttributePart(true, part("<truthy>", null))).toBe(
         true,
       );
     });
 
     test("boolean false → false", () => {
-      expect(engine.matchesAttributePart(false, part("<truthy>", null))).toBe(
+      expect(matchesAttributePart(false, part("<truthy>", null))).toBe(
         false,
       );
     });
@@ -72,63 +80,63 @@ test.describe("matchesAttributePart", () => {
   test.describe("= (equality)", () => {
     test("exact string match → true", () => {
       expect(
-        engine.matchesAttributePart("hello", part("=", "hello")),
+        matchesAttributePart("hello", part("=", "hello")),
       ).toBe(true);
     });
 
     test("string mismatch → false", () => {
       expect(
-        engine.matchesAttributePart("hello", part("=", "world")),
+        matchesAttributePart("hello", part("=", "world")),
       ).toBe(false);
     });
 
     test("number match → true", () => {
-      expect(engine.matchesAttributePart(42, part("=", 42))).toBe(true);
+      expect(matchesAttributePart(42, part("=", 42))).toBe(true);
     });
 
     test("boolean true match → true", () => {
-      expect(engine.matchesAttributePart(true, part("=", true))).toBe(true);
+      expect(matchesAttributePart(true, part("=", true))).toBe(true);
     });
 
     test("boolean false match → true", () => {
-      expect(engine.matchesAttributePart(false, part("=", false))).toBe(true);
+      expect(matchesAttributePart(false, part("=", false))).toBe(true);
     });
 
     test("boolean type mismatch → false", () => {
-      expect(engine.matchesAttributePart(true, part("=", false))).toBe(false);
+      expect(matchesAttributePart(true, part("=", false))).toBe(false);
     });
 
     test("regex: matching string → true", () => {
       expect(
-        engine.matchesAttributePart("hello world", part("=", /hello/)),
+        matchesAttributePart("hello world", part("=", /hello/)),
       ).toBe(true);
     });
 
     test("regex: non-matching string → false", () => {
       expect(
-        engine.matchesAttributePart("hello world", part("=", /^world/)),
+        matchesAttributePart("hello world", part("=", /^world/)),
       ).toBe(false);
     });
 
     test("regex: non-string value → false", () => {
-      expect(engine.matchesAttributePart(42, part("=", /42/))).toBe(false);
+      expect(matchesAttributePart(42, part("=", /42/))).toBe(false);
     });
 
     test("case insensitive: matches when cases differ → true", () => {
       expect(
-        engine.matchesAttributePart("Hello", part("=", "hello", false)),
+        matchesAttributePart("Hello", part("=", "hello", false)),
       ).toBe(true);
     });
 
     test("case insensitive: mismatch → false", () => {
       expect(
-        engine.matchesAttributePart("Hello", part("=", "world", false)),
+        matchesAttributePart("Hello", part("=", "world", false)),
       ).toBe(false);
     });
 
     test("case sensitive: different case → false", () => {
       expect(
-        engine.matchesAttributePart("Hello", part("=", "hello", true)),
+        matchesAttributePart("Hello", part("=", "hello", true)),
       ).toBe(false);
     });
   });
@@ -136,19 +144,19 @@ test.describe("matchesAttributePart", () => {
   test.describe("*= (contains)", () => {
     test("value contains substring → true", () => {
       expect(
-        engine.matchesAttributePart("hello world", part("*=", "lo wo")),
+        matchesAttributePart("hello world", part("*=", "lo wo")),
       ).toBe(true);
     });
 
     test("value does not contain substring → false", () => {
       expect(
-        engine.matchesAttributePart("hello world", part("*=", "xyz")),
+        matchesAttributePart("hello world", part("*=", "xyz")),
       ).toBe(false);
     });
 
     test("case insensitive contains → true", () => {
       expect(
-        engine.matchesAttributePart(
+        matchesAttributePart(
           "Hello World",
           part("*=", "lo wo", false),
         ),
@@ -156,11 +164,11 @@ test.describe("matchesAttributePart", () => {
     });
 
     test("non-string value → false", () => {
-      expect(engine.matchesAttributePart(42, part("*=", "4"))).toBe(false);
+      expect(matchesAttributePart(42, part("*=", "4"))).toBe(false);
     });
 
     test("non-string attr value → false", () => {
-      expect(engine.matchesAttributePart("42", part("*=", 4 as any))).toBe(
+      expect(matchesAttributePart("42", part("*=", 4 as any))).toBe(
         false,
       );
     });
@@ -169,116 +177,116 @@ test.describe("matchesAttributePart", () => {
   test.describe("^= (starts with)", () => {
     test("starts with prefix → true", () => {
       expect(
-        engine.matchesAttributePart("hello world", part("^=", "hello")),
+        matchesAttributePart("hello world", part("^=", "hello")),
       ).toBe(true);
     });
 
     test("does not start with → false", () => {
       expect(
-        engine.matchesAttributePart("hello world", part("^=", "world")),
+        matchesAttributePart("hello world", part("^=", "world")),
       ).toBe(false);
     });
 
     test("case insensitive starts with → true", () => {
       expect(
-        engine.matchesAttributePart("Hello World", part("^=", "hello", false)),
+        matchesAttributePart("Hello World", part("^=", "hello", false)),
       ).toBe(true);
     });
 
     test("non-string value → false", () => {
-      expect(engine.matchesAttributePart(42, part("^=", "4"))).toBe(false);
+      expect(matchesAttributePart(42, part("^=", "4"))).toBe(false);
     });
   });
 
   test.describe("$= (ends with)", () => {
     test("ends with suffix → true", () => {
       expect(
-        engine.matchesAttributePart("hello world", part("$=", "world")),
+        matchesAttributePart("hello world", part("$=", "world")),
       ).toBe(true);
     });
 
     test("does not end with → false", () => {
       expect(
-        engine.matchesAttributePart("hello world", part("$=", "hello")),
+        matchesAttributePart("hello world", part("$=", "hello")),
       ).toBe(false);
     });
 
     test("case insensitive ends with → true", () => {
       expect(
-        engine.matchesAttributePart("hello WORLD", part("$=", "world", false)),
+        matchesAttributePart("hello WORLD", part("$=", "world", false)),
       ).toBe(true);
     });
 
     test("non-string value → false", () => {
-      expect(engine.matchesAttributePart(42, part("$=", "2"))).toBe(false);
+      expect(matchesAttributePart(42, part("$=", "2"))).toBe(false);
     });
   });
 
   test.describe("|= (exact or hyphen-prefixed)", () => {
     test("exact match → true", () => {
-      expect(engine.matchesAttributePart("en", part("|=", "en"))).toBe(true);
+      expect(matchesAttributePart("en", part("|=", "en"))).toBe(true);
     });
 
     test("hyphen-prefixed subtype match → true", () => {
-      expect(engine.matchesAttributePart("en-US", part("|=", "en"))).toBe(
+      expect(matchesAttributePart("en-US", part("|=", "en"))).toBe(
         true,
       );
     });
 
     test("partial string without hyphen → false", () => {
-      expect(engine.matchesAttributePart("english", part("|=", "en"))).toBe(
+      expect(matchesAttributePart("english", part("|=", "en"))).toBe(
         false,
       );
     });
 
     test("different value → false", () => {
-      expect(engine.matchesAttributePart("fr", part("|=", "en"))).toBe(false);
+      expect(matchesAttributePart("fr", part("|=", "en"))).toBe(false);
     });
 
     test("non-string value → false", () => {
-      expect(engine.matchesAttributePart(42, part("|=", "42"))).toBe(false);
+      expect(matchesAttributePart(42, part("|=", "42"))).toBe(false);
     });
   });
 
   test.describe("~= (word in space-separated list)", () => {
     test("word found in list → true", () => {
       expect(
-        engine.matchesAttributePart("foo bar baz", part("~=", "bar")),
+        matchesAttributePart("foo bar baz", part("~=", "bar")),
       ).toBe(true);
     });
 
     test("word not in list → false", () => {
       expect(
-        engine.matchesAttributePart("foo bar baz", part("~=", "qux")),
+        matchesAttributePart("foo bar baz", part("~=", "qux")),
       ).toBe(false);
     });
 
     test("single word exact match → true", () => {
-      expect(engine.matchesAttributePart("active", part("~=", "active"))).toBe(
+      expect(matchesAttributePart("active", part("~=", "active"))).toBe(
         true,
       );
     });
 
     test("partial word prefix → false", () => {
       expect(
-        engine.matchesAttributePart("active inactive", part("~=", "act")),
+        matchesAttributePart("active inactive", part("~=", "act")),
       ).toBe(false);
     });
 
     test("first word in list → true", () => {
       expect(
-        engine.matchesAttributePart("foo bar baz", part("~=", "foo")),
+        matchesAttributePart("foo bar baz", part("~=", "foo")),
       ).toBe(true);
     });
 
     test("last word in list → true", () => {
       expect(
-        engine.matchesAttributePart("foo bar baz", part("~=", "baz")),
+        matchesAttributePart("foo bar baz", part("~=", "baz")),
       ).toBe(true);
     });
 
     test("non-string value → false", () => {
-      expect(engine.matchesAttributePart(42, part("~=", "42"))).toBe(false);
+      expect(matchesAttributePart(42, part("~=", "42"))).toBe(false);
     });
   });
 });
@@ -286,7 +294,7 @@ test.describe("matchesAttributePart", () => {
 test.describe("matchesComponentAttribute", () => {
   test("matches flat property", () => {
     expect(
-      engine.matchesComponentAttribute(
+      matchesComponentAttribute(
         { label: "Submit" },
         {
           name: "label",
@@ -301,7 +309,7 @@ test.describe("matchesComponentAttribute", () => {
 
   test("no match on flat property value mismatch", () => {
     expect(
-      engine.matchesComponentAttribute(
+      matchesComponentAttribute(
         { label: "Cancel" },
         {
           name: "label",
@@ -316,7 +324,7 @@ test.describe("matchesComponentAttribute", () => {
 
   test("matches two-level nested property", () => {
     expect(
-      engine.matchesComponentAttribute(
+      matchesComponentAttribute(
         { user: { name: "Alice" } },
         {
           name: "user.name",
@@ -331,7 +339,7 @@ test.describe("matchesComponentAttribute", () => {
 
   test("matches deeply nested property", () => {
     expect(
-      engine.matchesComponentAttribute(
+      matchesComponentAttribute(
         { a: { b: { c: 99 } } },
         {
           name: "a.b.c",
@@ -346,7 +354,7 @@ test.describe("matchesComponentAttribute", () => {
 
   test("returns false when intermediate property is null", () => {
     expect(
-      engine.matchesComponentAttribute(
+      matchesComponentAttribute(
         { user: null },
         {
           name: "user.name",
@@ -361,7 +369,7 @@ test.describe("matchesComponentAttribute", () => {
 
   test("returns false when intermediate property is undefined", () => {
     expect(
-      engine.matchesComponentAttribute(
+      matchesComponentAttribute(
         { user: undefined },
         {
           name: "user.name",
@@ -376,7 +384,7 @@ test.describe("matchesComponentAttribute", () => {
 
   test("matches truthy on nested boolean property", () => {
     expect(
-      engine.matchesComponentAttribute(
+      matchesComponentAttribute(
         { config: { enabled: true } },
         {
           name: "config.enabled",
@@ -391,7 +399,7 @@ test.describe("matchesComponentAttribute", () => {
 
   test("no truthy match when nested property is false", () => {
     expect(
-      engine.matchesComponentAttribute(
+      matchesComponentAttribute(
         { config: { enabled: false } },
         {
           name: "config.enabled",

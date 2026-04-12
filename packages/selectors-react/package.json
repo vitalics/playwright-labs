@@ -5,8 +5,8 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "test": "playwright test --project=unit",
-    "test:unit": "playwright test --project=unit",
+    "test": "playwright test --project=unit --pass-with-no-tests",
+    "test:unit": "playwright test --project=unit --pass-with-no-tests",
     "test:e2e": "playwright test --project=e2e",
     "ci:pretest": "playwright install chromium",
     "build": "tsup",
