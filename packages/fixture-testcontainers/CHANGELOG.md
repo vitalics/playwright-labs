@@ -1,5 +1,11 @@
 # @playwright-labs/fixture-testcontainers
 
+## 1.0.1
+
+### Patch Changes
+
+- f6caead: Fix: reduce npmjs bundle by adding to ignore test files
+
 ## 1.0.0
 
 ### Major Changes
@@ -7,7 +13,6 @@
 - 4a8f6c8: Introduce `@playwright-labs/fixture-testcontainers` — a new Playwright fixture package that integrates [Testcontainers](https://testcontainers.com/) into your test suite.
 
   ## Fixtures
-
   - **`useContainer(image, opts?)`** — starts a Docker container from an image name or a pre-configured `GenericContainer` instance; the container is automatically stopped after the test.
   - **`useContainerFromDockerFile(context, dockerfilePath?, opts?)`** — builds a Docker image from a Dockerfile and starts a container from it; automatic cleanup included.
 

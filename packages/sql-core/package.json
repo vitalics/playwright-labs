@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/sql-core",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Core SQL primitives: typed sql tag, adapters, and compile-time SQL type system",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
