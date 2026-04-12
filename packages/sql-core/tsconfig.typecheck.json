@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "src/**/*",
+    "tests/sql-types.test-d.ts",
+    "tests/sql-tag.test-d.ts"
+  ]
+}

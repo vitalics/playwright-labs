@@ -1,11 +1,18 @@
 import { test as baseTest, expect as baseExpect } from "@playwright/test";
 import { type TimerOptions } from "node:timers";
 import {
-  setTimeout,
-  setInterval,
-  setImmediate,
+  setTimeout as nodeSetTimeout,
+  setInterval as nodeSetInterval,
+  setImmediate as nodeSetImmediate,
   scheduler,
 } from "node:timers/promises";
+
+/**
+ * Internal symbol used to carry the promise creation timestamp.
+ * Allows matchers like toTakeAtLeast to measure from when the timer
+ * was created, not from when the matcher was called.
+ */
+const TIMER_START = Symbol("timerStart");
 
 export type Fixture = {
   setTimeout: <T = void>(
@@ -22,18 +29,32 @@ export type Fixture = {
   scheduler: typeof scheduler;
 };
 
+function stamp<T>(p: Promise<T>): Promise<T> {
+  (p as any)[TIMER_START] = Date.now();
+  return p;
+}
+
 export const test = baseTest.extend<Fixture>({
   setTimeout: async ({}, use) => {
-    await use(setTimeout);
+    await use(<T = void>(delay?: number, value?: T, options?: TimerOptions) =>
+      stamp(nodeSetTimeout(delay, value, options))
+    );
   },
   setImmediate: async ({}, use) => {
-    await use(setImmediate);
+    await use(<T = void>(value?: T, options?: TimerOptions) =>
+      stamp(nodeSetImmediate(value, options))
+    );
   },
   setInterval: async ({}, use) => {
-    await use(setInterval);
+    await use(nodeSetInterval);
   },
   scheduler: async ({}, use) => {
-    await use(scheduler);
+    const timedScheduler: typeof scheduler = {
+      wait: (delay?: number, options?: any) =>
+        stamp(scheduler.wait(delay ?? 0, options)),
+      yield: () => scheduler.yield(),
+    };
+    await use(timedScheduler);
   },
 });
 
@@ -106,8 +127,8 @@ export const expect = baseExpect.extend({
    * ```
    */
   async toTakeAtLeast(received: Promise<any>, minMs: number) {
-    const startTime = Date.now();
-    
+    const startTime = (received as any)[TIMER_START] ?? Date.now();
+
     try {
       await received;
     } catch (error) {
@@ -270,13 +291,15 @@ export const expect = baseExpect.extend({
    * ```
    */
   async toResolveInTimeRange(received: Promise<any>, minMs: number, maxMs: number) {
-    const startTime = Date.now();
-    
+    const startTime = (received as any)[TIMER_START] ?? Date.now();
+    const alreadyElapsed = Date.now() - startTime;
+    const remainingMax = Math.max(1, maxMs - alreadyElapsed);
+
     try {
       await Promise.race([
         received,
         new Promise((_, reject) =>
-          globalThis.setTimeout(() => reject(new Error(`Promise did not resolve within ${maxMs}ms`)), maxMs)
+          globalThis.setTimeout(() => reject(new Error(`Promise did not resolve within ${maxMs}ms`)), remainingMax)
         )
       ]);
     } catch (error) {

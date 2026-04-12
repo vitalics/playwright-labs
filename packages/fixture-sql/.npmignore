@@ -1,0 +1,7 @@
+src/*
+tsconfig.json
+tsconfig.typecheck.json
+tsup.config.ts
+playwright.config.ts
+tests/*
+test-results/*

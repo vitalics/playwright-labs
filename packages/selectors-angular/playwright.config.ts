@@ -18,11 +18,11 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
+  webServer: process.env.CI ? undefined : {
     command:
       "pnpm --filter selectors-angular-example run dev",
     url: "http://localhost:4200",
-    reuseExistingServer: !process.env["CI"],
+    reuseExistingServer: true,
     timeout: 120_000,
     stdout: "pipe",
     stderr: "pipe",

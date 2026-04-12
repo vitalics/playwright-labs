@@ -1,0 +1,101 @@
+{
+  "name": "@playwright-labs/sql-core",
+  "version": "0.0.1",
+  "description": "Core SQL primitives: typed sql tag, adapters, and compile-time SQL type system",
+  "main": "dist/index.cjs",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "bin": {
+    "@playwright-labs/sql-core": "./bin/dist/cli.js",
+    "playwright-labs-sql-core": "./bin/dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "playwright test",
+    "typecheck": "tsc --project tsconfig.typecheck.json --noEmit",
+    "pull": "tsx bin/cli.ts pull",
+    "ci:pretest": "playwright install",
+    "dev": "tsup --watch"
+  },
+  "keywords": [
+    "sql",
+    "typescript",
+    "type-safe",
+    "playwright-labs"
+  ],
+  "author": "Vitali Haradkou <vitalicset@yandex.ru>",
+  "license": "MIT",
+  "packageManager": "pnpm@10.29.2",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./sqlite": {
+      "import": {
+        "types": "./dist/adapters/sqlite.d.ts",
+        "default": "./dist/adapters/sqlite.mjs"
+      },
+      "require": {
+        "types": "./dist/adapters/sqlite.d.cts",
+        "default": "./dist/adapters/sqlite.cjs"
+      }
+    },
+    "./pg": {
+      "import": {
+        "types": "./dist/adapters/pg.d.ts",
+        "default": "./dist/adapters/pg.mjs"
+      },
+      "require": {
+        "types": "./dist/adapters/pg.d.cts",
+        "default": "./dist/adapters/pg.cjs"
+      }
+    },
+    "./mysql": {
+      "import": {
+        "types": "./dist/adapters/mysql.d.ts",
+        "default": "./dist/adapters/mysql.mjs"
+      },
+      "require": {
+        "types": "./dist/adapters/mysql.d.cts",
+        "default": "./dist/adapters/mysql.cjs"
+      }
+    }
+  },
+  "peerDependencies": {
+    "better-sqlite3": ">=9.0.0",
+    "mysql2": ">=3.0.0",
+    "pg": ">=8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    },
+    "mysql2": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "commander": "14.0.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/pg": "^8.11.11",
+    "better-sqlite3": "^9.6.0",
+    "mysql2": "^3.12.0",
+    "pg": "^8.14.1",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}

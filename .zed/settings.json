@@ -1,0 +1,11 @@
+{
+  "lsp": {
+    "typescript-language-server": {
+      "initialization_options": {
+        "tsserver": {
+          "path": "packages/fixture-sql-example/node_modules/typescript/lib/tsserver.js"
+        }
+      }
+    }
+  }
+}
