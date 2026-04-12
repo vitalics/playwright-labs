@@ -41,10 +41,16 @@ return (${fn.toString()})(ng, el, arg);`,
  * A wrapper around a Playwright `Locator` that exposes a typed, Angular-aware
  * API for inspecting and interacting with Angular component instances at runtime.
  *
+ * `NgHtmlElement` is fully compatible with `Locator` — all standard Playwright
+ * methods (`click`, `fill`, `waitFor`, etc.) are forwarded to the underlying
+ * locator via a transparent `Proxy`. Angular-specific methods (`input`,
+ * `signal`, `detectChanges`, …) are layered on top.
+ *
  * Obtained via the `$ng` fixture:
  * ```typescript
  * const btn = $ng("app-button");
- * const label = await btn.input("label");   // "Submit"
+ * await btn.click();                        // ← standard Locator method
+ * const label = await btn.input("label");   // ← Angular-specific method
  * await btn.detectChanges();
  * ```
  *
@@ -52,23 +58,35 @@ return (${fn.toString()})(ng, el, arg);`,
  * `window.ng` (Angular's global debug API) is available.
  */
 export class NgHtmlElement {
-  constructor(private readonly locator: Locator) {}
+  constructor(private readonly _locator: Locator) {
+    return new Proxy(this, {
+      get(target, prop, receiver) {
+        // Prioritise class-defined methods and own properties (incl. _locator).
+        if (Reflect.has(target, prop)) {
+          return Reflect.get(target, prop, receiver);
+        }
+        // Fall through to the underlying Playwright Locator.
+        const val = Reflect.get(_locator as object, prop, _locator);
+        return typeof val === "function" ? (val as any).bind(_locator) : val;
+      },
+    });
+  }
 
   // ── Locator narrowing ──────────────────────────────────────────────────────
 
   /** Returns an `NgHtmlElement` for the element at position `index` (0-based). */
   nth(index: number): NgHtmlElement {
-    return new NgHtmlElement(this.locator.nth(index));
+    return new NgHtmlElement(this._locator.nth(index));
   }
 
   /** Returns an `NgHtmlElement` for the first matched element. */
   first(): NgHtmlElement {
-    return new NgHtmlElement(this.locator.first());
+    return new NgHtmlElement(this._locator.first());
   }
 
   /** Returns an `NgHtmlElement` for the last matched element. */
   last(): NgHtmlElement {
-    return new NgHtmlElement(this.locator.last());
+    return new NgHtmlElement(this._locator.last());
   }
 
   // ── Component / directive introspection ────────────────────────────────────
@@ -79,7 +97,7 @@ export class NgHtmlElement {
    * Returns `false` (rather than throwing) when `window.ng` is unavailable.
    */
   async isComponent(): Promise<boolean> {
-    return this.locator.evaluate((el) => {
+    return this._locator.evaluate((el) => {
       const ng = (window as any).ng;
       if (!ng) return false;
       try {
@@ -99,7 +117,7 @@ export class NgHtmlElement {
    * // ["RouterOutlet"]
    */
   async directives(): Promise<string[]> {
-    return this.locator.evaluate(
+    return this._locator.evaluate(
       withNg((ng, el) => {
         const dirs: unknown[] = ng.getDirectives(el) ?? [];
         return dirs
@@ -119,7 +137,7 @@ export class NgHtmlElement {
    * await $ng("app-button").inputs(); // ["label", "disabled", "type"]
    */
   async inputs(): Promise<string[]> {
-    return this.locator.evaluate(
+    return this._locator.evaluate(
       withNg((ng, el) => {
         const comp = ng.getComponent(el);
         if (!comp) return [];
@@ -141,7 +159,7 @@ export class NgHtmlElement {
    * // "Submit"
    */
   async input<T = unknown>(name: string): Promise<T> {
-    return this.locator.evaluate(
+    return this._locator.evaluate(
       withNg((ng, el, propName: string) => {
         const comp = ng.getComponent(el);
         if (!comp) throw new Error("Element is not an Angular component host");
@@ -180,7 +198,7 @@ export class NgHtmlElement {
    * await $ng("app-button").outputs(); // ["clicked"]
    */
   async outputs(): Promise<string[]> {
-    return this.locator.evaluate(
+    return this._locator.evaluate(
       withNg((ng, el) => {
         const comp = ng.getComponent(el);
         if (!comp) return [];
@@ -200,7 +218,7 @@ export class NgHtmlElement {
    * await $ng("app-counter").signals(); // ["count"]
    */
   async signals(): Promise<string[]> {
-    return this.locator.evaluate(
+    return this._locator.evaluate(
       withNg((ng, el) => {
         const comp = ng.getComponent(el);
         if (!comp) return [];
@@ -226,7 +244,7 @@ export class NgHtmlElement {
    * // 0
    */
   async signal<T = unknown>(name: string): Promise<T> {
-    return this.locator.evaluate(
+    return this._locator.evaluate(
       withNg((ng, el, signalName: string) => {
         const comp = ng.getComponent(el);
         if (!comp) throw new Error("Element is not an Angular component host");
@@ -254,7 +272,7 @@ export class NgHtmlElement {
    * await $ng("app-counter").detectChanges();
    */
   async detectChanges(): Promise<void> {
-    await this.locator.evaluate(
+    await this._locator.evaluate(
       withNg((ng, el) => {
         const comp = ng.getComponent(el);
         if (comp) ng.applyChanges(comp);
@@ -262,6 +280,12 @@ export class NgHtmlElement {
     );
   }
 }
+
+// Declaration merging: NgHtmlElement gains all Playwright Locator methods.
+// At runtime the Proxy in the constructor forwards unknown property lookups to
+// the underlying locator, so all standard Playwright methods (click, fill,
+// waitFor, …) work directly on NgHtmlElement instances.
+export interface NgHtmlElement extends Locator {}
 
 // ─── Fixture ───────────────────────────────────────────────────────────────────
 
@@ -280,9 +304,10 @@ export type Fixture = {
    *
    * @example
    * const btn = $ng("app-button");
-   * const label = await btn.input("label");        // read @Input
-   * const names  = await btn.inputs();             // list all @Inputs
-   * await btn.detectChanges();                     // trigger CD
+   * await btn.click();                          // ← standard Locator method
+   * const label = await btn.input("label");     // read @Input
+   * const names  = await btn.inputs();          // list all @Inputs
+   * await btn.detectChanges();                  // trigger CD
    *
    * // Use the Angular selector engine:
    * const submit = $ng('angular=app-button[label="Submit"]');

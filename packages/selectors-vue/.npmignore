@@ -1,0 +1,8 @@
+.claude/*
+examples/*
+src/*
+test-results/*
+tests/*
+tsconfig.json
+tsup.config.ts
+playwright.config.ts

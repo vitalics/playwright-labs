@@ -14,18 +14,19 @@ export default defineConfig({
       testMatch: "*.e2e.test.ts",
       use: {
         ...devices["Desktop Chrome"],
-        baseURL: "http://localhost:4200",
+        baseURL: "http://localhost:5173",
       },
     },
   ],
 
-  webServer: process.env.CI ? undefined : {
-    command:
-      "pnpm --filter selectors-angular-example run dev",
-    url: "http://localhost:4200",
-    reuseExistingServer: true,
-    timeout: 120_000,
-    stdout: "pipe",
-    stderr: "pipe",
-  },
+  webServer: process.env.CI
+    ? undefined
+    : {
+        command: "pnpm --dir ./examples run dev",
+        url: "http://localhost:5173",
+        reuseExistingServer: true,
+        timeout: 120_000,
+        stdout: "pipe",
+        stderr: "pipe",
+      },
 });

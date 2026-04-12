@@ -1,29 +1,27 @@
 import { test, expect } from "@playwright/test";
-import { AngularEngine } from "../src/index";
-
-const engine = AngularEngine();
+import { parseAttributeSelector } from "@playwright-labs/selectors-core";
 
 test.describe("parseAttributeSelector", () => {
   test.describe("component name", () => {
     test("parses component name only", () => {
-      const result = engine.parseAttributeSelector("my-component", false);
+      const result = parseAttributeSelector("my-component", false);
       expect(result).toEqual({ name: "my-component", attributes: [] });
     });
 
     test("parses component name with underscore", () => {
-      const result = engine.parseAttributeSelector("my_component", false);
+      const result = parseAttributeSelector("my_component", false);
       expect(result).toEqual({ name: "my_component", attributes: [] });
     });
 
     test("parses mixed-case component name", () => {
-      const result = engine.parseAttributeSelector("AppButton", false);
+      const result = parseAttributeSelector("AppButton", false);
       expect(result).toEqual({ name: "AppButton", attributes: [] });
     });
   });
 
   test.describe("truthy attribute", () => {
     test("parses truthy attribute without component name", () => {
-      const result = engine.parseAttributeSelector("[enabled]", false);
+      const result = parseAttributeSelector("[enabled]", false);
       expect(result).toEqual({
         name: "",
         attributes: [
@@ -39,7 +37,7 @@ test.describe("parseAttributeSelector", () => {
     });
 
     test("parses component name with truthy attribute", () => {
-      const result = engine.parseAttributeSelector(
+      const result = parseAttributeSelector(
         "app-button[disabled]",
         false,
       );
@@ -57,7 +55,7 @@ test.describe("parseAttributeSelector", () => {
 
   test.describe("= operator", () => {
     test("parses = with double-quoted string", () => {
-      const result = engine.parseAttributeSelector('[label="Submit"]', false);
+      const result = parseAttributeSelector('[label="Submit"]', false);
       expect(result.attributes[0]).toEqual({
         name: "label",
         jsonPath: ["label"],
@@ -68,47 +66,47 @@ test.describe("parseAttributeSelector", () => {
     });
 
     test("parses = with single-quoted string", () => {
-      const result = engine.parseAttributeSelector("[label='Click me']", false);
+      const result = parseAttributeSelector("[label='Click me']", false);
       expect(result.attributes[0].value).toBe("Click me");
       expect(result.attributes[0].op).toBe("=");
     });
 
     test("parses = with boolean true", () => {
-      const result = engine.parseAttributeSelector("[active=true]", false);
+      const result = parseAttributeSelector("[active=true]", false);
       expect(result.attributes[0].value).toBe(true);
       expect(result.attributes[0].op).toBe("=");
     });
 
     test("parses = with boolean false", () => {
-      const result = engine.parseAttributeSelector("[active=false]", false);
+      const result = parseAttributeSelector("[active=false]", false);
       expect(result.attributes[0].value).toBe(false);
     });
 
     test("parses = with integer", () => {
-      const result = engine.parseAttributeSelector("[count=42]", false);
+      const result = parseAttributeSelector("[count=42]", false);
       expect(result.attributes[0].value).toBe(42);
     });
 
     test("parses = with float", () => {
-      const result = engine.parseAttributeSelector("[ratio=3.14]", false);
+      const result = parseAttributeSelector("[ratio=3.14]", false);
       expect(result.attributes[0].value).toBe(3.14);
     });
 
     test("parses = with regex", () => {
-      const result = engine.parseAttributeSelector("[name=/hello/]", false);
+      const result = parseAttributeSelector("[name=/hello/]", false);
       expect(result.attributes[0].value).toEqual(/hello/);
       expect(result.attributes[0].op).toBe("=");
     });
 
     test("parses = with regex and flags", () => {
-      const result = engine.parseAttributeSelector("[name=/hello/gi]", false);
+      const result = parseAttributeSelector("[name=/hello/gi]", false);
       expect(result.attributes[0].value).toEqual(/hello/gi);
     });
   });
 
   test.describe("case sensitivity flags", () => {
     test("parses case-insensitive flag (i)", () => {
-      const result = engine.parseAttributeSelector(
+      const result = parseAttributeSelector(
         '[label="submit" i]',
         false,
       );
@@ -116,7 +114,7 @@ test.describe("parseAttributeSelector", () => {
     });
 
     test("parses case-insensitive flag (I uppercase)", () => {
-      const result = engine.parseAttributeSelector(
+      const result = parseAttributeSelector(
         '[label="submit" I]',
         false,
       );
@@ -124,7 +122,7 @@ test.describe("parseAttributeSelector", () => {
     });
 
     test("parses case-sensitive flag (s)", () => {
-      const result = engine.parseAttributeSelector(
+      const result = parseAttributeSelector(
         '[label="Submit" s]',
         false,
       );
@@ -132,7 +130,7 @@ test.describe("parseAttributeSelector", () => {
     });
 
     test("parses case-sensitive flag (S uppercase)", () => {
-      const result = engine.parseAttributeSelector(
+      const result = parseAttributeSelector(
         '[label="Submit" S]',
         false,
       );
@@ -142,7 +140,7 @@ test.describe("parseAttributeSelector", () => {
 
   test.describe("property path", () => {
     test("parses two-level nested property", () => {
-      const result = engine.parseAttributeSelector(
+      const result = parseAttributeSelector(
         '[user.name="Alice"]',
         false,
       );
@@ -156,7 +154,7 @@ test.describe("parseAttributeSelector", () => {
     });
 
     test("parses deeply nested property path", () => {
-      const result = engine.parseAttributeSelector('[a.b.c.d="x"]', false);
+      const result = parseAttributeSelector('[a.b.c.d="x"]', false);
       expect(result.attributes[0].jsonPath).toEqual(["a", "b", "c", "d"]);
       expect(result.attributes[0].name).toBe("a.b.c.d");
     });
@@ -164,35 +162,35 @@ test.describe("parseAttributeSelector", () => {
 
   test.describe("other operators", () => {
     test("parses *= (contains)", () => {
-      const result = engine.parseAttributeSelector('[title*="foo"]', false);
+      const result = parseAttributeSelector('[title*="foo"]', false);
       expect(result.attributes[0].op).toBe("*=");
       expect(result.attributes[0].value).toBe("foo");
     });
 
     test("parses ^= (starts with)", () => {
-      const result = engine.parseAttributeSelector('[title^="foo"]', false);
+      const result = parseAttributeSelector('[title^="foo"]', false);
       expect(result.attributes[0].op).toBe("^=");
     });
 
     test("parses $= (ends with)", () => {
-      const result = engine.parseAttributeSelector('[title$="foo"]', false);
+      const result = parseAttributeSelector('[title$="foo"]', false);
       expect(result.attributes[0].op).toBe("$=");
     });
 
     test("parses |= (exact or hyphen-prefixed)", () => {
-      const result = engine.parseAttributeSelector('[lang|="en"]', false);
+      const result = parseAttributeSelector('[lang|="en"]', false);
       expect(result.attributes[0].op).toBe("|=");
     });
 
     test("parses ~= (word in list)", () => {
-      const result = engine.parseAttributeSelector('[class~="active"]', false);
+      const result = parseAttributeSelector('[class~="active"]', false);
       expect(result.attributes[0].op).toBe("~=");
     });
   });
 
   test.describe("multiple attributes", () => {
     test("parses multiple attributes without component name", () => {
-      const result = engine.parseAttributeSelector(
+      const result = parseAttributeSelector(
         '[a][b="x"][c=true]',
         false,
       );
@@ -203,7 +201,7 @@ test.describe("parseAttributeSelector", () => {
     });
 
     test("parses component name with multiple attributes", () => {
-      const result = engine.parseAttributeSelector(
+      const result = parseAttributeSelector(
         'app-card[title="Hello"][active]',
         false,
       );
@@ -216,7 +214,7 @@ test.describe("parseAttributeSelector", () => {
 
   test.describe("whitespace tolerance", () => {
     test("tolerates spaces inside attribute brackets", () => {
-      const result = engine.parseAttributeSelector(
+      const result = parseAttributeSelector(
         '[ label = "Hello" ]',
         false,
       );
@@ -225,7 +223,7 @@ test.describe("parseAttributeSelector", () => {
     });
 
     test("tolerates spaces between component name and attribute", () => {
-      const result = engine.parseAttributeSelector(
+      const result = parseAttributeSelector(
         'app-button [active]',
         false,
       );
@@ -236,51 +234,51 @@ test.describe("parseAttributeSelector", () => {
 
   test.describe("allowUnquotedStrings", () => {
     test("allows unquoted string value when flag is true", () => {
-      const result = engine.parseAttributeSelector("[prop=hello]", true);
+      const result = parseAttributeSelector("[prop=hello]", true);
       expect(result.attributes[0].value).toBe("hello");
     });
 
     test("throws on unquoted non-boolean/non-number when flag is false", () => {
       expect(() =>
-        engine.parseAttributeSelector("[prop=hello]", false),
+        parseAttributeSelector("[prop=hello]", false),
       ).toThrow();
     });
   });
 
   test.describe("error cases", () => {
     test("throws on empty selector", () => {
-      expect(() => engine.parseAttributeSelector("", false)).toThrow(
+      expect(() => parseAttributeSelector("", false)).toThrow(
         "selector cannot be empty",
       );
     });
 
     test("throws on unexpected end while parsing attribute value", () => {
       expect(() =>
-        engine.parseAttributeSelector('[prop="unterminated', false),
+        parseAttributeSelector('[prop="unterminated', false),
       ).toThrow("Unexpected end of selector");
     });
 
     test("throws on unexpected end after operator", () => {
       expect(() =>
-        engine.parseAttributeSelector("[prop=", false),
+        parseAttributeSelector("[prop=", false),
       ).toThrow("Unexpected end of selector");
     });
 
     test("throws when regex used with non-= operator", () => {
       expect(() =>
-        engine.parseAttributeSelector("[prop*=/hello/]", false),
+        parseAttributeSelector("[prop*=/hello/]", false),
       ).toThrow("cannot use *=");
     });
 
     test("throws when non-= operator used with non-string value", () => {
       expect(() =>
-        engine.parseAttributeSelector("[count*=42]", false),
+        parseAttributeSelector("[count*=42]", false),
       ).toThrow("cannot use *=");
     });
 
     test("throws on invalid regex pattern", () => {
       expect(() =>
-        engine.parseAttributeSelector("[prop=/[invalid/]", false),
+        parseAttributeSelector("[prop=/[invalid/]", false),
       ).toThrow();
     });
   });

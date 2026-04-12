@@ -1,6 +1,6 @@
 {
-  "name": "@playwright-labs/selectors-angular",
-  "version": "1.0.1",
+  "name": "@playwright-labs/selectors-react",
+  "version": "1.0.0",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -18,10 +18,11 @@
     "automation",
     "testing",
     "playwright-labs",
-    "angular",
+    "react",
     "selector",
     "selector-engine",
-    "component"
+    "component",
+    "fiber"
   ],
   "author": "Vitali Haradkou <vitalicset@yandex.ru>",
   "license": "MIT",
