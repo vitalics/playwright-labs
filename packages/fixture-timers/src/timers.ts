@@ -51,7 +51,7 @@ export const test = baseTest.extend<Fixture>({
   scheduler: async ({}, use) => {
     const timedScheduler: typeof scheduler = {
       wait: (delay?: number, options?: any) =>
-        stamp(scheduler.wait(delay, options)),
+        stamp(scheduler.wait(delay ?? 0, options)),
       yield: () => scheduler.yield(),
     };
     await use(timedScheduler);
