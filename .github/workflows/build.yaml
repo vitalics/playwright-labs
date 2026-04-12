@@ -7,12 +7,16 @@ on:
       - "packages/fixture-*/**"
       - "packages/reporter-*/**"
       - "packages/selectors-*/**"
+      - "packages/ts-plugin-*/**"
+      - "packages/sql-core/**"
   pull_request:
     branches: [main]
     paths:
       - "packages/fixture-*/**"
       - "packages/reporter-*/**"
       - "packages/selectors-*/**"
+      - "packages/ts-plugin-*/**"
+      - "packages/sql-core/**"
 
 jobs:
   build:

@@ -1,0 +1,20 @@
+{
+  "name": "@playwright-labs/fixture-sql-example",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Example project demonstrating @playwright-labs/fixture-sql + @playwright-labs/ts-plugin-sql",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui"
+  },
+  "dependencies": {
+    "@playwright-labs/fixture-sql": "workspace:*",
+    "@playwright-labs/ts-plugin-sql": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "better-sqlite3": "^11.0.0",
+    "typescript": "^5.7.0"
+  }
+}

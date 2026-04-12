@@ -1,0 +1,5 @@
+{
+    "typescript.tsdk": "packages/fixture-sql-example/node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "js/ts.tsdk.path": "packages/fixture-sql-example/node_modules/typescript/lib"
+}

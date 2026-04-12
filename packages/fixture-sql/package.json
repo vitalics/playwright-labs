@@ -1,0 +1,99 @@
+{
+  "name": "@playwright-labs/fixture-sql",
+  "version": "0.0.1",
+  "description": "SQL connection fixture for Playwright tests — driver-agnostic, auto-cleanup",
+  "main": "dist/index.cjs",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "test": "playwright test",
+    "typecheck": "tsc --project tsconfig.typecheck.json --noEmit",
+    "ci:pretest": "playwright install",
+    "package:pack": "pnpm exec npm pack",
+    "package:pack:dry-run": "pnpm package:pack --dry-run"
+  },
+  "keywords": [
+    "playwright",
+    "fixture",
+    "sql",
+    "database",
+    "db",
+    "postgres",
+    "mysql",
+    "sqlite",
+    "testing",
+    "playwright-labs"
+  ],
+  "author": "Vitali Haradkou <vitalicset@yandex.ru>",
+  "license": "MIT",
+  "packageManager": "pnpm@10.29.2",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./pg": {
+      "import": {
+        "types": "./dist/adapters/pg.d.ts",
+        "default": "./dist/adapters/pg.mjs"
+      },
+      "require": {
+        "types": "./dist/adapters/pg.d.cts",
+        "default": "./dist/adapters/pg.cjs"
+      }
+    },
+    "./mysql": {
+      "import": {
+        "types": "./dist/adapters/mysql.d.ts",
+        "default": "./dist/adapters/mysql.mjs"
+      },
+      "require": {
+        "types": "./dist/adapters/mysql.d.cts",
+        "default": "./dist/adapters/mysql.cjs"
+      }
+    },
+    "./sqlite": {
+      "import": {
+        "types": "./dist/adapters/sqlite.d.ts",
+        "default": "./dist/adapters/sqlite.mjs"
+      },
+      "require": {
+        "types": "./dist/adapters/sqlite.d.cts",
+        "default": "./dist/adapters/sqlite.cjs"
+      }
+    }
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.57.0",
+    "better-sqlite3": ">=9.0.0",
+    "mysql2": ">=3.0.0",
+    "pg": ">=8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    },
+    "mysql2": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "better-sqlite3": "^9.6.0",
+    "mysql2": "^3.12.0",
+    "pg": "^8.14.1"
+  },
+  "dependencies": {
+    "@playwright-labs/sql-core": "workspace:*"
+  }
+}
