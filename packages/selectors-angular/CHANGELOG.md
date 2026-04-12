@@ -1,5 +1,11 @@
 # @playwright-labs/selectors-angular
 
+## 1.0.1
+
+### Patch Changes
+
+- 094b14d: Fix: update angular selectors test script
+
 ## 1.0.0
 
 ### Major Changes

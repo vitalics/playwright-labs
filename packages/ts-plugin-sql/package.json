@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/ts-plugin-sql",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "TypeScript language service plugin for SQL tagged template literals — autocomplete, diagnostics, and hover info",
   "main": "dist/plugin.cjs",
   "types": "dist/index.d.ts",
@@ -47,7 +47,9 @@
     "typescript": ">=5.0.0"
   },
   "peerDependenciesMeta": {
-    "typescript": { "optional": true }
+    "typescript": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@playwright-labs/sql-core": "workspace:*"
