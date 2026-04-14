@@ -86,8 +86,6 @@ test("schemaFile: join with posts", async ({ sql: db }) => {
     WHERE posts.published = 1
   `);
 
-  db.query(sql`SELECT * FROM `)
-
   expect(rows).toHaveLength(1);
   expect(rows[0]!.title).toBe("Hello");
   expect(rows[0]!.name).toBe("Bob");
