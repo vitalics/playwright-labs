@@ -1,0 +1,19 @@
+apiVersion: 1
+
+datasources:
+  # ── Prometheus — metrics ──────────────────────────────────────────────────────
+  # Explore → Prometheus → try: pw_tests_total, pw_test_duration_bucket
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+
+  # ── Jaeger — traces ───────────────────────────────────────────────────────────
+  # Explore → Jaeger → Service: playwright → Find Traces
+  - name: Jaeger
+    type: jaeger
+    uid: jaeger
+    url: http://jaeger:16686
+    editable: false

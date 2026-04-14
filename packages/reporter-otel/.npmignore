@@ -1,0 +1,6 @@
+src/*
+tsconfig.json
+tsup.config.ts
+tests/*
+test-results/*
+playwright.config.ts

@@ -14,6 +14,9 @@ A collection of Playwright fixtures, utilities, and best practices for building 
 | [@playwright-labs/fixture-faker](./packages/fixture-faker)                         | Fake data generation fixture using [@faker-js/faker](https://npmjs.com/package/@faker-js/faker) with multi-locale support                                           | `npm i @playwright-labs/fixture-faker @faker-js/faker`                                                    |
 | [@playwright-labs/fixture-testcontainers](./packages/fixture-testcontainers)       | Playwright fixture for [Testcontainers](https://testcontainers.com/) — start real Docker containers in tests with automatic cleanup and 13 custom `expect` matchers | `npm i @playwright-labs/fixture-testcontainers testcontainers`                                            |
 | [@playwright-labs/fixture-timers](./packages/fixture-timers)                       | Promise-based Node.js timer fixtures (`setTimeout`, `setInterval`, `setImmediate`, `scheduler`) with timing matchers                                                | `npm i @playwright-labs/fixture-timers`                                                                   |
+| [@playwright-labs/otel-core](./packages/otel-core)                                 | Shared OTel primitives (`Counter`, `Histogram`, `UpDownCounter`, `Span`) with stdout serialization bridge — used internally by `reporter-otel` and `fixture-otel`  | `npm i @playwright-labs/otel-core`                                                                        |
+| [@playwright-labs/reporter-otel](./packages/reporter-otel)                         | OpenTelemetry reporter — exports test traces and metrics to any OTLP-compatible backend (Jaeger, Grafana Tempo, Prometheus, Datadog)                                | `npm i @playwright-labs/reporter-otel`                                                                    |
+| [@playwright-labs/fixture-otel](./packages/fixture-otel)                           | OTel metric fixtures (`useCounter`, `useHistogram`, `useUpDownCounter`, `useSpan`), `withSpan` callback helper, and custom matchers                                | `npm i @playwright-labs/fixture-otel`                                                                     |
 | [@playwright-labs/reporter-email](./packages/reporter-email)                       | Email reporter for test run notifications via nodemailer (50+ email services supported)                                                                             | `npm i @playwright-labs/reporter-email`                                                                   |
 | [@playwright-labs/selectors-angular](./packages/selectors-angular)                 | Angular-aware selector engine (`angular=` syntax), `expect` matchers, and `$ng` fixture for inspecting component inputs, outputs, signals, and directives at runtime | `npm i @playwright-labs/selectors-angular`                                                                |
 | [@playwright-labs/selectors-react](./packages/selectors-react)                     | React-aware selector engine (`react=` syntax), `expect` matchers, and `$r` fixture for inspecting component props, state (hooks), and context via the fiber tree    | `npm i @playwright-labs/selectors-react`                                                                  |
@@ -22,6 +25,18 @@ A collection of Playwright fixtures, utilities, and best practices for building 
 | [@playwright-labs/fixture-sql](./packages/fixture-sql)                             | Playwright fixture for SQL database testing — auto-open/close connections, `sql` and `useSql` fixtures, works with SQLite, PostgreSQL, and MySQL                   | `npm i @playwright-labs/fixture-sql`                                                                      |
 | [@playwright-labs/ts-plugin-sql](./packages/ts-plugin-sql)                         | TypeScript language service plugin for `sql` tagged templates — table/column autocomplete, structural diagnostics, and hover types from your live DB schema         | `npm i @playwright-labs/ts-plugin-sql`                                                                    |
 | [@playwright-labs/playwright-best-practices](./packages/playwright-best-practices) | AI-optimized best practices guide — 10+ rules across 8 categories with real-world examples                                                                          | `pnpx add-skill https://github.com/vitalics/playwright-labs/tree/main/packages/playwright-best-practices` |
+
+## Examples
+
+Runnable examples showing each package integrated with real infrastructure.
+
+| Example | Packages demonstrated | What it shows |
+| ------- | --------------------- | ------------- |
+| [reporter-otel](./examples/reporter-otel) | `reporter-otel` · `fixture-otel` | Full OTel stack (OTel Collector → Jaeger + Prometheus + Grafana) — traces per test/step, built-in metrics, custom counters/histograms/spans |
+| [reporter-email](./examples/reporter-email) | `reporter-email` | Live preview server for all email templates (plain HTML, Tailwind, shadcn/ui, charts) |
+| [selectors-angular](./examples/selectors-angular) | `selectors-angular` | Angular application used to test the `angular=` selector engine and component inspection |
+| [selectors-react](./examples/selectors-react) | `selectors-react` | React application used to test the `react=` selector engine and fiber-tree inspection |
+| [selectors-vue](./examples/selectors-vue) | `selectors-vue` | Vue 3 application used to test the `vue=` selector engine and Composition API inspection |
 
 ## Quick Start
 
