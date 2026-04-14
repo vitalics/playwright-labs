@@ -2,7 +2,7 @@ packages:
   - packages/*
   - examples/reporter-email
   - examples/reporter-otel
-  - '!packages/fixture-sql-example'
+  - examples/sql
   - '!packages/playwright-best-practices'
   - '!packages/playwright-best-practices-build'
 

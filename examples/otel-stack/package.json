@@ -1,0 +1,18 @@
+{
+  "name": "@playwright-labs/reporter-otel-example",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Full working example: reporter-otel + fixture-otel with a real OTel infrastructure (Jaeger + Prometheus + Grafana)",
+  "type": "module",
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "infra:up": "docker compose up -d --wait",
+    "infra:down": "docker compose down --remove-orphans"
+  },
+  "dependencies": {
+    "@playwright-labs/fixture-otel": "workspace:*",
+    "@playwright-labs/reporter-otel": "workspace:*",
+    "@playwright/test": "1.57.0"
+  }
+}

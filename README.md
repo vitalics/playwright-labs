@@ -37,6 +37,7 @@ Runnable examples showing each package integrated with real infrastructure.
 | [selectors-angular](./examples/selectors-angular) | `selectors-angular` | Angular application used to test the `angular=` selector engine and component inspection |
 | [selectors-react](./examples/selectors-react) | `selectors-react` | React application used to test the `react=` selector engine and fiber-tree inspection |
 | [selectors-vue](./examples/selectors-vue) | `selectors-vue` | Vue 3 application used to test the `vue=` selector engine and Composition API inspection |
+| [sql](./examples/sql) | `fixture-sql` · `ts-plugin-sql` | SQLite in-memory tests showing `sql` tagged templates, join/aggregate queries, and TypeScript plugin schema (inline + `schemaFile`) |
 
 ## Quick Start
 
