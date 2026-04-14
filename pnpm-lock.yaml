@@ -21,6 +21,46 @@ importers:
         specifier: 4.21.0
         version: 4.21.0
 
+  examples/reporter-email:
+    dependencies:
+      '@playwright-labs/reporter-email':
+        specifier: workspace:*
+        version: link:../../packages/reporter-email
+      '@react-email/components':
+        specifier: 1.0.10
+        version: 1.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@react-email/render':
+        specifier: 2.0.4
+        version: 2.0.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+      react-email:
+        specifier: 5.2.10
+        version: 5.2.10
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+      '@react-email/preview-server':
+        specifier: 5.2.10
+        version: 5.2.10(@opentelemetry/api@1.9.1)(@playwright/test@1.57.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(sass@1.71.1)
+
+  examples/reporter-otel:
+    dependencies:
+      '@playwright-labs/fixture-otel':
+        specifier: workspace:*
+        version: link:../../packages/fixture-otel
+      '@playwright-labs/reporter-otel':
+        specifier: workspace:*
+        version: link:../../packages/reporter-otel
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
   packages/decorators:
     devDependencies:
       '@playwright/test':
@@ -191,34 +231,6 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
 
-  packages/reporter-email/examples:
-    dependencies:
-      '@playwright-labs/reporter-email':
-        specifier: workspace:*
-        version: link:..
-      '@react-email/components':
-        specifier: 1.0.10
-        version: 1.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@react-email/render':
-        specifier: 2.0.4
-        version: 2.0.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      react:
-        specifier: 19.1.0
-        version: 19.1.0
-      react-dom:
-        specifier: 19.1.0
-        version: 19.1.0(react@19.1.0)
-      react-email:
-        specifier: 5.2.10
-        version: 5.2.10
-    devDependencies:
-      '@playwright/test':
-        specifier: 1.57.0
-        version: 1.57.0
-      '@react-email/preview-server':
-        specifier: 5.2.10
-        version: 5.2.10(@opentelemetry/api@1.9.1)(@playwright/test@1.57.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(sass@1.71.1)
-
   packages/reporter-otel:
     dependencies:
       '@opentelemetry/api':
@@ -237,18 +249,6 @@ importers:
         specifier: workspace:*
         version: link:../otel-core
     devDependencies:
-      '@playwright/test':
-        specifier: 1.57.0
-        version: 1.57.0
-
-  packages/reporter-otel/example:
-    dependencies:
-      '@playwright-labs/fixture-otel':
-        specifier: workspace:*
-        version: link:../../fixture-otel
-      '@playwright-labs/reporter-otel':
-        specifier: workspace:*
-        version: link:..
       '@playwright/test':
         specifier: 1.57.0
         version: 1.57.0
@@ -3315,7 +3315,7 @@ snapshots:
     dependencies:
       '@babel/code-frame': 7.29.0
       '@babel/generator': 7.29.1
-      '@babel/parser': 7.27.0
+      '@babel/parser': 7.29.2
       '@babel/template': 7.28.6
       '@babel/types': 7.29.0
       debug: 4.4.3
