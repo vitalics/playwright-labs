@@ -1,0 +1,54 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 512
+
+  # Promote selected resource attributes to metric datapoint attributes so that
+  # they appear as Prometheus labels and can be used for grouping/filtering in
+  # dashboards (e.g. per-user or per-host views).
+  transform/promote_resource_attrs:
+    metric_statements:
+      - context: datapoint
+        statements:
+          - set(attributes["host.user"], resource.attributes["host.user"])
+          - set(attributes["host.name"], resource.attributes["host.name"])
+          - set(attributes["host.ip"],   resource.attributes["host.ip"])
+          - set(attributes["os.platform"], resource.attributes["os.platform"])
+
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  # Prometheus scrape endpoint — Prometheus polls :8889/metrics.
+  # The verify tests also query this endpoint directly to avoid the
+  # Prometheus scrape-interval delay.
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: ""
+
+  debug:
+    verbosity: normal
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/jaeger, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch, transform/promote_resource_attrs]
+      exporters: [prometheus, debug]

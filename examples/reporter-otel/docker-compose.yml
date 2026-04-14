@@ -1,0 +1,87 @@
+services:
+  # ── OTel Collector ────────────────────────────────────────────────────────────
+  # Receives OTLP/HTTP from Playwright, fans out to Jaeger (traces) and
+  # Prometheus (metrics). Health endpoint at :13133.
+  #
+  # NOTE: The image is distroless (no shell/wget/curl), so Docker cannot run
+  # an in-container healthcheck. Readiness is verified by global-setup.ts via
+  # waitForUrl("http://localhost:13133/") after docker compose --wait returns.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.122.0
+    ports:
+      - "4318:4318"    # OTLP/HTTP receiver  ← Playwright sends here
+      - "8889:8889"    # Prometheus scrape endpoint (used by verify tests)
+      - "13133:13133"  # Health check endpoint
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel/config.yaml
+    command: ["--config=/etc/otel/config.yaml"]
+    depends_on:
+      jaeger:
+        condition: service_healthy
+
+  # ── Jaeger (traces) ───────────────────────────────────────────────────────────
+  # Stores every test span as a trace. Browse at http://localhost:16686.
+  # Select service "playwright" → Find Traces to see per-test and step spans.
+  jaeger:
+    image: jaegertracing/all-in-one:1.65.0
+    ports:
+      - "16686:16686"  # Jaeger UI  ← open in browser
+      - "4317:4317"    # OTLP/gRPC  ← collector forwards traces here
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686/"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Prometheus (metrics) ──────────────────────────────────────────────────────
+  # Scrapes metrics from the OTel Collector's Prometheus exporter (:8889).
+  # Browse at http://localhost:9090. Try querying pw_tests_total.
+  #
+  # Uses service_started for otel-collector because the collector image is
+  # distroless and cannot expose a Docker healthcheck. global-setup.ts polls
+  # the collector's HTTP health endpoint directly.
+  prometheus:
+    image: prom/prometheus:v3.3.0
+    ports:
+      - "9090:9090"   # Prometheus UI  ← open in browser
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      otel-collector:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Grafana (unified UI) ──────────────────────────────────────────────────────
+  # Pre-configured with Prometheus + Jaeger datasources. No login required.
+  # Browse at http://localhost:3000 → Explore → pick a datasource.
+  #
+  # Useful starting points:
+  #   Metrics  → Explore → Prometheus → pw_tests_total
+  #   Traces   → Explore → Jaeger    → service: playwright
+  grafana:
+    image: grafana/grafana:11.6.0
+    ports:
+      - "3000:3000"   # Grafana UI  ← open in browser
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/dashboards
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 10s
+      retries: 15

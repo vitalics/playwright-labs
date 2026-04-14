@@ -5,7 +5,7 @@
   "description": "Example: @playwright-labs/reporter-email with the built-in React Email template",
   "type": "module",
   "scripts": {
-    "test": "playwright test",
+    "test:e2e": "playwright test",
     "ci:pretest": "playwright install --with-deps chromium",
     "email:preview": "email dev --dir emails"
   },
