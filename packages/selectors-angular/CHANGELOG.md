@@ -1,5 +1,11 @@
 # @playwright-labs/selectors-angular
 
+## 1.1.1
+
+### Patch Changes
+
+- 7d6ee21: [test]: Remove unused config option
+
 ## 1.1.0
 
 ### Minor Changes
