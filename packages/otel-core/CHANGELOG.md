@@ -1,5 +1,11 @@
 # @playwright-labs/otel-core
 
+## 1.0.1
+
+### Patch Changes
+
+- 0ed8282: Add README documenting all public exports — `Counter`, `Histogram`, `UpDownCounter`, `Span`, `OtelEvent`, `resolveOtelConfig`, and `createOtelSdk` — with the stdout bridge architecture, `using` keyword lifecycle, and SDK factory examples.
+
 ## 1.0.0
 
 ### Major Changes

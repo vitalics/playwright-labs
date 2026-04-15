@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/fixture-otel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "OpenTelemetry fixtures and matchers for @playwright/test — use with @playwright-labs/reporter-otel",
   "keywords": [
     "playwright",
