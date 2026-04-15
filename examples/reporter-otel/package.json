@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/reporter-otel-example",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Full working example: reporter-otel + fixture-otel with a real OTel infrastructure (Jaeger + Prometheus + Grafana)",
   "type": "module",

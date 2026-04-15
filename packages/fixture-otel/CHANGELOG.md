@@ -1,5 +1,13 @@
 # @playwright-labs/fixture-otel
 
+## 1.0.1
+
+### Patch Changes
+
+- 0ed8282: Add README documenting all fixtures (`useCounter`, `useHistogram`, `useUpDownCounter`, `useSpan`), the `withSpan` callback helper, `using` keyword lifecycle, and all custom expect matchers (`toBeOtelMetricCollected`, `toHaveOtelCallCount`, `toHaveOtelMinCallCount`, `toBeOtelSpanEnded`).
+- Updated dependencies [0ed8282]
+  - @playwright-labs/otel-core@1.0.1
+
 ## 1.0.0
 
 ### Major Changes

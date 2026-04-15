@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/reporter-otel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "OpenTelemetry reporter for Playwright — send test metrics and traces to any OTEL-compatible backend",
   "keywords": [
     "playwright",
