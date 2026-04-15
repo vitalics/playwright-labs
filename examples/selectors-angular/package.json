@@ -8,9 +8,9 @@
   },
   "dependencies": {
     "@angular/animations": "^17.3.0",
-    "@angular/common": "^17.3.0",
-    "@angular/compiler": "^17.3.0",
-    "@angular/core": "^17.3.0",
+    "@angular/common": "^21.2.8",
+    "@angular/compiler": "^21.2.8",
+    "@angular/core": "^21.2.8",
     "@angular/platform-browser": "^17.3.0",
     "@angular/platform-browser-dynamic": "^17.3.0",
     "@angular/router": "^17.3.0",
