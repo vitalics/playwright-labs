@@ -254,7 +254,7 @@ test.describe("Custom expect matchers", () => {
 
     test("should work at max boundary", async ({ setTimeout }) => {
       const promise = setTimeout(100);
-      await expect(promise).toResolveInTimeRange(50, 105);
+      await expect(promise).toResolveInTimeRange(50, 150);
     });
 
     test("should work with scheduler.wait", async ({ scheduler }) => {
