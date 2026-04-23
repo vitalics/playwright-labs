@@ -1,5 +1,11 @@
 # @playwright-labs/fixture-ajv-ts
 
+## 1.0.4
+
+### Patch Changes
+
+- ec7f12f: Security: update versions
+
 ## 1.0.3
 
 ### Patch Changes
