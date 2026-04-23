@@ -1,0 +1,20 @@
+{
+  "name": "ghost-cursor-example",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Example: @playwright-labs/ghost-cursor + @playwright-labs/fixture-ghost-cursor",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "ci:pretest": "playwright install --with-deps chromium"
+  },
+  "dependencies": {
+    "@playwright-labs/fixture-ghost-cursor": "workspace:*",
+    "@playwright-labs/ghost-cursor": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0"
+  }
+}
