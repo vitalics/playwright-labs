@@ -152,7 +152,7 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "nodemailer": "8.0.4",
+    "nodemailer": "8.0.5",
     "tailwind-merge": "^3.3.0"
   }
 }

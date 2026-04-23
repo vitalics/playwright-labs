@@ -21,5 +21,18 @@
     "@types/node": "25.0.9",
     "tsup": "8.5.1",
     "tsx": "4.21.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "protobufjs": "7.5.5",
+      "rollup": "4.60.2",
+      "picomatch@2.3.1": "2.3.2",
+      "picomatch@4.0.3": "4.0.4",
+      "lodash": "4.18.1",
+      "ajv": "8.18.0",
+      "minimatch>brace-expansion": "2.0.3",
+      "next": "16.2.4",
+      "dockerode>uuid": "14.0.0"
+    }
   }
 }
