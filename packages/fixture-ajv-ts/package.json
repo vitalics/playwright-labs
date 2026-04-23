@@ -39,7 +39,7 @@
   "dependencies": {},
   "devDependencies": {},
   "peerDependencies": {
-    "@playwright/test": "1.52.0",
+    "@playwright/test": ">=1.55.1",
     "ajv-ts": "0.9.0"
   }
 }
