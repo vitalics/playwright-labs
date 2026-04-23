@@ -1,5 +1,11 @@
 # @playwright-labs/reporter-email
 
+## 1.1.2
+
+### Patch Changes
+
+- ec7f12f: Security: update versions
+
 ## 1.1.1
 
 ### Patch Changes

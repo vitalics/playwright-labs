@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/fixture-ajv-ts",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Utility to test your schema for ajv-ts package",
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
