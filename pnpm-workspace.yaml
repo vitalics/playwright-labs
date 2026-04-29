@@ -3,6 +3,7 @@ packages:
   - examples/reporter-email
   - examples/reporter-otel
   - examples/sql
+  - examples/ghost-cursor
   - '!packages/playwright-best-practices'
   - '!packages/playwright-best-practices-build'
 

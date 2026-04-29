@@ -32,6 +32,19 @@ importers:
         specifier: 4.21.0
         version: 4.21.0
 
+  examples/ghost-cursor:
+    dependencies:
+      '@playwright-labs/fixture-ghost-cursor':
+        specifier: workspace:*
+        version: link:../../packages/fixture-ghost-cursor
+      '@playwright-labs/ghost-cursor':
+        specifier: workspace:*
+        version: link:../../packages/ghost-cursor
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
   examples/reporter-email:
     dependencies:
       '@playwright-labs/reporter-email':
@@ -153,6 +166,16 @@ importers:
         specifier: 1.57.0
         version: 1.57.0
 
+  packages/fixture-ghost-cursor:
+    dependencies:
+      '@playwright-labs/ghost-cursor':
+        specifier: workspace:*
+        version: link:../ghost-cursor
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
   packages/fixture-otel:
     dependencies:
       '@playwright-labs/otel-core':
@@ -192,6 +215,16 @@ importers:
         version: 11.13.0
 
   packages/fixture-timers:
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
+  packages/ghost-cursor:
+    dependencies:
+      bezier-js:
+        specifier: ^6.1.4
+        version: 6.1.4
     devDependencies:
       '@playwright/test':
         specifier: 1.57.0
@@ -1809,6 +1842,9 @@ packages:
 
   better-sqlite3@9.6.0:
     resolution: {integrity: sha512-yR5HATnqeYNVnkaUTf4bOP2dJSnyhP4puJN/QPRyx4YkBEEUxib422n2XzPqDEHjQQqazoYoADdAm5vE15+dAQ==}
+
+  bezier-js@6.1.4:
+    resolution: {integrity: sha512-PA0FW9ZpcHbojUCMu28z9Vg/fNkwTj5YhusSAjHHDfHDGLxJ6YUKrAN2vk1fP2MMOxVw4Oko16FMlRGVBGqLKg==}
 
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
@@ -4576,6 +4612,8 @@ snapshots:
     dependencies:
       bindings: 1.5.0
       prebuild-install: 7.1.3
+
+  bezier-js@6.1.4: {}
 
   binary-extensions@2.3.0:
     optional: true
