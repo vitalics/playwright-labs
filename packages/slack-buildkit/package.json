@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/slack-buildkit",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Build interactive Slack Block Kit messages with React (and soon Lit, Vue, Angular) components",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",

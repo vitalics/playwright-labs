@@ -1,6 +1,6 @@
 {
   "name": "ghost-cursor-example",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "Example: @playwright-labs/ghost-cursor + @playwright-labs/fixture-ghost-cursor",
   "type": "module",
