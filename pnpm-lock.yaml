@@ -316,6 +316,21 @@ importers:
         specifier: 1.57.0
         version: 1.57.0
 
+  packages/reporter-slack:
+    devDependencies:
+      '@playwright-labs/slack-buildkit':
+        specifier: workspace:*
+        version: link:../slack-buildkit
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+      '@types/react':
+        specifier: 19.1.2
+        version: 19.1.2
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+
   packages/selectors-angular:
     dependencies:
       '@playwright-labs/selectors-core':
@@ -351,6 +366,18 @@ importers:
       '@playwright/test':
         specifier: 1.57.0
         version: 1.57.0
+
+  packages/slack-buildkit:
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+      '@types/react':
+        specifier: 19.1.2
+        version: 19.1.2
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
 
   packages/sql-core:
     dependencies:

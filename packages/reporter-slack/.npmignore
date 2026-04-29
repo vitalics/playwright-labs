@@ -1,0 +1,13 @@
+# Source & dev tooling
+src/
+tsup.config.ts
+tsconfig.json
+playwright.config.ts
+
+# Tests
+tests/
+test-results/
+
+# Artefacts
+*.tgz
+node_modules/

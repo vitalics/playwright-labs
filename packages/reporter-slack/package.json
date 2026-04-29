@@ -1,0 +1,97 @@
+{
+  "name": "@playwright-labs/reporter-slack",
+  "version": "0.0.0",
+  "description": "Slack reporter for Playwright using slack-buildkit",
+  "main": "dist/index.cjs",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "ci:pretest": "playwright install",
+    "build": "tsup",
+    "package:pack": "pnpm exec npm pack",
+    "package:pack:dry-run": "pnpm package:pack --dry-run"
+  },
+  "keywords": [
+    "playwright",
+    "automation",
+    "testing",
+    "playwright-labs",
+    "reporter",
+    "slack",
+    "notification",
+    "block-kit",
+    "slack-reporter"
+  ],
+  "author": "Vitali Haradkou <vitalicset@yandex.ru>",
+  "license": "MIT",
+  "packageManager": "pnpm@10.11.0",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./templates": {
+      "import": {
+        "types": "./dist/templates/index.d.ts",
+        "default": "./dist/templates/index.mjs"
+      },
+      "require": {
+        "types": "./dist/templates/index.d.cts",
+        "default": "./dist/templates/index.cjs"
+      }
+    },
+    "./templates/base": {
+      "import": {
+        "types": "./dist/templates/base.d.ts",
+        "default": "./dist/templates/base.mjs"
+      },
+      "require": {
+        "types": "./dist/templates/base.d.cts",
+        "default": "./dist/templates/base.cjs"
+      }
+    },
+    "./templates/with-options": {
+      "import": {
+        "types": "./dist/templates/with-options.d.ts",
+        "default": "./dist/templates/with-options.mjs"
+      },
+      "require": {
+        "types": "./dist/templates/with-options.d.cts",
+        "default": "./dist/templates/with-options.cjs"
+      }
+    },
+    "./templates/with-table": {
+      "import": {
+        "types": "./dist/templates/with-table.d.ts",
+        "default": "./dist/templates/with-table.mjs"
+      },
+      "require": {
+        "types": "./dist/templates/with-table.d.cts",
+        "default": "./dist/templates/with-table.cjs"
+      }
+    }
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "@playwright-labs/slack-buildkit": "workspace:*",
+    "@types/react": "19.1.2",
+    "react": "19.1.0"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.49.0",
+    "@playwright-labs/slack-buildkit": "workspace:*",
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  }
+}

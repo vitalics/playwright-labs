@@ -1,0 +1,84 @@
+{
+  "name": "@playwright-labs/slack-buildkit",
+  "version": "0.0.0",
+  "description": "Build interactive Slack Block Kit messages with React (and soon Lit, Vue, Angular) components",
+  "main": "dist/index.cjs",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "ci:pretest": "playwright install",
+    "build": "tsup",
+    "package:pack": "pnpm exec npm pack",
+    "package:pack:dry-run": "pnpm package:pack --dry-run"
+  },
+  "keywords": [
+    "slack",
+    "block-kit",
+    "slack-blocks",
+    "react",
+    "playwright",
+    "playwright-labs",
+    "interactive",
+    "notifications",
+    "buildkit"
+  ],
+  "author": "Vitali Haradkou <vitalicset@yandex.ru>",
+  "license": "MIT",
+  "packageManager": "pnpm@10.11.0",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./react": {
+      "import": {
+        "types": "./dist/react/index.d.ts",
+        "default": "./dist/react/index.mjs"
+      },
+      "require": {
+        "types": "./dist/react/index.d.cts",
+        "default": "./dist/react/index.cjs"
+      }
+    },
+    "./react/jsx-runtime": {
+      "import": {
+        "types": "./dist/react/jsx-runtime.d.ts",
+        "default": "./dist/react/jsx-runtime.mjs"
+      },
+      "require": {
+        "types": "./dist/react/jsx-runtime.d.cts",
+        "default": "./dist/react/jsx-runtime.cjs"
+      }
+    },
+    "./react/jsx-dev-runtime": {
+      "import": {
+        "types": "./dist/react/jsx-runtime.d.ts",
+        "default": "./dist/react/jsx-runtime.mjs"
+      },
+      "require": {
+        "types": "./dist/react/jsx-runtime.d.cts",
+        "default": "./dist/react/jsx-runtime.cjs"
+      }
+    }
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "@types/react": "19.1.2",
+    "react": "19.1.0"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  }
+}
