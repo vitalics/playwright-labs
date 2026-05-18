@@ -1,4 +1,7 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { Span } from "@playwright-labs/otel-core";
+
+const _activeSpan = new AsyncLocalStorage<Span>();
 
 /**
  * Wraps a synchronous or asynchronous operation in an OTel span.
@@ -7,6 +10,32 @@ import { Span } from "@playwright-labs/otel-core";
  * the callback completes — whether it resolves or throws.  On error the span
  * is marked with `status = "error"` before being ended, so the failure shows
  * up highlighted in Jaeger / Tempo.
+ *
+ * ## Nested spans
+ *
+ * Nested `withSpan` calls automatically produce **parent–child** relationships
+ * in the OTel backend.  The inner span becomes a true child of the outer span:
+ *
+ * ```
+ * [test span]
+ *   └── checkout.flow
+ *         ├── db.query
+ *         └── http.payment
+ * ```
+ *
+ * ```ts
+ * await withSpan('checkout.flow', async (flow) => {
+ *   flow.setAttribute('cart.items', 3);
+ *
+ *   await withSpan('db.query', async (db) => {
+ *     db.setAttribute('db.table', 'orders');
+ *   });
+ *
+ *   await withSpan('http.payment', async (pay) => {
+ *     pay.setAttribute('method', 'credit_card');
+ *   });
+ * });
+ * ```
  *
  * ## Integration with `test.step`
  *
@@ -62,24 +91,6 @@ import { Span } from "@playwright-labs/otel-core";
  * });
  * ```
  *
- * ## Nesting
- *
- * Nested `withSpan` calls produce sibling spans in the OTel backend
- * (all are children of the test span).  For logical grouping use the span
- * name and attributes rather than relying on OTel parent–child nesting:
- *
- * ```ts
- * await test.step('checkout', () =>
- *   withSpan('checkout.flow', async (checkoutSpan) => {
- *     checkoutSpan.setAttribute('cart.items', 3);
- *
- *     await withSpan('checkout.payment', async (paySpan) => {
- *       paySpan.setAttribute('method', 'credit_card');
- *     });
- *   })
- * );
- * ```
- *
  * @param name - Span name as it will appear in the OTel tracing backend.
  * @param fn   - Callback that receives the span.  May be sync or async.
  * @returns    The value returned (or resolved) by `fn`.
@@ -88,9 +99,10 @@ export async function withSpan<T>(
   name: string,
   fn: (span: Span) => T | Promise<T>,
 ): Promise<T> {
-  const span = new Span(name);
+  const parent = _activeSpan.getStore();
+  const span = new Span(name, parent);
   try {
-    return await fn(span);
+    return await _activeSpan.run(span, () => fn(span));
   } catch (error) {
     span.setStatus(
       "error",

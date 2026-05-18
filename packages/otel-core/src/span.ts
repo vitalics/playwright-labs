@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { OtelEvent } from "./events";
 
 export type SpanStatus = "ok" | "error";
@@ -34,14 +35,19 @@ export type SpanStatus = "ok" | "error";
  * ```
  */
 export class Span implements Disposable {
+  /** Worker-side span ID (8-byte hex). Used to wire parent–child relationships. */
+  readonly spanId: string;
+  private readonly _parentSpanId?: string;
   private readonly _startTime: number;
   private _attributes: Record<string, string | number | boolean> = {};
   private _status?: SpanStatus;
   private _statusMessage?: string;
   private _ended = false;
 
-  constructor(readonly name: string) {
+  constructor(readonly name: string, parent?: Span) {
     this._startTime = Date.now();
+    this.spanId = randomBytes(8).toString("hex");
+    this._parentSpanId = parent?.spanId;
   }
 
   /**
@@ -89,6 +95,10 @@ export class Span implements Disposable {
 
     OtelEvent.emit({
       kind: "span",
+      spanId: this.spanId,
+      ...(this._parentSpanId !== undefined && {
+        parentSpanId: this._parentSpanId,
+      }),
       name: this.name,
       startTime: this._startTime,
       endTime: Date.now(),
