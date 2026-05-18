@@ -177,6 +177,66 @@ await withSpan("api.orders", async (span) => {
 }); // span status = "error" if fetch throws
 ```
 
+### Nested spans
+
+Nested `withSpan` calls automatically produce **parent–child** relationships in the OTel backend. The context is propagated via `AsyncLocalStorage`, so no manual wiring is needed:
+
+```typescript
+await withSpan("checkout.flow", async (flow) => {
+  flow.setAttribute("cart.items", 3);
+
+  await withSpan("db.orders", async (db) => {
+    db.setAttribute("db.table", "orders");
+  });
+
+  await withSpan("http.payment", async (pay) => {
+    pay.setAttribute("method", "credit_card");
+  });
+});
+```
+
+This produces the following tree in Jaeger / Tempo:
+
+```
+[test span]
+  └── checkout.flow
+        ├── db.orders
+        └── http.payment
+```
+
+## Propagating trace context to downstream services
+
+The OTel trace context (`traceId`, `spanId`) is created in the reporter process, not in the worker. If you need to forward a `traceparent` header to a downstream service under test, generate one in a fixture:
+
+```typescript
+import { test as base } from "@playwright-labs/fixture-otel";
+import { randomBytes } from "node:crypto";
+
+export const test = base.extend<{ traceparent: string }>({
+  traceparent: async ({}, use) => {
+    const traceId = randomBytes(16).toString("hex");
+    const spanId  = randomBytes(8).toString("hex");
+    await use(`00-${traceId}-${spanId}-01`);
+  },
+});
+```
+
+```typescript
+test("order API", async ({ traceparent, useSpan, request }) => {
+  const span = useSpan("api.create_order");
+  span.setAttribute("trace.propagated", traceparent);
+
+  const response = await request.post("/api/orders", {
+    headers: { traceparent },
+    data: { item: "widget" },
+  });
+
+  expect(response.ok()).toBeTruthy();
+});
+```
+
+The span attribute `trace.propagated` lets you find the request in your downstream service's tracing backend and correlate it with the Playwright test span.
+
 ## `using` keyword — scope-bound lifecycle (TypeScript 5.2+)
 
 Both metrics and spans implement `Symbol.dispose`, so they work with the `using` keyword for deterministic, scope-bound cleanup:

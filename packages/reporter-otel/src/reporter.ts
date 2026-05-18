@@ -112,6 +112,8 @@ export default class OtelReporter implements Reporter {
   private readonly testSpans = new Map<string, Span>();
   /** step hash → span */
   private readonly stepSpans = new Map<string, Span>();
+  /** test.id → buffered worker span payloads (flushed on test end) */
+  private readonly workerSpanBuffer = new Map<string, SpanPayload[]>();
 
   // ── Metric instruments ───────────────────────────────────────────────────────
   private testsTotal: Counter | undefined;
@@ -244,6 +246,8 @@ export default class OtelReporter implements Reporter {
         });
       }
 
+      this.flushWorkerSpans(test, span);
+
       span.end(new Date(result.startTime.getTime() + result.duration));
       this.testSpans.delete(test.id);
     }
@@ -330,7 +334,9 @@ export default class OtelReporter implements Reporter {
       const payload = OtelEvent.parse(line);
       if (!payload) continue;
       if (payload.kind === "span") {
-        this.forwardWorkerSpan(payload, test);
+        const buf = this.workerSpanBuffer.get(test.id) ?? [];
+        buf.push(payload);
+        this.workerSpanBuffer.set(test.id, buf);
       } else {
         this.recordWorkerMetric(payload);
       }
@@ -376,34 +382,45 @@ export default class OtelReporter implements Reporter {
   // ── Private helpers ───────────────────────────────────────────────────────────
 
   /**
-   * Creates a child span under the test span from a worker-emitted span event.
-   * This makes worker-side `useSpan()` spans appear as children of the test
-   * span in Jaeger / Zipkin / etc.
+   * Flushes all buffered worker span payloads for a test, creating OTel spans
+   * in topological order (parents before children) so that nested `withSpan`
+   * calls appear as a proper parent–child tree in Jaeger / Tempo.
    */
-  private forwardWorkerSpan(event: SpanPayload, test: TestCase): void {
+  private flushWorkerSpans(test: TestCase, testSpan: Span): void {
     if (!this.tracer) return;
-    const parentSpan = this.testSpans.get(test.id);
-    const ctx = parentSpan
-      ? opentelemetry.trace.setSpan(ROOT_CONTEXT, parentSpan)
-      : ROOT_CONTEXT;
+    const payloads = this.workerSpanBuffer.get(test.id);
+    if (!payloads?.length) return;
+    this.workerSpanBuffer.delete(test.id);
 
-    const span = this.tracer.startSpan(
-      event.name,
-      { startTime: event.startTime },
-      ctx,
-    );
-    if (event.attributes) {
-      span.setAttributes(event.attributes as Attributes);
+    const sorted = topoSort(payloads);
+    const otelSpanById = new Map<string, Span>();
+
+    for (const event of sorted) {
+      const parentOtelSpan = event.parentSpanId
+        ? (otelSpanById.get(event.parentSpanId) ?? testSpan)
+        : testSpan;
+
+      const ctx = opentelemetry.trace.setSpan(ROOT_CONTEXT, parentOtelSpan);
+      const span = this.tracer.startSpan(
+        event.name,
+        { startTime: event.startTime },
+        ctx,
+      );
+
+      if (event.attributes) span.setAttributes(event.attributes as Attributes);
+
+      if (event.status === "error") {
+        span.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: event.statusMessage ?? "",
+        });
+      } else if (event.status === "ok") {
+        span.setStatus({ code: SpanStatusCode.OK });
+      }
+
+      span.end(event.endTime);
+      otelSpanById.set(event.spanId, span);
     }
-    if (event.status === "error") {
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: event.statusMessage ?? "",
-      });
-    } else if (event.status === "ok") {
-      span.setStatus({ code: SpanStatusCode.OK });
-    }
-    span.end(event.endTime);
   }
 
   /**
@@ -573,6 +590,30 @@ function findProject(test: TestCase): FullProject | undefined {
     suite = suite.parent;
   }
   return undefined;
+}
+
+/**
+ * Sorts worker span payloads so every parent appears before its children.
+ * Spans whose parentSpanId is unknown (cross-test or missing) are treated as
+ * roots and placed first.
+ */
+function topoSort(payloads: SpanPayload[]): SpanPayload[] {
+  const byId = new Map(payloads.map((p) => [p.spanId, p]));
+  const result: SpanPayload[] = [];
+  const visited = new Set<string>();
+
+  function visit(p: SpanPayload): void {
+    if (visited.has(p.spanId)) return;
+    visited.add(p.spanId);
+    if (p.parentSpanId) {
+      const parent = byId.get(p.parentSpanId);
+      if (parent) visit(parent);
+    }
+    result.push(p);
+  }
+
+  for (const p of payloads) visit(p);
+  return result;
 }
 
 /**

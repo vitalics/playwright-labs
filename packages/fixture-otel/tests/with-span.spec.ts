@@ -223,6 +223,60 @@ test.describe("withSpan — nesting", () => {
     spans.forEach((s) => expect(s).toBeOtelSpanEnded());
   });
 
+  test("inner span has outer span as parent", async () => {
+    let outer!: Span;
+    let inner!: Span;
+
+    await withSpan("outer", async (o) => {
+      outer = o;
+      await withSpan("inner", (i) => {
+        inner = i;
+      });
+    });
+
+    expect((inner as any)._parentSpanId).toBe(outer.spanId);
+  });
+
+  test("top-level withSpan has no parent", async () => {
+    let captured!: Span;
+    await withSpan("root", (s) => {
+      captured = s;
+    });
+    expect((captured as any)._parentSpanId).toBeUndefined();
+  });
+
+  test("deeply nested spans form a chain", async () => {
+    let a!: Span, b!: Span, c!: Span;
+
+    await withSpan("a", async (sa) => {
+      a = sa;
+      await withSpan("b", async (sb) => {
+        b = sb;
+        await withSpan("c", (sc) => {
+          c = sc;
+        });
+      });
+    });
+
+    expect((b as any)._parentSpanId).toBe(a.spanId);
+    expect((c as any)._parentSpanId).toBe(b.spanId);
+  });
+
+  test("sibling spans share the same parent", async () => {
+    let parent!: Span;
+    let child1!: Span;
+    let child2!: Span;
+
+    await withSpan("parent", async (p) => {
+      parent = p;
+      await withSpan("child1", (c) => { child1 = c; });
+      await withSpan("child2", (c) => { child2 = c; });
+    });
+
+    expect((child1 as any)._parentSpanId).toBe(parent.spanId);
+    expect((child2 as any)._parentSpanId).toBe(parent.spanId);
+  });
+
   test("inner error ends both inner and outer spans", async () => {
     const spans: Span[] = [];
 

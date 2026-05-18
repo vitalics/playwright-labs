@@ -30,6 +30,10 @@ export type MetricPayload = {
 
 export type SpanPayload = {
   kind: "span";
+  /** Worker-side span ID used to wire parent–child relationships. */
+  spanId: string;
+  /** Worker-side parent span ID, present only for nested spans. */
+  parentSpanId?: string;
   /** Span display name. */
   name: string;
   /** Unix epoch milliseconds when the span started. */
