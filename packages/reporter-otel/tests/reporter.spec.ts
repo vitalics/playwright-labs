@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import opentelemetry, { ROOT_CONTEXT, TraceFlags } from "@opentelemetry/api";
+import opentelemetry, {
+  ROOT_CONTEXT,
+  TraceFlags,
+  SpanStatusCode,
+} from "@opentelemetry/api";
 import type {
   Attributes,
   Context,
@@ -8,6 +12,11 @@ import type {
   SpanOptions,
   Tracer,
 } from "@opentelemetry/api";
+import {
+  ATTR_TEST_CASE_NAME,
+  ATTR_TEST_CASE_RESULT_STATUS,
+  ATTR_TEST_SUITE_NAME,
+} from "@opentelemetry/semantic-conventions/incubating";
 
 import OtelReporter, {
   parseTraceparent,
@@ -73,6 +82,12 @@ test.describe("parseTraceparent", () => {
     ).toBeUndefined();
   });
 
+  test("returns undefined when spanId contains non-hex characters", () => {
+    expect(
+      parseTraceparent("00-4bf92f3577b34da6a3ce929d0e0e4736-ZZZZZZZZZZZZZZZZ-01"),
+    ).toBeUndefined();
+  });
+
   test("returns undefined when there are too few segments", () => {
     expect(parseTraceparent("00-4bf92f3577b34da6a3ce929d0e0e4736")).toBeUndefined();
   });
@@ -90,19 +105,20 @@ test.describe("parseTraceparent", () => {
 /** Minimal OTel Span spy that records setAttribute calls and can be ended. */
 class SpySpan implements Span {
   readonly attrs: Record<string, unknown> = {};
-  private _ctx: Context;
+  readonly creationCtx: Context;
   private _ended = false;
   statusCode: number | undefined;
+  statusMessage: string | undefined;
 
   constructor(
     readonly name: string,
     ctx: Context,
   ) {
-    this._ctx = ctx;
+    this.creationCtx = ctx;
   }
 
   spanContext(): SpanContext {
-    const remote = opentelemetry.trace.getSpanContext(this._ctx);
+    const remote = opentelemetry.trace.getSpanContext(this.creationCtx);
     return (
       remote ?? {
         traceId: "0".repeat(32),
@@ -121,8 +137,9 @@ class SpySpan implements Span {
     Object.assign(this.attrs, attrs);
     return this;
   }
-  setStatus({ code }: { code: number; message?: string }) {
+  setStatus({ code, message }: { code: number; message?: string }) {
     this.statusCode = code;
+    this.statusMessage = message;
     return this;
   }
   end() {
@@ -340,6 +357,22 @@ test.describe("OtelReporter — pw_otel.traceparent", () => {
     expect(testSpan.attrs["traceparent"]).toBeUndefined();
   });
 
+  test("malformed traceparent annotation: span is still created in root context", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const test_ = makeTest({
+      annotations: [
+        { type: TRACEPARENT_ANNOTATION, description: "not-a-valid-traceparent" },
+      ],
+    });
+    reporter.onTestBegin(test_, makeResult({}));
+    reporter.onTestEnd(test_, makeResult({}));
+
+    // Reporter must not throw and must still produce one span
+    expect(reporter.spyTracer.spans).toHaveLength(1);
+  });
+
   test("other pw_otel.* annotations are still forwarded as span attributes", () => {
     const reporter = new TestReporter();
     reporter.onBegin(makeConfig(), makeSuite());
@@ -365,12 +398,13 @@ test.describe("OtelReporter — pw_otel.traceparent", () => {
 test.describe("OtelReporter — step spans", () => {
   function makeStep(overrides: {
     title?: string;
+    category?: string;
     steps?: TestStep[];
     error?: { message: string };
   }): TestStep {
     return {
       title: overrides.title ?? "click button",
-      category: "action",
+      category: overrides.category ?? "action",
       startTime: new Date("2024-01-01T00:00:00Z"),
       duration: 10,
       location: { file: "/tmp/test.spec.ts", line: 5, column: 0 },
@@ -421,5 +455,206 @@ test.describe("OtelReporter — step spans", () => {
     reporter.onTestEnd(makeTest({}), result);
 
     reporter.spyTracer.spans.forEach((s) => expect(s.ended).toBe(true));
+  });
+
+  test("step span carries test.step.category and test.step.name attributes", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const result = makeResult({
+      steps: [makeStep({ title: "fill email", category: "action" })],
+    });
+    reporter.onTestBegin(makeTest({}), result);
+    reporter.onTestEnd(makeTest({}), result);
+
+    // spans[0] = test span, spans[1] = step span
+    const stepSpan = reporter.spyTracer.spans[1];
+    expect(stepSpan.attrs["test.step.category"]).toBe("action");
+    expect(stepSpan.attrs["test.step.name"]).toBe("fill email");
+  });
+
+  test("step span name is prefixed with category", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const result = makeResult({
+      steps: [makeStep({ title: "click button", category: "action" })],
+    });
+    reporter.onTestBegin(makeTest({}), result);
+    reporter.onTestEnd(makeTest({}), result);
+
+    const stepSpan = reporter.spyTracer.spans[1];
+    expect(stepSpan.name).toBe("action: click button");
+  });
+
+  test("step with error gets ERROR span status", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const result = makeResult({
+      steps: [makeStep({ title: "failing step", error: { message: "Element not found" } })],
+    });
+    reporter.onTestBegin(makeTest({}), result);
+    reporter.onTestEnd(makeTest({}), result);
+
+    const stepSpan = reporter.spyTracer.spans[1];
+    expect(stepSpan.statusCode).toBe(SpanStatusCode.ERROR);
+    expect(stepSpan.statusMessage).toBe("Element not found");
+  });
+
+  test("step without error has no status set", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const result = makeResult({
+      steps: [makeStep({ title: "passing step" })],
+    });
+    reporter.onTestBegin(makeTest({}), result);
+    reporter.onTestEnd(makeTest({}), result);
+
+    const stepSpan = reporter.spyTracer.spans[1];
+    expect(stepSpan.statusCode).toBeUndefined();
+  });
+
+  test("inner step span is created in context of outer step span", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const inner = makeStep({ title: "inner" });
+    const outer = makeStep({ title: "outer", steps: [inner] });
+    const result = makeResult({ steps: [outer] });
+
+    reporter.onTestBegin(makeTest({}), result);
+    reporter.onTestEnd(makeTest({}), result);
+
+    // spans[0]=test, spans[1]=outer, spans[2]=inner
+    const [, outerSpan, innerSpan] = reporter.spyTracer.spans;
+    // The inner span's creation context must contain the outer span as active span
+    expect(opentelemetry.trace.getSpan(innerSpan.creationCtx)).toBe(outerSpan);
+  });
+});
+
+// ── Reporter — span attributes ────────────────────────────────────────────────
+
+test.describe("OtelReporter — span attributes", () => {
+  test("sets test case name attribute", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const test_ = makeTest({ title: "my fancy test" });
+    reporter.onTestBegin(test_, makeResult({}));
+    reporter.onTestEnd(test_, makeResult({}));
+
+    expect(reporter.spyTracer.spans[0].attrs[ATTR_TEST_CASE_NAME]).toBe("my fancy test");
+  });
+
+  test("sets test suite name attribute", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const test_ = makeTest({});
+    reporter.onTestBegin(test_, makeResult({}));
+    reporter.onTestEnd(test_, makeResult({}));
+
+    expect(reporter.spyTracer.spans[0].attrs[ATTR_TEST_SUITE_NAME]).toBe("my suite");
+  });
+
+  test("sets test.id attribute", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const test_ = makeTest({ id: "abc-123" });
+    reporter.onTestBegin(test_, makeResult({}));
+    reporter.onTestEnd(test_, makeResult({}));
+
+    expect(reporter.spyTracer.spans[0].attrs["test.id"]).toBe("abc-123");
+  });
+
+  test("sets test.duration_ms attribute", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const test_ = makeTest({});
+    const result = makeResult({ duration: 1234 });
+    reporter.onTestBegin(test_, result);
+    reporter.onTestEnd(test_, result);
+
+    expect(reporter.spyTracer.spans[0].attrs["test.duration_ms"]).toBe(1234);
+  });
+
+  test("sets test.status attribute", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const test_ = makeTest({});
+    const result = makeResult({ status: "passed" });
+    reporter.onTestBegin(test_, result);
+    reporter.onTestEnd(test_, result);
+
+    expect(reporter.spyTracer.spans[0].attrs["test.status"]).toBe("passed");
+  });
+
+  test("sets result status to pass when test passes", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const test_ = makeTest({ expectedStatus: "passed" });
+    const result = makeResult({ status: "passed" });
+    reporter.onTestBegin(test_, result);
+    reporter.onTestEnd(test_, result);
+
+    expect(reporter.spyTracer.spans[0].attrs[ATTR_TEST_CASE_RESULT_STATUS]).toBe("pass");
+  });
+
+  test("sets result status to fail when test fails", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const test_ = makeTest({ expectedStatus: "passed" });
+    const result = makeResult({ status: "failed" });
+    reporter.onTestBegin(test_, result);
+    reporter.onTestEnd(test_, result);
+
+    expect(reporter.spyTracer.spans[0].attrs[ATTR_TEST_CASE_RESULT_STATUS]).toBe("fail");
+  });
+});
+
+// ── Reporter — span status ────────────────────────────────────────────────────
+
+test.describe("OtelReporter — span status on failure", () => {
+  test("passing test does not set span to ERROR", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const test_ = makeTest({ expectedStatus: "passed" });
+    const result = makeResult({ status: "passed" });
+    reporter.onTestBegin(test_, result);
+    reporter.onTestEnd(test_, result);
+
+    expect(reporter.spyTracer.spans[0].statusCode).toBeUndefined();
+  });
+
+  test("failing test sets span status to ERROR", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const test_ = makeTest({ expectedStatus: "passed" });
+    const result = makeResult({ status: "failed" });
+    reporter.onTestBegin(test_, result);
+    reporter.onTestEnd(test_, result);
+
+    expect(reporter.spyTracer.spans[0].statusCode).toBe(SpanStatusCode.ERROR);
+  });
+
+  test("skipped test is treated as passing (not ERROR)", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const test_ = makeTest({ expectedStatus: "passed" });
+    const result = makeResult({ status: "skipped" });
+    reporter.onTestBegin(test_, result);
+    reporter.onTestEnd(test_, result);
+
+    expect(reporter.spyTracer.spans[0].statusCode).toBeUndefined();
   });
 });

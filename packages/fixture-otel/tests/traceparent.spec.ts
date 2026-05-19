@@ -43,6 +43,13 @@ test.describe("useTraceparent — format", () => {
     const { traceId } = useTraceparent();
     expect(traceId).not.toBe("0".repeat(32));
   });
+
+  test("traceId and spanId are independent values", async ({ useTraceparent }) => {
+    const { traceId, spanId } = useTraceparent();
+    // They are different lengths (32 vs 16 chars) and independently random
+    expect(traceId).not.toContain(spanId);
+    expect(spanId).not.toContain(traceId);
+  });
 });
 
 // ── Memoisation ───────────────────────────────────────────────────────────────
