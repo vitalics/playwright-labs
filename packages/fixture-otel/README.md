@@ -277,6 +277,20 @@ This produces the following tree in Jaeger / Tempo:
         └── http.payment
 ```
 
+### Using `withSpan` together with `useTraceparent`
+
+`withSpan` and `useTraceparent` are composable — when both are active, all spans end up in the same trace. However, because the reporter creates the test span at `onTestEnd` (after the test body completes), `withSpan` spans and the reporter test span cannot be in a strict parent–child relationship. Instead they are **siblings** under the same synthetic root:
+
+```
+[traceparent root — synthetic, not exported]
+  ├── withSpan("checkout.flow")   ← created in the worker, during the test
+  │     └── withSpan("db.query")
+  └── [test span from reporter]   ← created in onTestEnd
+        └── [step spans]
+```
+
+All spans share the same `traceId` and are visible together in Jaeger / Tempo. The hierarchy is flat at the top level rather than nested, which is an architectural trade-off of deferring the test span to `onTestEnd`.
+
 ## `using` keyword — scope-bound lifecycle (TypeScript 5.2+)
 
 Both metrics and spans implement `Symbol.dispose`, so they work with the `using` keyword for deterministic, scope-bound cleanup:
