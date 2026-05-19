@@ -1,5 +1,4 @@
 import path from "node:path";
-import { createHash } from "node:crypto";
 import { cpuUsage, memoryUsage, argv, versions } from "node:process";
 import {
   arch,
@@ -16,13 +15,18 @@ import {
   networkInterfaces,
 } from "node:os";
 
-import opentelemetry, { SpanStatusCode, ROOT_CONTEXT } from "@opentelemetry/api";
+import opentelemetry, {
+  SpanStatusCode,
+  ROOT_CONTEXT,
+  TraceFlags,
+} from "@opentelemetry/api";
 import type {
   Attributes,
   Counter,
   Histogram,
   Meter,
   Span,
+  SpanContext,
   Tracer,
   UpDownCounter,
 } from "@opentelemetry/api";
@@ -60,10 +64,13 @@ import {
   type SpanPayload,
   WORKER_BASE_URL_ENV,
   WORKER_HEADERS_ENV,
+  TRACEPARENT_ANNOTATION,
   resolveOtelConfig,
   createOtelSdk,
   type OtelCoreOptions,
 } from "@playwright-labs/otel-core";
+
+export { TRACEPARENT_ANNOTATION };
 
 /**
  * Prefix that annotation types must start with to be forwarded as span
@@ -104,14 +111,12 @@ export default class OtelReporter implements Reporter {
   protected readonly exportIntervalMillis: number;
 
   private sdk: NodeSDK | undefined;
-  private tracer: Tracer | undefined;
-  private meter: Meter | undefined;
+  protected tracer: Tracer | undefined;
+  protected meter: Meter | undefined;
 
   // ── Span tracking ────────────────────────────────────────────────────────────
-  /** test.id → root span for that test */
-  private readonly testSpans = new Map<string, Span>();
-  /** step hash → span */
-  private readonly stepSpans = new Map<string, Span>();
+  /** test.id → startTime buffered from onTestBegin; span is created in onTestEnd */
+  private readonly testStartTimes = new Map<string, Date>();
   /** test.id → buffered worker span payloads (flushed on test end) */
   private readonly workerSpanBuffer = new Map<string, SpanPayload[]>();
 
@@ -188,13 +193,10 @@ export default class OtelReporter implements Reporter {
   }
 
   onTestBegin(test: TestCase, result: TestResult): void {
-    if (!this.tracer) return;
-    const span = this.tracer.startSpan(
-      this.formatTestTitle(test),
-      { startTime: result.startTime },
-      ROOT_CONTEXT,
-    );
-    this.testSpans.set(test.id, span);
+    // Buffer the start time only. The OTel span is created in onTestEnd so that
+    // test annotations (including pw_otel.traceparent) are available when we
+    // need to set the parent SpanContext.
+    this.testStartTimes.set(test.id, result.startTime);
     this.updateNodejsStats();
   }
 
@@ -204,8 +206,21 @@ export default class OtelReporter implements Reporter {
     const project = findProject(test);
     const browserAttrs = resolveBrowserAttrs(project);
 
-    const span = this.testSpans.get(test.id);
-    if (span) {
+    if (this.tracer) {
+      const startTime =
+        this.testStartTimes.get(test.id) ?? result.startTime;
+      this.testStartTimes.delete(test.id);
+
+      // If the test annotated a W3C traceparent, create the span as a child of
+      // that remote context so all spans share a single trace ID that tests can
+      // propagate to downstream services via the traceparent header.
+      const remoteCtx = this.resolveRemoteContext(test);
+      const span = this.tracer.startSpan(
+        this.formatTestTitle(test),
+        { startTime },
+        remoteCtx,
+      );
+
       span.setAttributes({
         [ATTR_TEST_CASE_NAME]: test.title,
         [ATTR_TEST_SUITE_NAME]: test.parent.title,
@@ -229,9 +244,12 @@ export default class OtelReporter implements Reporter {
         }),
       });
 
-      // Forward pw_otel.* annotations as span attributes
+      // Forward pw_otel.* annotations as span attributes (skip traceparent itself)
       for (const annotation of test.annotations) {
-        if (annotation.type.startsWith(ANNOTATION_PREFIX)) {
+        if (
+          annotation.type.startsWith(ANNOTATION_PREFIX) &&
+          annotation.type !== TRACEPARENT_ANNOTATION
+        ) {
           span.setAttribute(
             annotation.type.slice(ANNOTATION_PREFIX.length),
             annotation.description ?? "",
@@ -246,10 +264,14 @@ export default class OtelReporter implements Reporter {
         });
       }
 
+      // Create step spans recursively from the completed result tree
+      for (const step of result.steps) {
+        this.createStepSpan(step, span);
+      }
+
       this.flushWorkerSpans(test, span);
 
-      span.end(new Date(result.startTime.getTime() + result.duration));
-      this.testSpans.delete(test.id);
+      span.end(new Date(startTime.getTime() + result.duration));
     }
 
     // Metrics — include project/browser attrs for grouping in dashboards.
@@ -276,49 +298,21 @@ export default class OtelReporter implements Reporter {
     this.updateNodejsStats();
   }
 
-  onStepBegin(test: TestCase, _result: TestResult, step: TestStep): void {
-    if (!this.tracer) return;
-    const parentSpan = step.parent
-      ? this.stepSpans.get(this.stepSpanKey(test, step.parent))
-      : this.testSpans.get(test.id);
-
-    const ctx = parentSpan
-      ? opentelemetry.trace.setSpan(ROOT_CONTEXT, parentSpan)
-      : ROOT_CONTEXT;
-
-    const span = this.tracer.startSpan(
-      `${step.category}: ${step.title}`,
-      { startTime: step.startTime },
-      ctx,
-    );
-    this.stepSpans.set(this.stepSpanKey(test, step), span);
+  onStepBegin(
+    _test: TestCase,
+    _result: TestResult,
+    _step: TestStep,
+  ): void {
+    // Step spans are created in onTestEnd from result.steps so that they share
+    // the same trace context as the (deferred) test span.
     this.updateNodejsStats();
   }
 
-  onStepEnd(test: TestCase, _result: TestResult, step: TestStep): void {
-    const key = this.stepSpanKey(test, step);
-    const span = this.stepSpans.get(key);
-    if (span) {
-      span.setAttributes({
-        "test.step.category": step.category,
-        "test.step.name": step.title,
-      });
-      if (step.location) {
-        span.setAttributes({
-          [ATTR_CODE_FILEPATH]: step.location.file,
-          [ATTR_CODE_LINENO]: step.location.line,
-          [ATTR_CODE_COLUMN]: step.location.column,
-        });
-      }
-      if (step.error) {
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: step.error.message ?? "",
-        });
-      }
-      span.end(new Date(step.startTime.getTime() + step.duration));
-      this.stepSpans.delete(key);
-    }
+  onStepEnd(
+    _test: TestCase,
+    _result: TestResult,
+    _step: TestStep,
+  ): void {
     this.updateNodejsStats();
   }
 
@@ -380,6 +374,58 @@ export default class OtelReporter implements Reporter {
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────────
+
+  /**
+   * Reads the `pw_otel.traceparent` annotation from a test and, if present,
+   * returns a context with that remote SpanContext set as the active span.
+   * Returns ROOT_CONTEXT when no annotation is found or the value is invalid.
+   */
+  private resolveRemoteContext(
+    test: TestCase,
+  ): typeof ROOT_CONTEXT {
+    const annotation = test.annotations.find(
+      (a) => a.type === TRACEPARENT_ANNOTATION,
+    );
+    if (!annotation?.description) return ROOT_CONTEXT;
+    const spanContext = parseTraceparent(annotation.description);
+    if (!spanContext) return ROOT_CONTEXT;
+    return opentelemetry.trace.setSpanContext(ROOT_CONTEXT, spanContext);
+  }
+
+  /**
+   * Recursively creates OTel spans for a TestStep and all its children.
+   * Called from onTestEnd so the spans share the same trace as the test span.
+   */
+  private createStepSpan(step: TestStep, parentSpan: Span): void {
+    if (!this.tracer) return;
+    const ctx = opentelemetry.trace.setSpan(ROOT_CONTEXT, parentSpan);
+    const span = this.tracer.startSpan(
+      `${step.category}: ${step.title}`,
+      { startTime: step.startTime },
+      ctx,
+    );
+    span.setAttributes({
+      "test.step.category": step.category,
+      "test.step.name": step.title,
+    });
+    if (step.location) {
+      span.setAttributes({
+        [ATTR_CODE_FILEPATH]: step.location.file,
+        [ATTR_CODE_LINENO]: step.location.line,
+        [ATTR_CODE_COLUMN]: step.location.column,
+      });
+    }
+    if (step.error) {
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: step.error.message ?? "",
+      });
+    }
+    for (const child of step.steps) {
+      this.createStepSpan(child, span);
+    }
+    span.end(new Date(step.startTime.getTime() + step.duration));
+  }
 
   /**
    * Flushes all buffered worker span payloads for a test, creating OTel spans
@@ -548,14 +594,6 @@ export default class OtelReporter implements Reporter {
     return `${projectPrefix}${filePath}:${test.location.line} › ${titles.join(" › ")}`;
   }
 
-  private stepSpanKey(test: TestCase, step: TestStep): string {
-    return createHash("sha256")
-      .update(test.id)
-      .update(step.titlePath().join("||"))
-      .update(String(step.startTime.getTime()))
-      .digest("hex");
-  }
-
   private location(item: TestCase | TestStep | TestError): string {
     const file = path.relative(
       process.cwd(),
@@ -614,6 +652,32 @@ function topoSort(payloads: SpanPayload[]): SpanPayload[] {
 
   for (const p of payloads) visit(p);
   return result;
+}
+
+/**
+ * Parses a W3C traceparent string into an OTel SpanContext.
+ * Returns `undefined` if the value does not match the expected format.
+ *
+ * Format: `00-{32-hex traceId}-{16-hex spanId}-{2-hex flags}`
+ *
+ * @example
+ * ```ts
+ * const ctx = parseTraceparent('00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01');
+ * // { traceId: '4bf92f3577b34da6a3ce929d0e0e4736', spanId: '00f067aa0ba902b7', traceFlags: 1, isRemote: true }
+ * ```
+ */
+export function parseTraceparent(traceparent: string): SpanContext | undefined {
+  const parts = traceparent.split("-");
+  if (parts.length < 4 || parts[0] !== "00") return undefined;
+  const [, traceId, spanId, flags] = parts;
+  if (!/^[0-9a-f]{32}$/.test(traceId)) return undefined;
+  if (!/^[0-9a-f]{16}$/.test(spanId)) return undefined;
+  return {
+    traceId,
+    spanId,
+    traceFlags: Number.isNaN(parseInt(flags, 16)) ? TraceFlags.SAMPLED : parseInt(flags, 16),
+    isRemote: true,
+  };
 }
 
 /**

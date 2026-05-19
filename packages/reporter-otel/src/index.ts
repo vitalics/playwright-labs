@@ -3,6 +3,8 @@ export {
   default,
   annotationLabel,
   ANNOTATION_PREFIX,
+  TRACEPARENT_ANNOTATION,
+  parseTraceparent,
   type OtelReporterOptions,
 } from "./reporter";
 

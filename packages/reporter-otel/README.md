@@ -28,6 +28,7 @@ npm install @playwright-labs/reporter-otel @playwright-labs/fixture-otel
 - Captures **browser and project metadata** — browser name, channel, viewport, locale, headless mode
 - Captures **host identity** — username, hostname, IP address, OS platform
 - Monitors **Node.js process internals** — heap, RSS, CPU
+- **Trace propagation** via `useTraceparent` — generate a single W3C `traceparent` per test and forward it to every downstream service call, so Playwright spans and service spans appear in the same trace
 - **Custom metrics** via `@playwright-labs/fixture-otel` — `Counter`, `Histogram`, `UpDownCounter`
 - **Custom spans** via `useSpan` fixture — child spans nested under the test span
 - **Custom expect matchers** — `toBeOtelMetricCollected`, `toHaveOtelCallCount`, `toBeOtelSpanEnded`
@@ -209,6 +210,8 @@ The reporter attaches these as OTel resource attributes (available in `target_in
 Every test produces a root span. Every Playwright step produces a child span.  
 Additional spans from `useSpan` appear as further children of the test span.
 
+> **Implementation note**: the test span is created at the end of the test (not at `onTestBegin`), so that annotations pushed during the test — including `pw_otel.traceparent` — are available when the span context is resolved. All timing is preserved: the span's `startTime` is still set to when the test began.
+
 ### Test span attributes
 
 | Attribute | Description |
@@ -228,6 +231,102 @@ Additional spans from `useSpan` appear as further children of the test span.
 | `browser.headless` | `"true"` / `"false"` |
 | `browser.viewport` | e.g. `"1280x720"` |
 | `browser.locale` | e.g. `"en-US"` |
+
+### Propagating the trace ID to downstream services
+
+The `useTraceparent` fixture from `@playwright-labs/fixture-otel` gives every test a single W3C
+[`traceparent`](https://www.w3.org/TR/trace-context/) that is shared by the reporter's test span
+and all spans emitted by the services the test calls.
+
+It supports **two modes simultaneously** — automatic and manual — so you can mix them freely in
+the same test.
+
+#### Automatic propagation (no manual headers)
+
+When `startWorkerSdk()` is called in the worker, the fixture activates the traceparent as the OTel
+`AsyncLocalStorage` context for the entire test.  Every library instrumented by OpenTelemetry
+(`node:http`, global `fetch`, gRPC, database clients, …) picks it up automatically — no manual
+header injection needed.
+
+**Step 1 — create a worker setup file:**
+
+```typescript
+// worker-setup.ts
+import { startWorkerSdk } from "@playwright-labs/fixture-otel";
+import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
+
+startWorkerSdk({
+  instrumentations: [getNodeAutoInstrumentations()],
+});
+```
+
+`startWorkerSdk` is a singleton — safe to call multiple times.  It reads the OTLP endpoint from
+the env var set by the reporter (`PLAYWRIGHT_OTEL_BASE_URL`) and exits silently when the reporter
+is not running.
+
+**Step 2 — register it in `playwright.config.ts`:**
+
+```typescript
+export default defineConfig({
+  require: ["./worker-setup.ts"],
+  // … rest of config
+});
+```
+
+Or as a worker-scoped fixture if you prefer:
+
+```typescript
+export const test = baseTest.extend<{}, { otelWorker: void }>({
+  otelWorker: [
+    async ({}, use) => {
+      startWorkerSdk({ instrumentations: [getNodeAutoInstrumentations()] });
+      await use();
+    },
+    { scope: "worker" },
+  ],
+});
+```
+
+**Step 3 — add `useTraceparent` to any test:**
+
+```typescript
+import { test } from "@playwright-labs/fixture-otel";
+
+// No extra setup needed — all fetch/http calls are auto-instrumented.
+test("checkout", async ({ useTraceparent, page }) => {
+  useTraceparent(); // activates the OTel context; return value optional here
+  await page.goto("/checkout");
+  await page.getByRole("button", { name: "Buy" }).click();
+  // Every fetch and http.request made by the app shares the same traceId.
+});
+```
+
+#### Manual propagation
+
+For clients that are not auto-instrumented (Playwright's `request` fixture, custom `fetch` wrappers,
+non-Node runtimes), call `useTraceparent()` to get the header value and inject it yourself:
+
+```typescript
+test("checkout API", async ({ useTraceparent, request }) => {
+  const { traceparent, traceId } = useTraceparent();
+
+  await request.post("/api/order", { headers: { traceparent } });
+  await request.get("/api/order/latest", { headers: { traceparent } });
+
+  console.log("trace:", traceId); // same ID visible in Jaeger for all spans
+});
+```
+
+Both modes are fully composable — the same traceparent value is used whether you inject it
+manually or it is propagated automatically.
+
+#### `Traceparent` object
+
+| Property | Type | Description |
+|---|---|---|
+| `traceId` | `string` | 32-char lowercase hex trace ID |
+| `spanId` | `string` | 16-char lowercase hex parent span ID |
+| `traceparent` | `string` | Full W3C header value: `00-{traceId}-{spanId}-01` |
 
 ### Forwarding annotations as span attributes
 
@@ -311,6 +410,34 @@ test("track in-flight requests", async ({ useUpDownCounter, page }) => {
   expect(inFlight).toHaveOtelMinCallCount(1);
 });
 ```
+
+### useTraceparent — W3C trace propagation
+
+Generates a W3C `traceparent` at the start of the test, activates it as the OTel context for the
+test duration, and registers it as the `pw_otel.traceparent` annotation so the reporter's test span
+joins the same trace.
+
+**Automatic** — with `startWorkerSdk()` running in the worker, all instrumented code propagates
+it without any manual work:
+
+```typescript
+test("checkout", async ({ useTraceparent, page }) => {
+  useTraceparent(); // activates context — return value optional
+  await page.goto("/checkout");
+  // fetch/http auto-instrumented spans share the same traceId automatically
+});
+```
+
+**Manual** — get the header value and inject it yourself:
+
+```typescript
+test("order API", async ({ useTraceparent, request }) => {
+  const { traceparent } = useTraceparent();
+  await request.post("/api/orders", { headers: { traceparent } });
+});
+```
+
+Calling `useTraceparent()` multiple times in the same test returns the **same object** — the OTel context and annotation are set up once at fixture initialisation.
 
 ### useSpan — custom child spans
 
@@ -547,9 +674,15 @@ import type {
   OtelReporterOptions,
 } from "@playwright-labs/reporter-otel";
 
+// parseTraceparent is exported for consumers who need to inspect a traceparent
+// string outside of the reporter lifecycle:
+import { parseTraceparent, TRACEPARENT_ANNOTATION } from "@playwright-labs/reporter-otel";
+
 // From the fixture package:
 import type {
   OtelFixture,
+  Traceparent,
+  WorkerSdkOptions,
   Counter,
   Histogram,
   UpDownCounter,
@@ -557,8 +690,8 @@ import type {
   OtelMatchers,
 } from "@playwright-labs/fixture-otel";
 
-// withSpan is a value export (not a type):
-import { withSpan } from "@playwright-labs/fixture-otel";
+// Value exports:
+import { withSpan, startWorkerSdk, TRACEPARENT_ANNOTATION } from "@playwright-labs/fixture-otel";
 ```
 
 ## License
