@@ -248,34 +248,14 @@ When `startWorkerSdk()` is called in the worker, the fixture activates the trace
 (`node:http`, global `fetch`, gRPC, database clients, …) picks it up automatically — no manual
 header injection needed.
 
-**Step 1 — create a worker setup file:**
+**Step 1 — add a worker-scoped fixture that calls `startWorkerSdk`:**
 
 ```typescript
-// worker-setup.ts
+// fixtures.ts
+import { test as baseTest } from "@playwright-labs/fixture-otel";
 import { startWorkerSdk } from "@playwright-labs/fixture-otel";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 
-startWorkerSdk({
-  instrumentations: [getNodeAutoInstrumentations()],
-});
-```
-
-`startWorkerSdk` is a singleton — safe to call multiple times.  It reads the OTLP endpoint from
-the env var set by the reporter (`PLAYWRIGHT_OTEL_BASE_URL`) and exits silently when the reporter
-is not running.
-
-**Step 2 — register it in `playwright.config.ts`:**
-
-```typescript
-export default defineConfig({
-  require: ["./worker-setup.ts"],
-  // … rest of config
-});
-```
-
-Or as a worker-scoped fixture if you prefer:
-
-```typescript
 export const test = baseTest.extend<{}, { otelWorker: void }>({
   otelWorker: [
     async ({}, use) => {
@@ -287,7 +267,11 @@ export const test = baseTest.extend<{}, { otelWorker: void }>({
 });
 ```
 
-**Step 3 — add `useTraceparent` to any test:**
+`startWorkerSdk` is a singleton — safe to call multiple times. It reads the OTLP endpoint from
+the env var set by the reporter (`PLAYWRIGHT_OTEL_BASE_URL`) and exits silently when the reporter
+is not running.
+
+**Step 2 — add `useTraceparent` to any test:**
 
 ```typescript
 import { test } from "@playwright-labs/fixture-otel";

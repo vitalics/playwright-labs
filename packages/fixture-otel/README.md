@@ -112,32 +112,10 @@ Calling `useTraceparent()` multiple times within the same test returns the **sam
 When `startWorkerSdk()` has been called in the worker process, every library instrumented by OpenTelemetry (`node:http`, global `fetch`, gRPC, database clients, …) picks up the context automatically via `AsyncLocalStorage`. No manual header injection needed.
 
 ```typescript
-import { test, startWorkerSdk } from "@playwright-labs/fixture-otel";
+// fixtures.ts
+import { test as baseTest, startWorkerSdk } from "@playwright-labs/fixture-otel";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 
-// worker-setup.ts — call once per worker, before any tests run
-startWorkerSdk({ instrumentations: [getNodeAutoInstrumentations()] });
-
-// my.spec.ts
-test("checkout", async ({ useTraceparent, page }) => {
-  useTraceparent(); // activates context; return value optional here
-  await page.goto("/checkout");
-  // Every fetch / http.request the app makes automatically carries the same traceId
-});
-```
-
-Register the setup file in `playwright.config.ts`:
-
-```typescript
-export default defineConfig({
-  require: ["./worker-setup.ts"],
-  reporter: [["@playwright-labs/reporter-otel", { host: "localhost", port: 4318 }]],
-});
-```
-
-Or as a worker-scoped fixture:
-
-```typescript
 export const test = baseTest.extend<{}, { otelWorker: void }>({
   otelWorker: [
     async ({}, use) => {
@@ -146,6 +124,17 @@ export const test = baseTest.extend<{}, { otelWorker: void }>({
     },
     { scope: "worker" },
   ],
+});
+```
+
+```typescript
+// my.spec.ts
+import { test } from "./fixtures";
+
+test("checkout", async ({ useTraceparent, page }) => {
+  useTraceparent(); // activates context; return value optional here
+  await page.goto("/checkout");
+  // Every fetch / http.request the app makes automatically carries the same traceId
 });
 ```
 
