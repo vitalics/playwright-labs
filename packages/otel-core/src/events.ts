@@ -7,6 +7,18 @@ export const WORKER_HEADERS_ENV = "PLAYWRIGHT_OTEL_HEADERS";
 /** Prefix that OTel event lines written to stdout must start with. */
 export const OTEL_EVENT_PREFIX = "__pw_otel__";
 
+/**
+ * Annotation type used to carry a W3C traceparent from a test fixture to the
+ * reporter.  When present, the reporter creates the test span as a child of
+ * the remote span described by the value, ensuring all spans produced by the
+ * test share a single trace ID that can be propagated to downstream services.
+ *
+ * Value format: `00-{32-hex traceId}-{16-hex spanId}-{2-hex flags}`
+ *
+ * @example `"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"`
+ */
+export const TRACEPARENT_ANNOTATION = "pw_otel.traceparent";
+
 // ── Metric types ──────────────────────────────────────────────────────────────
 
 export type MetricType = "counter" | "histogram" | "updown_counter";

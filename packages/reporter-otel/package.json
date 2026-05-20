@@ -22,6 +22,7 @@
   "packageManager": "pnpm@10.11.0",
   "scripts": {
     "build": "tsup",
+    "test": "playwright test",
     "package:pack": "pnpm exec npm pack",
     "package:pack:dry-run": "pnpm package:pack --dry-run"
   },

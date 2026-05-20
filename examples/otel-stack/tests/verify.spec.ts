@@ -137,6 +137,81 @@ test.describe("OTel reporter — trace verification (Jaeger)", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// useTraceparent verification (Jaeger)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe("OTel reporter — useTraceparent verification (Jaeger)", () => {
+  /**
+   * The `useTraceparent` test in sample.spec.ts creates three worker spans:
+   *   e2e.traceparent.cart.validate
+   *   e2e.traceparent.payment.charge
+   *   e2e.traceparent.email.send
+   *
+   * All three are reported as children of the test span, which is created
+   * inside the trace identified by the `pw_otel.traceparent` annotation.
+   * This test verifies that all three spans appear inside the SAME Jaeger trace,
+   * proving that `useTraceparent()` correctly tied them all together.
+   */
+  test("useTraceparent: all checkout spans appear in the same Jaeger trace", async ({
+    request,
+  }) => {
+    await expect
+      .poll(async () => {
+        const resp = await request.get(
+          `${JAEGER_BASE}/api/traces?service=playwright&limit=50`,
+        );
+        if (!resp.ok()) return false;
+        const body = await resp.json();
+        const traces: { spans: { operationName: string }[] }[] =
+          body.data ?? [];
+
+        // Find a single trace that contains ALL three traceparent demo spans.
+        // If useTraceparent worked correctly, they must all share one traceId.
+        return traces.some(
+          (trace) =>
+            trace.spans.some(
+              (s) => s.operationName === "e2e.traceparent.cart.validate",
+            ) &&
+            trace.spans.some(
+              (s) => s.operationName === "e2e.traceparent.payment.charge",
+            ) &&
+            trace.spans.some(
+              (s) => s.operationName === "e2e.traceparent.email.send",
+            ),
+        );
+      }, POLL_OPTS)
+      .toBe(true);
+  });
+
+  test("useTraceparent: trace contains the Playwright test span alongside worker spans", async ({
+    request,
+  }) => {
+    await expect
+      .poll(async () => {
+        const resp = await request.get(
+          `${JAEGER_BASE}/api/traces?service=playwright&limit=50`,
+        );
+        if (!resp.ok()) return false;
+        const body = await resp.json();
+        const traces: { spans: { operationName: string }[] }[] =
+          body.data ?? [];
+
+        // The trace must include a Playwright test span (contains " › ") AND at
+        // least one traceparent worker span — the reporter test span and the
+        // worker spans share the same traceId thanks to useTraceparent().
+        return traces.some(
+          (trace) =>
+            trace.spans.some((s) => s.operationName.includes(" › ")) &&
+            trace.spans.some((s) =>
+              s.operationName.startsWith("e2e.traceparent."),
+            ),
+        );
+      }, POLL_OPTS)
+      .toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Built-in metric verification (pw_* metrics)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -374,6 +449,7 @@ test.describe("OTel reporter — interactive UIs", () => {
     expect(resp.ok()).toBeTruthy();
     console.log("  Jaeger UI → http://localhost:16686");
     console.log("    Select service: playwright → Find Traces");
+    console.log("    Look for traces with e2e.traceparent.* spans — all in one traceId (useTraceparent demo)");
   });
 
   test("Prometheus UI is accessible", async ({ request }) => {
