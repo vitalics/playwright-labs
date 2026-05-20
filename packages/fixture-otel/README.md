@@ -50,6 +50,16 @@ export { expect } from "@playwright-labs/fixture-otel";
 
 All fixtures are automatically cleaned up after each test — metrics are flushed and spans are ended without any manual call.
 
+| Fixture | Returns | Purpose |
+|---|---|---|
+| `useCounter(name, options?)` | `Counter` | Monotonically increasing metric |
+| `useHistogram(name, options?)` | `Histogram` | Distribution of values (latency, size, …) |
+| `useUpDownCounter(name, options?)` | `UpDownCounter` | Value that can go up or down (queue depth, …) |
+| `useSpan(name)` | `Span` | Named span nested under the test span |
+| `useTraceparent()` | `Traceparent` | W3C traceparent that ties the test and all downstream requests into one trace |
+
+---
+
 ### `useCounter`
 
 Creates an OTel **Counter** — a monotonically increasing value.
