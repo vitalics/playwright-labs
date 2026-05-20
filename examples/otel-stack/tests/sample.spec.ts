@@ -131,4 +131,46 @@ test.describe("OTel reporter — sample data generation", () => {
 
     expect(total).toBe(1337);
   });
+
+  test("useTraceparent links test span and all worker spans in one trace", async ({
+    useTraceparent,
+  }) => {
+    // A single W3C traceparent is generated for this test.
+    // The reporter places its test span inside that trace, and every span
+    // emitted from the worker (via withSpan / useSpan) is reported as a child
+    // of that test span — so all spans share the same traceId in Jaeger.
+    const { traceId, traceparent } = useTraceparent();
+
+    // Simulate a multi-step checkout flow where each step would normally call
+    // a downstream service.  In a real setup with startWorkerSdk() and
+    // auto-instrumented HTTP clients, the traceparent header would be injected
+    // automatically into every outgoing request.
+    await test.step("validate cart", () =>
+      withSpan("e2e.traceparent.cart.validate", (span) => {
+        span.setAttribute("cart.items", 3);
+        span.setAttribute("cart.total_usd", 89.97);
+      }),
+    );
+
+    await test.step("charge payment", () =>
+      withSpan("e2e.traceparent.payment.charge", (span) => {
+        span.setAttribute("payment.method", "credit_card");
+        span.setAttribute("payment.amount_usd", 89.97);
+      }),
+    );
+
+    await test.step("send confirmation email", () =>
+      withSpan("e2e.traceparent.email.send", (span) => {
+        span.setAttribute("email.recipient", "user@example.com");
+        span.setAttribute("email.template", "order_confirmation");
+      }),
+    );
+
+    // All three worker spans + the test span itself share this traceId.
+    // Open the link below in Jaeger after the run to see them together.
+    console.log(`  useTraceparent demo trace → http://localhost:16686/trace/${traceId}`);
+    console.log(`  W3C traceparent header    → ${traceparent}`);
+
+    expect(traceparent).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/);
+  });
 });
