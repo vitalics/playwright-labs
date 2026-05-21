@@ -1,12 +1,12 @@
 # Playwright TypeScript Best Practices
 
-**Version:** 1.0.1  
+**Version:** 1.1.0  
 **Organization:** vitalics <vitalicset@yandex.ru>  
-**Date:** January 2026
+**Date:** May 2026
 
 ## Abstract
 
-Comprehensive best practices guide for Playwright TypeScript test automation, designed for AI agents and LLMs. Contains 40+ rules across 8 categories, prioritized by impact from critical (test stability, execution speed) to incremental (advanced patterns). Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated test writing and refactoring.
+Comprehensive best practices guide for Playwright TypeScript test automation, designed for AI agents and LLMs. Contains 20+ rules across 8 categories, prioritized by impact from critical (test stability, execution speed) to incremental (advanced patterns). Covers modular fixture composition with mergeTests/mergeExpects, type-safe environment variables, JSON schema validation for API responses, AbortSignal-based cancellation, Node.js timer control, OOP decorator patterns for large teams, OpenTelemetry integration for test observability (custom metrics, distributed traces, Jaeger/Grafana/Prometheus), Slack Block Kit notifications, and email reporting with React Email templates. Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated test writing and refactoring.
 
 ---
 
@@ -24,12 +24,22 @@ Comprehensive best practices guide for Playwright TypeScript test automation, de
    - 5.1. [Ensure Test Isolation for Parallel Execution](#5.1-ensure-test-isolation-for-parallel-execution)
    - 5.2. [Use Test Sharding to Distribute Tests Across Multiple Machines](#5.2-use-test-sharding-to-distribute-tests-across-multiple-machines)
 6. [Fixtures & Test Organization](#6-fixtures--test-organization) (MEDIUM)
-   - 6.1. [Use Custom Fixtures for Reusable Test Setup and Teardown](#6.1-use-custom-fixtures-for-reusable-test-setup-and-teardown)
-   - 6.2. [Use test.describe for Logical Test Grouping](#6.2-use-testdescribe-for-logical-test-grouping)
+   - 6.1. [Cancel Async Operations and Network Requests with AbortSignal Fixtures](#6.1-cancel-async-operations-and-network-requests-with-abortsignal-fixtures)
+   - 6.2. [Compose Fixtures with mergeTests and mergeExpects for Modular Test Suites](#6.2-compose-fixtures-with-mergetests-and-mergeexpects-for-modular-test-suites)
+   - 6.3. [Control Node.js Timers in Tests with Promise-Based Timer Fixtures](#6.3-control-nodejs-timers-in-tests-with-promise-based-timer-fixtures)
+   - 6.4. [Instrument Tests with Custom OTel Metrics, Spans, and Distributed Trace Propagation](#6.4-instrument-tests-with-custom-otel-metrics-spans-and-distributed-trace-propagation)
+   - 6.5. [Manage Environment Variables with Type-Safe Validated Configuration](#6.5-manage-environment-variables-with-type-safe-validated-configuration)
+   - 6.6. [Use Custom Fixtures for Reusable Test Setup and Teardown](#6.6-use-custom-fixtures-for-reusable-test-setup-and-teardown)
+   - 6.7. [Use test.describe for Logical Test Grouping](#6.7-use-testdescribe-for-logical-test-grouping)
 7. [Debugging & Maintenance](#7-debugging--maintenance) (MEDIUM)
    - 7.1. [Use test.step for Better Test Readability and Debugging](#7.1-use-teststep-for-better-test-readability-and-debugging)
 8. [Advanced Patterns](#8-advanced-patterns) (LOW)
-   - 8.1. [Use API Mocking for Reliable and Fast Tests](#8.1-use-api-mocking-for-reliable-and-fast-tests)
+   - 8.1. [Export Test Traces and Metrics to OpenTelemetry Backends with reporter-otel](#8.1-export-test-traces-and-metrics-to-opentelemetry-backends-with-reporter-otel)
+   - 8.2. [Organize Tests with OOP Decorator Pattern for Large Scalable Test Suites](#8.2-organize-tests-with-oop-decorator-pattern-for-large-scalable-test-suites)
+   - 8.3. [Send Test Results to Slack with Rich Block Kit Messages via reporter-slack](#8.3-send-test-results-to-slack-with-rich-block-kit-messages-via-reporter-slack)
+   - 8.4. [Send Test Run Reports via Email with React Email Templates via reporter-email](#8.4-send-test-run-reports-via-email-with-react-email-templates-via-reporter-email)
+   - 8.5. [Use API Mocking for Reliable and Fast Tests](#8.5-use-api-mocking-for-reliable-and-fast-tests)
+   - 8.6. [Validate API Response JSON Schemas with toMatchSchema Custom Matcher](#8.6-validate-api-response-json-schemas-with-tomatchschema-custom-matcher)
 
 ---
 
@@ -1930,7 +1940,920 @@ Reference: [Playwright Test Sharding](https://playwright.dev/docs/test-sharding)
 **Impact:** MEDIUM  
 **Description:** Well-structured tests with proper fixtures and hooks improve code reusability, maintainability, and test clarity.
 
-### 6.1. Use Custom Fixtures for Reusable Test Setup and Teardown
+### 6.1. Cancel Async Operations and Network Requests with AbortSignal Fixtures
+
+**Tags:** abort, signal, AbortController, AbortSignal, cancellation, network, async, fixture-abort  
+**Impact:** MEDIUM (enables deterministic cancellation tests and prevents async resource leaks)
+
+**Impact: MEDIUM (enables deterministic cancellation tests and prevents async resource leaks)**
+
+Testing cancellation behavior (user navigates away, timeout exceeded, request manually aborted) requires `AbortController` and `AbortSignal`. Creating them manually in every test is repetitive and their cleanup is often forgotten. The `@playwright-labs/fixture-abort` package provides per-test `abortController` and `abortSignal` fixtures with automatic lifecycle management, plus 7 custom matchers for asserting abort state.
+
+## When to Use
+
+- **Use abortController/abortSignal fixtures when**: Testing fetch cancellation, stream interruption, long-polling termination, or user-initiated cancel flows
+- **Use useAbortSignalWithTimeout when**: You need a timeout-based abort that automatically triggers after N milliseconds
+- **Use matchers when**: Asserting that a signal is active before the operation and aborted after cancellation
+- **Required for**: Any test covering network request cancellation, AbortSignal-aware APIs, or cleanup-on-cancel behavior
+
+## Guidelines
+
+### Do
+
+- Use `signal` fixture to pass to `fetch()`, streams, or any AbortSignal-aware API
+- Use `abortController.abort(reason)` with a descriptive reason to identify the cancel source
+- Use `toBeAborted()` after cancellation and `toBeActive()` before
+- Use `toAbortWithin(ms)` for timeout-based signals (`AbortSignal.timeout(n)`)
+- Use `useAbortController(onAbort)` when you need a cleanup callback on abort
+
+### Don't
+
+- Don't share one `abortController` across multiple tests — each test gets its own fresh instance via the fixture
+- Don't ignore the abort reason — use `toBeAbortedWithReason(reason)` when the reason matters
+- Don't manually create `new AbortController()` when the fixture is available
+- Don't forget to handle rejected promises from aborted operations — `fetch` rejects with `AbortError`
+
+### Tool Usage Patterns
+
+- **Install**: `npm install @playwright-labs/fixture-abort`
+- **Fixtures**: `abortController` (AbortController), `abortSignal` (AbortSignal), `useAbortController(onAbort?)`, `useAbortSignalWithTimeout(ms)`
+- **Matchers**: `toBeAborted()`, `toBeActive()`, `toBeAbortedWithReason(reason)`, `toHaveAbortedSignal()`, `toHaveActiveSignal()`, `toAbortWithin(ms)`, `toHaveAbortReason(ErrorType)`
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- `abortController` is test-scoped — a new instance is created for every test; you cannot persist it across tests
+- `useAbortSignalWithTimeout(ms)` also sets the Playwright test timeout to `ms` — keep this in mind when setting short timeouts
+- `toAbortWithin(ms)` is async — always `await` it
+
+### Edge Cases
+
+1. **Multiple abort reasons**: Calling `abort()` a second time is a no-op — the first reason is preserved. Assert with `toBeAbortedWithReason`.
+2. **Stream cleanup**: When aborting a `ReadableStream`, call `.cancel()` on the reader — the signal alone doesn't automatically clean up all stream consumers.
+3. **Nested async operations**: An aborted signal propagates to child `fetch` calls that receive the same signal — all reject simultaneously.
+
+### What Breaks If Ignored
+
+- **Without abort fixtures**: Manual `new AbortController()` in every test, no automatic teardown, signal never checked
+- **Without matchers**: Cancellation assertions require try/catch boilerplate that hides the actual behavior
+- **Without cleanup**: Aborted but not-rejected promises keep network connections open, causing test timeouts in slow CI
+
+**Incorrect (manual AbortController, no assertions):**
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test('cancel request', async () => {
+  // ❌ Manual creation, no fixture lifecycle
+  const ac = new AbortController();
+
+  const promise = fetch('https://api.example.com/data', { signal: ac.signal });
+  ac.abort();
+
+  // ❌ Try/catch instead of matchers — brittle, hides assertion
+  try {
+    await promise;
+    throw new Error('Should have aborted');
+  } catch (e) {
+    expect(e).toBeInstanceOf(Error); // ❌ Too loose — any Error passes
+  }
+  // ❌ Never checks the signal's final state
+});
+```
+
+**Correct (fixtures + custom matchers):**
+
+```typescript
+// fixtures/index.ts
+import { mergeTests, mergeExpects } from '@playwright/test';
+import {
+  test as abortTest,
+  expect as abortExpect,
+} from '@playwright-labs/fixture-abort';
+
+export const test = mergeTests(abortTest);
+export const expect = mergeExpects(abortExpect);
+```
+
+```typescript
+import { test, expect } from '../fixtures';
+
+// ✅ Signal starts active
+test('signal is active before operation', async ({ abortSignal }) => {
+  expect(abortSignal).toBeActive();
+  expect(abortSignal).not.toBeAborted();
+});
+
+// ✅ Cancel API request and assert abort state
+test('abort cancels in-flight fetch', async ({ abortController, abortSignal }) => {
+  expect(abortSignal).toBeActive();
+
+  const fetchPromise = fetch('https://httpbin.org/delay/10', { signal: abortSignal });
+
+  abortController.abort('user cancelled');
+
+  await expect(fetchPromise).rejects.toThrow();
+  expect(abortSignal).toBeAborted();
+  expect(abortSignal).toBeAbortedWithReason('user cancelled');
+  expect(abortController).toHaveAbortedSignal();
+});
+
+// ✅ Timeout-based abort
+test('request aborts after 3 seconds', async () => {
+  const signal = AbortSignal.timeout(3000);
+  await expect(signal).toAbortWithin(3500); // async — must await
+  expect(signal).toHaveAbortReason(DOMException);
+});
+
+// ✅ Cleanup callback on abort
+test('cleans up on cancel', async ({ useAbortController }) => {
+  let cleanedUp = false;
+
+  const controller = useAbortController(() => {
+    cleanedUp = true;
+  });
+
+  controller.abort();
+  expect(cleanedUp).toBe(true);
+});
+
+// ✅ Multiple listeners
+test('abort notifies all listeners', async ({ abortController, abortSignal }) => {
+  let count = 0;
+  abortSignal.addEventListener('abort', () => count++);
+  abortSignal.addEventListener('abort', () => count++);
+
+  abortController.abort();
+
+  expect(count).toBe(2);
+  expect(abortController).toHaveAbortedSignal();
+});
+
+// ✅ Pass signal to any AbortSignal-aware API
+test('page fetch respects signal', async ({ page, signal, abortController }) => {
+  const pagePromise = page.evaluate((signal) => {
+    return fetch('/api/slow', { signal });
+  }, signal);
+
+  abortController.abort('navigation');
+
+  await expect(pagePromise).rejects.toThrow();
+  expect(signal).toBeAbortedWithReason('navigation');
+});
+```
+
+Reference: [@playwright-labs/fixture-abort](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-abort)
+
+---
+
+### 6.2. Compose Fixtures with mergeTests and mergeExpects for Modular Test Suites
+
+**Tags:** fixtures, mergeTests, mergeExpects, modular, composition, scalability  
+**Impact:** MEDIUM (enables scalable fixture composition across large teams without conflicts)
+
+**Impact: MEDIUM (enables scalable fixture composition across large teams without conflicts)**
+
+Playwright's `mergeTests` and `mergeExpects` utilities let you combine multiple fixture sets and custom matchers from separate packages or team modules into a single unified `test` and `expect`. This is the standard pattern for third-party fixture libraries and for splitting large fixture suites across feature teams without naming collisions.
+
+## When to Use
+
+- **Use mergeTests/mergeExpects when**: Combining fixtures from multiple `test.extend()` sources, using third-party fixture packages like `@playwright-labs/*`, or splitting fixtures across domains (auth, database, API)
+- **Prefer over manual extend-chaining when**: You have 3+ independent fixture modules, need to compose external packages, or want to isolate fixture ownership by team
+- **Required for**: Monorepos, large teams, any project using `@playwright-labs/fixture-*` packages
+
+## Guidelines
+
+### Do
+
+- Create a single `fixtures.ts` (or `test.ts`) entry point that merges everything and re-exports
+- Merge both `test` and `expect` objects — `mergeTests` handles fixtures, `mergeExpects` handles matchers
+- Type each module's fixtures independently before merging
+- Use `mergeTests` at project level in playwright.config.ts-adjacent files, not inside test files
+
+### Don't
+
+- Don't call `mergeTests` inside individual test files — create a shared file
+- Don't chain `.extend()` when composing unrelated modules — use `mergeTests` instead
+- Don't forget to re-export from the merged file — all tests should import from one place
+- Don't mix merged and non-merged imports in the same project
+
+### Tool Usage Patterns
+
+- **Primary tools**: `mergeTests()`, `mergeExpects()` from `@playwright/test`
+- **Third-party fixtures**: All `@playwright-labs/fixture-*` packages export a `test` and `expect` that are merge-compatible
+- **Pattern**: one `fixtures/index.ts` that merges and re-exports; all spec files import from it
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Fixture names must be unique across all merged modules — duplicate names cause a runtime error
+- `mergeExpects` only merges custom matchers; TypeScript types may need manual declaration merging via `declare module "@playwright/test"`
+- Order of merge arguments does not affect fixture resolution but does affect error messages
+
+### Edge Cases
+
+1. **Duplicate fixture names**: If two modules both define `apiClient`, `mergeTests` throws. Solution: namespace fixtures (`authApiClient`, `adminApiClient`) before merging.
+2. **Matcher type conflicts**: Two packages extending `Matchers<R>` with the same method name silently override. Solution: check package changelogs before updating.
+3. **Circular fixture dependencies across modules**: Module A's fixture depends on Module B's fixture. Works fine with `mergeTests` — Playwright resolves across the merged graph.
+
+### What Breaks If Ignored
+
+- **Without merging**: Deep `.extend().extend().extend()` chains become unreadable and impossible to split across files
+- **Without re-exporting from one file**: Tests import inconsistently, some getting older fixture versions
+- **Without mergeExpects**: Custom matchers from different packages are silently dropped
+
+**Incorrect (chaining extends for unrelated modules):**
+
+```typescript
+// ❌ Hard to maintain, mixes unrelated concerns
+import { test as base } from '@playwright/test';
+import { authFixtures } from './auth';
+import { dbFixtures } from './database';
+import { apiFixtures } from './api';
+
+export const test = base
+  .extend(authFixtures)
+  .extend(dbFixtures)
+  .extend(apiFixtures);
+// Matchers from each module are lost — no mergeExpects
+```
+
+**Correct (using mergeTests and mergeExpects):**
+
+```typescript
+// fixtures/index.ts
+import { mergeTests, mergeExpects } from '@playwright/test';
+
+// Third-party playwright-labs packages
+import {
+  test as timersTest,
+  expect as timersExpect,
+} from '@playwright-labs/fixture-timers';
+import {
+  test as abortTest,
+  expect as abortExpect,
+} from '@playwright-labs/fixture-abort';
+import {
+  test as ajvTest,
+  expect as ajvExpect,
+} from '@playwright-labs/fixture-ajv-ts';
+import {
+  test as envTest,
+  expect as envExpect,
+} from '@playwright-labs/fixture-env';
+
+// Internal project fixtures
+import { test as authTest, expect as authExpect } from './auth.fixture';
+import { test as dbTest } from './database.fixture';
+
+// ✅ Merge all fixtures into one test object
+export const test = mergeTests(
+  timersTest,
+  abortTest,
+  ajvTest,
+  envTest,
+  authTest,
+  dbTest,
+);
+
+// ✅ Merge all custom matchers into one expect object
+export const expect = mergeExpects(
+  timersExpect,
+  abortExpect,
+  ajvExpect,
+  envExpect,
+  authExpect,
+);
+```
+
+```typescript
+// tests/api.spec.ts — all tests import from one place
+import { test, expect } from '../fixtures';
+
+test('POST /users validates schema', async ({ request, schema }) => {
+  // schema fixture from @playwright-labs/fixture-ajv-ts
+  const UserSchema = schema.object({ id: schema.number(), email: schema.string() });
+
+  const res = await request.post('/api/users', { data: { email: 'test@example.com' } });
+  expect(await res.json()).toMatchSchema(UserSchema); // toMatchSchema from ajvExpect
+});
+
+test('cancel slow request', async ({ abortController, signal }) => {
+  // abortController/signal fixtures from @playwright-labs/fixture-abort
+  const fetch = globalThis.fetch('/api/slow', { signal });
+  abortController.abort('timeout');
+  await expect(fetch).rejects.toThrow();
+});
+```
+
+```typescript
+// Splitting fixtures by team ownership — each team owns a module
+// team-auth/fixtures.ts
+import { test as base } from '@playwright/test';
+export const test = base.extend<{ authToken: string }>({
+  authToken: async ({}, use) => {
+    const token = await fetchToken();
+    await use(token);
+  },
+});
+
+// team-payments/fixtures.ts
+import { test as base } from '@playwright/test';
+export const test = base.extend<{ paymentApi: PaymentClient }>({
+  paymentApi: async ({}, use) => {
+    await use(new PaymentClient());
+  },
+});
+
+// fixtures/index.ts — platform team composes everything
+import { mergeTests } from '@playwright/test';
+import { test as authTest } from '../team-auth/fixtures';
+import { test as paymentsTest } from '../team-payments/fixtures';
+
+export const test = mergeTests(authTest, paymentsTest);
+export { expect } from '@playwright/test';
+```
+
+Reference: [Playwright mergeTests](https://playwright.dev/docs/api/class-test#test-merge-tests)
+
+---
+
+### 6.3. Control Node.js Timers in Tests with Promise-Based Timer Fixtures
+
+**Tags:** timers, setTimeout, setInterval, fixture-timers, async, timing, nodejs  
+**Impact:** MEDIUM (eliminates real-time waits and makes timing-sensitive tests deterministic)
+
+**Impact: MEDIUM (eliminates real-time waits and makes timing-sensitive tests deterministic)**
+
+Node.js timer APIs (`setTimeout`, `setInterval`, `setImmediate`) are callback-based and awkward to use in async tests. The `@playwright-labs/fixture-timers` package exposes them as first-class Playwright fixtures that return Promises and AsyncIterators, integrate naturally with `await` and `for await...of`, support AbortSignal cancellation, and include 6 custom matchers for timing assertions.
+
+## When to Use
+
+- **Use fixture-timers when**: Testing retry logic, polling, debounce/throttle, timeout races, or any code with timing-sensitive behavior
+- **Prefer over `page.waitForTimeout()`**: `waitForTimeout` is a hard sleep; fixture timers are composable and assertable
+- **Use custom matchers when**: You need to assert that an operation completes within an SLA or takes at least a minimum duration
+- **Required for**: Integration tests involving queues, retry policies, or interval-driven workflows
+
+## Guidelines
+
+### Do
+
+- Use `setTimeout` fixture instead of `page.waitForTimeout()` or raw `setTimeout()`
+- Use `setInterval` with `for await...of` for polling patterns
+- Use `toResolveWithin(ms)` to assert SLA compliance
+- Use `toTakeAtLeast(ms)` to assert minimum delay enforcement
+- Cancel timers with `AbortController` to test timeout handling
+- Use `scheduler.wait()` when you need precise sub-millisecond-class scheduling
+
+### Don't
+
+- Don't use `page.waitForTimeout()` — it's a hard sleep with no assertions
+- Don't import Node's `setTimeout` directly in tests — use the fixture for composability
+- Don't leave `setInterval` iterators running — always `break` or call `.return?.()` for cleanup
+- Don't use raw `new Promise(resolve => setTimeout(resolve, ms))` when fixture is available
+
+### Tool Usage Patterns
+
+- **Install**: `npm install @playwright-labs/fixture-timers`
+- **Fixtures**: `setTimeout`, `setInterval`, `setImmediate`, `scheduler`
+- **Matchers**: `toResolveWithin(ms)`, `toTakeAtLeast(ms)`, `toResolveWith(value)`, `toResolveInTimeRange(min, max)`, `toYield(value?)`, `toYieldWithin(ms)`
+- **Cancellation**: All fixtures accept `{ signal: AbortSignal }` as last argument
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- `setInterval` returns an `AsyncIterator`, not a number — do not try to pass it to `clearInterval`
+- `toResolveWithin` has ~10ms margin of error on loaded CI machines — use generous bounds in CI
+- `scheduler.yield()` is a Node.js 20+ API; tests fail on older runtimes
+
+### Edge Cases
+
+1. **Cleanup of open intervals**: If a test fails mid-loop, the iterator stays open. Use `afterEach` or `signal` cancellation to ensure cleanup.
+2. **AbortController shared across multiple timers**: Aborting once cancels all timers sharing the signal — intended but can surprise.
+3. **Concurrent timers with `Promise.race`**: Works as expected; use `setTimeout` fixtures in the race array.
+
+### What Breaks If Ignored
+
+- **Without timer fixtures**: Real `setTimeout(fn, 5000)` in tests causes 5-second actual waits, slow CI
+- **Without cleanup**: Open `setInterval` iterators keep the test worker alive past completion, causing timeouts
+- **Without matchers**: Timing assertions require fragile manual `Date.now()` bookkeeping
+
+**Incorrect (raw timers, hard sleeps, no assertions):**
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test('retry logic', async ({ page }) => {
+  // ❌ Hard sleep — always waits 3s even if ready sooner
+  await page.waitForTimeout(3000);
+
+  // ❌ Raw callback-based timer — breaks async flow
+  await new Promise<void>(resolve => {
+    setTimeout(resolve, 1000);
+  });
+
+  // ❌ No timing assertion — test passes even if response is 10s late
+  const start = Date.now();
+  const res = await fetch('/api/data');
+  expect(Date.now() - start).toBeLessThan(2000); // manual, fragile
+});
+```
+
+**Correct (promise-based fixtures and custom matchers):**
+
+```typescript
+// fixtures/index.ts
+import { mergeTests, mergeExpects } from '@playwright/test';
+import {
+  test as timersTest,
+  expect as timersExpect,
+} from '@playwright-labs/fixture-timers';
+
+export const test = mergeTests(timersTest);
+export const expect = mergeExpects(timersExpect);
+```
+
+```typescript
+import { test, expect } from '../fixtures';
+
+// ✅ Basic delay — awaitable, no callbacks
+test('waits with delay', async ({ setTimeout }) => {
+  const result = await setTimeout(500, 'done');
+  expect(result).toBe('done');
+});
+
+// ✅ Assert operation completes within SLA
+test('API responds within 2s', async ({ setTimeout }) => {
+  const fetchPromise = fetch('/api/data');
+  await expect(fetchPromise).toResolveWithin(2000);
+});
+
+// ✅ Assert minimum delay is enforced (debounce test)
+test('debounce enforces 300ms delay', async ({ setTimeout }) => {
+  const debounced = setTimeout(300, 'fired');
+  await expect(debounced).toTakeAtLeast(295);
+});
+
+// ✅ Polling with async iterator
+test('poll until service ready', async ({ setInterval }) => {
+  const poller = setInterval(200, 'check');
+  let ready = false;
+
+  for await (const _ of poller) {
+    const res = await fetch('/api/health');
+    if ((await res.json()).status === 'ok') {
+      ready = true;
+      break;
+    }
+  }
+
+  await poller.return?.(); // cleanup
+  expect(ready).toBe(true);
+});
+
+// ✅ Timeout race pattern
+test('operation vs timeout', async ({ setTimeout }) => {
+  const operation = fetch('/api/slow');
+  const timeout = setTimeout(5000).then(() => {
+    throw new Error('timed out');
+  });
+
+  const result = await Promise.race([operation, timeout]);
+  expect(result.ok).toBe(true);
+});
+
+// ✅ Cancel timer with AbortSignal
+test('abort cancels pending timer', async ({ setTimeout }) => {
+  const ac = new AbortController();
+  const timer = setTimeout(10_000, 'late', { signal: ac.signal });
+
+  ac.abort('cancelled');
+
+  await expect(timer).rejects.toThrow();
+});
+
+// ✅ Assert value resolved in time range (not too fast, not too slow)
+test('cache warms between 50-200ms', async ({ setTimeout }) => {
+  const warmup = setTimeout(100, 'warm');
+  await expect(warmup).toResolveInTimeRange(50, 200);
+});
+```
+
+Reference: [@playwright-labs/fixture-timers](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-timers)
+
+---
+
+### 6.4. Instrument Tests with Custom OTel Metrics, Spans, and Distributed Trace Propagation
+
+**Tags:** opentelemetry, otel, metrics, spans, tracing, traceparent, counter, histogram, useSpan, withSpan, fixture-otel  
+**Impact:** MEDIUM (adds business-level telemetry to tests and connects Playwright spans with upstream service traces)
+
+**Impact: MEDIUM (adds business-level telemetry to tests and connects Playwright spans with upstream service traces)**
+
+The built-in reporter-otel metrics track test results and durations. The `@playwright-labs/fixture-otel` package goes further — its fixtures let you record custom business metrics (`useCounter`, `useHistogram`, `useUpDownCounter`), create named child spans (`useSpan`, `withSpan`), and propagate a W3C `traceparent` into the system under test so every downstream service span appears in the same Jaeger trace as the Playwright test span.
+
+## When to Use
+
+- **Use useCounter when**: Counting specific events inside a test — API calls made, items rendered, retries triggered
+- **Use useHistogram when**: Recording latency or size distributions — page load time, response sizes, render durations
+- **Use useUpDownCounter when**: Tracking values that go up and down — in-flight requests, queue depth, active connections
+- **Use useSpan when**: Grouping a logical operation into a named span visible in Jaeger alongside Playwright steps
+- **Use withSpan when**: Wrapping a utility function in a span without needing a fixture
+- **Use useTraceparent when**: The test calls real services and you want Playwright and service spans in one trace
+- **Requires**: `@playwright-labs/reporter-otel` running in `playwright.config.ts`
+
+## Guidelines
+
+### Do
+
+- Pair `test.step` with `withSpan` for simultaneous visibility in Playwright Trace Viewer and Jaeger
+- Use the `using` keyword (TypeScript 5.2+) for deterministic span/metric cleanup within a scope block
+- Call `useTraceparent()` once at the top of tests that make real HTTP calls — all auto-instrumented libraries pick it up via `AsyncLocalStorage`
+- Add `startWorkerSdk({ instrumentations: [...] })` in a worker-scoped fixture to enable zero-config trace propagation across all tests in the worker
+- Use `toBeOtelMetricCollected()` and `toHaveOtelCallCount(n)` to assert that instrumentation fired the expected number of times
+
+### Don't
+
+- Don't call `useTraceparent()` multiple times in one test — it is idempotent and always returns the same object
+- Don't use `useSpan` for spans that cross `await` boundaries without holding a reference — the span stays open until fixture teardown, but explicit `span.end()` is clearer
+- Don't add test-unique IDs (order IDs, user IDs) as metric attributes — high cardinality exhausts Prometheus label space; use span attributes instead
+- Don't import from `@playwright-labs/fixture-otel` in tests that don't use the reporter — the stdout bridge writes JSON lines to stdout, which can interfere with reporters that parse stdout
+
+### Tool Usage Patterns
+
+- **Install**: `npm install @playwright-labs/fixture-otel @playwright-labs/reporter-otel`
+- **Fixtures**: `useCounter(name, options?)`, `useHistogram(name, options?)`, `useUpDownCounter(name, options?)`, `useSpan(name)`, `useTraceparent()`
+- **Standalone helper**: `withSpan(name, callback)` — no fixture required
+- **Worker SDK**: `startWorkerSdk(options)` — call once per worker for auto-instrumented trace propagation
+- **Matchers**: `toBeOtelMetricCollected()`, `toHaveOtelCallCount(n)`, `toHaveOtelMinCallCount(min)`, `toBeOtelSpanEnded()`
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Metrics and spans are flushed via `process.stdout` (`__pw_otel__` prefix) — they require `reporter-otel` to be active in the same Playwright process; standalone use without the reporter silently discards data
+- `withSpan` spans and the reporter's test span are siblings under the same `traceparent` root, not parent–child — this is an architectural trade-off because the test span is created at `onTestEnd`
+- `startWorkerSdk()` is a singleton — calling it multiple times is safe; calling it without the reporter running is also safe (exits silently)
+
+### Edge Cases
+
+1. **Span still open after test**: If `span.end()` is not called, the fixture teardown closes it automatically. The span's end time reflects the fixture teardown moment, not the test end.
+2. **Nested `withSpan` calls**: Automatically produce parent–child relationships in Jaeger via `AsyncLocalStorage` context propagation — no manual wiring needed.
+3. **Manual vs. automatic traceparent**: Both modes use the same `traceparent` value and are fully composable within one test.
+
+### What Breaks If Ignored
+
+- **Without useTraceparent**: Playwright spans and service spans appear as unrelated traces in Jaeger — no end-to-end trace correlation
+- **Without custom metrics**: You can only see "test passed/failed" — not "how many retries happened inside this test" or "how long did the checkout API take"
+- **Without withSpan + test.step**: Playwright Trace Viewer shows steps but not the downstream spans they trigger; Jaeger shows spans but not the test steps
+
+**Incorrect (no instrumentation, no trace correlation):**
+
+```typescript
+import { test, expect } from "@playwright/test";
+
+test("checkout flow", async ({ page, request }) => {
+  // ❌ Playwright span exists in Jaeger, but the service spans are separate traces
+  const res = await request.post("/api/orders", {
+    data: { items: ["abc-123"] },
+  });
+  expect(res.ok()).toBe(true);
+  // ❌ No visibility into how many items were processed, how long it took
+});
+```
+
+**Correct (trace propagation + custom metrics + span instrumentation):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+export default defineConfig({
+  reporter: [["@playwright-labs/reporter-otel", { host: "localhost", port: 4318 }]],
+});
+```
+
+```typescript
+// fixtures/index.ts — worker SDK + merged fixtures
+import { mergeTests, mergeExpects } from "@playwright/test";
+import {
+  test as otelTest,
+  expect as otelExpect,
+  startWorkerSdk,
+} from "@playwright-labs/fixture-otel";
+import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
+
+const workerOtel = otelTest.extend<{}, { otelWorker: void }>({
+  otelWorker: [
+    async ({}, use) => {
+      // ✅ Runs once per worker — enables zero-config trace propagation
+      startWorkerSdk({ instrumentations: [getNodeAutoInstrumentations()] });
+      await use();
+    },
+    { scope: "worker" },
+  ],
+});
+
+export const test = mergeTests(workerOtel);
+export const expect = mergeExpects(otelExpect);
+```
+
+```typescript
+// tests/checkout.spec.ts
+import { test, expect } from "../fixtures";
+import { withSpan } from "@playwright-labs/fixture-otel";
+
+test("checkout with full observability", async ({
+  page,
+  request,
+  useTraceparent,
+  useCounter,
+  useHistogram,
+  useSpan,
+}) => {
+  // ✅ All HTTP calls in this test share one traceId with Playwright's test span
+  const { traceparent, traceId } = useTraceparent();
+  console.log("Trace:", `http://localhost:16686/trace/${traceId}`);
+
+  // ✅ Business metrics
+  const apiCalls  = useCounter("checkout_api_calls", { unit: "calls" });
+  const pageLoads = useHistogram("page_load_ms", { unit: "ms" });
+
+  // ✅ Wrapping test.step in withSpan: visible in both Trace Viewer and Jaeger
+  await test.step("load cart", () =>
+    withSpan("cart.load", async (span) => {
+      const start = Date.now();
+      await page.goto("/cart");
+      const elapsed = Date.now() - start;
+
+      span.setAttribute("cart.url", "/cart");
+      pageLoads.record(elapsed, { route: "/cart" });
+    }),
+  );
+
+  // ✅ Named span for the API call — joins the same trace automatically
+  const orderSpan = useSpan("order.create");
+  const res = await request.post("/api/orders", {
+    headers: { traceparent },               // manual propagation for request fixture
+    data: { items: ["abc-123", "def-456"] },
+  });
+  apiCalls.add(1, { endpoint: "/api/orders", status: String(res.status()) });
+  orderSpan.setAttribute("order.items", 2);
+  orderSpan.setAttribute("order.status", String(res.status()));
+  orderSpan.end();
+
+  expect(res).toBeOK();
+
+  await test.step("confirm page", () =>
+    withSpan("confirmation.load", async (span) => {
+      const start = Date.now();
+      await page.waitForURL("/confirmation/**");
+      pageLoads.record(Date.now() - start, { route: "/confirmation" });
+      span.setAttribute("confirmation.url", page.url());
+    }),
+  );
+
+  // ✅ Assert instrumentation fired as expected
+  expect(apiCalls).toHaveOtelCallCount(1);
+  expect(pageLoads).toHaveOtelMinCallCount(2);
+  expect(orderSpan).toBeOtelSpanEnded();
+});
+```
+
+```typescript
+// Tracking in-flight requests with UpDownCounter
+test("loading indicator during requests", async ({ page, useUpDownCounter }) => {
+  const inFlight = useUpDownCounter("http_in_flight");
+
+  // ✅ Tracks concurrent request depth
+  page.on("request",         () => inFlight.add(1));
+  page.on("requestfinished", () => inFlight.add(-1));
+  page.on("requestfailed",   () => inFlight.add(-1));
+
+  await page.goto("/dashboard");
+  expect(inFlight).toHaveOtelMinCallCount(1);
+});
+```
+
+```typescript
+// Scope-bound cleanup with the `using` keyword (TypeScript 5.2+)
+test("scope-bound spans and metrics", async ({ useCounter, useSpan, page }) => {
+  {
+    using span = useSpan("hero.load");           // ✅ span.end() on block exit
+    await page.goto("/");
+    span.setAttribute("hero.variant", "v2");
+  }
+
+  {
+    using clicks = useCounter("cta_clicks");     // ✅ clicks.collect() on block exit
+    await page.click('[data-testid="cta"]');
+    clicks.add(1, { button: "hero-cta" });
+  }
+});
+```
+
+```typescript
+// withSpan standalone — no fixture, wraps any async utility
+import { withSpan } from "@playwright-labs/fixture-otel";
+
+async function fetchUserWithSpan(id: string) {
+  return withSpan("db.users.find", async (span) => {
+    span.setAttribute("db.table", "users");
+    span.setAttribute("user.id", id);
+    return db.users.findById(id); // span status = "error" if this throws
+  });
+}
+
+test("user profile loads", async ({ page, useTraceparent }) => {
+  useTraceparent(); // auto-propagates to withSpan via AsyncLocalStorage
+  const user = await fetchUserWithSpan("123");
+  await page.goto(`/profile/${user.id}`);
+  // db.users.find span appears as child of the test span in Jaeger
+});
+```
+
+Reference: [@playwright-labs/fixture-otel](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-otel)
+
+---
+
+### 6.5. Manage Environment Variables with Type-Safe Validated Configuration
+
+**Tags:** environment-variables, configuration, type-safe, validation, fixture-env, ajv-ts, zod  
+**Impact:** MEDIUM (prevents test failures caused by missing or misconfigured environment variables)
+
+**Impact: MEDIUM (prevents test failures caused by missing or misconfigured environment variables)**
+
+Accessing `process.env.SOME_VAR` directly in tests is untyped, lacks validation, and causes obscure failures when variables are missing. The `@playwright-labs/fixture-env` package provides a `createEnv()` factory (with ajv-ts or zod schemas), fixtures for safe access (`getEnvValueOrThrow`, `setEnv`, `snapshotEnv`), and custom matchers for asserting env state. Type errors are caught at startup, not mid-test.
+
+## When to Use
+
+- **Use createEnv when**: You have more than 2 required environment variables — validate all at startup with a schema
+- **Use setEnv fixture when**: A test needs to override an env variable and restore it afterwards without manual cleanup
+- **Use getEnvValueOrThrow when**: A test requires a variable that must exist (auth tokens, API keys, base URLs)
+- **Use env matchers when**: Testing configuration loading or environment-conditional behavior
+
+## Guidelines
+
+### Do
+
+- Define a typed `createEnv()` schema at the project root (`env.ts`) and import from it in tests
+- Use `prefix` option when all test-specific vars share a common prefix (e.g. `PW_`)
+- Use `onValidationError` to fail fast with a clear message before any test runs
+- Use `setEnv` fixture in tests rather than mutating `process.env` directly
+- Use `snapshotEnv`/`restoreEnv` when a test needs full env isolation
+- Combine with `extends` to share common env definitions across environments
+
+### Don't
+
+- Don't access `process.env.X` directly in test code — it's untyped and unvalidated
+- Don't modify `process.env` directly in tests without restoring — it bleeds into other tests in the same worker
+- Don't skip `onValidationError` — validation errors need to abort the run, not silently default
+- Don't define `createEnv` inside test files — it runs at startup, define it once and import
+
+### Tool Usage Patterns
+
+- **Install**: `npm install @playwright-labs/fixture-env`
+- **Install schema**: `npm install ajv-ts` (or `zod`)
+- **Exports**: `createEnv` from `@playwright-labs/fixture-env/ajv-ts` or `/zod`
+- **Fixtures**: `useEnv`, `setEnv`, `getEnvValue`, `getEnvValueOrThrow`, `hasEnvKey`, `snapshotEnv`, `restoreEnv`, `clearEnvKeys`, `getEnvKeysWithPrefix`, `stripEnvPrefix`
+- **Matchers**: `toBeInEnv()`, `toBeInEnvWithValue(value)`, `toMatchEnvPattern(regex)`, `toBeEnvUrl()`, `toBeEnvNumber()`, `toBeEnvBoolean()`, `toBeEnvOneOf(values)`
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- `createEnv` validates at import time — errors surface before `test.beforeAll` runs
+- `setEnv` restoration only works for keys set within the fixture scope — pre-existing keys are preserved
+- `extends` merges env objects shallowly — duplicate keys in extended envs are overridden by the outer `createEnv`
+
+### Edge Cases
+
+1. **CI vs local**: Use `extends` with a `github` or `gitlab` predefined preset to map CI-injected variables to consistent names.
+2. **Secret masking**: Wrap sensitive values in `{ value, masked: true }` if your reporting integration supports it; `createEnv` itself does not mask.
+3. **Multiple test projects**: Each project can have its own `createEnv` with different prefixes and schemas — merge them via `extends`.
+
+### What Breaks If Ignored
+
+- **Without validation**: Missing `DATABASE_URL` causes a cryptic `TypeError: Cannot read properties of undefined` 50 tests in
+- **Without setEnv cleanup**: A test sets `NODE_ENV=production`, the next test in the same worker sees it, tests become order-dependent
+- **Without typed env**: `process.env.PORT` is always `string | undefined` — passing it to `parseInt` without a check silently produces `NaN`
+
+**Incorrect (direct process.env access, no typing, no validation):**
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test('connects to database', async () => {
+  // ❌ No validation — undefined if variable not set
+  const url = process.env.DATABASE_URL;
+  const db = await connect(url as string); // ❌ unsafe cast
+  expect(await db.ping()).toBe(true);
+});
+
+test('API base URL is set', async ({ request }) => {
+  // ❌ Direct env access, test fails with unhelpful error if missing
+  const base = process.env.API_BASE_URL!;
+  const res = await request.get(`${base}/health`);
+  expect(res.ok()).toBe(true);
+});
+```
+
+**Correct (createEnv with schema validation + env fixtures):**
+
+```typescript
+// env.ts — validated at startup, imported by playwright.config.ts and tests
+import { createEnv } from '@playwright-labs/fixture-env/ajv-ts';
+import { s } from 'ajv-ts';
+
+export const env = createEnv({
+  prefix: 'PW_',
+  schema: {
+    DATABASE_URL: s.string().format('uri'),   // PW_DATABASE_URL
+    API_BASE_URL: s.string().format('uri'),   // PW_API_BASE_URL
+    AUTH_TOKEN: s.string().min(1),            // PW_AUTH_TOKEN
+    LOG_LEVEL: s.enum('debug', 'info', 'warn', 'error').optional(),
+  },
+  env: process.env,
+  onValidationError: (error) => {
+    console.error('❌ Invalid test environment:', error);
+    process.exit(1); // fail fast before tests start
+  },
+});
+// env.DATABASE_URL, env.API_BASE_URL, etc. are typed as string
+```
+
+```typescript
+// fixtures/index.ts
+import { mergeTests, mergeExpects } from '@playwright/test';
+import { test as envTest, expect as envExpect } from '@playwright-labs/fixture-env';
+
+export const test = mergeTests(envTest);
+export const expect = mergeExpects(envExpect);
+```
+
+```typescript
+// tests/config.spec.ts
+import { test, expect } from '../fixtures';
+import { env } from '../env';
+
+// ✅ Typed access — TypeScript knows env.API_BASE_URL is string
+test('health endpoint is reachable', async ({ request }) => {
+  const res = await request.get(`${env.API_BASE_URL}/health`);
+  await expect(res).toBeOK();
+});
+
+// ✅ Override env in test scope, auto-restored after
+test('feature is disabled in staging', async ({ setEnv }) => {
+  setEnv({ FEATURE_FLAG: 'false' });
+
+  const res = await fetch(`${env.API_BASE_URL}/feature`);
+  const body = await res.json();
+  expect(body.enabled).toBe(false);
+  // process.env.FEATURE_FLAG is restored automatically
+});
+
+// ✅ Assert env variable exists and has expected format
+test('DATABASE_URL is a valid URI', async () => {
+  expect('PW_DATABASE_URL').toBeInEnv();
+  expect('PW_DATABASE_URL').toBeEnvUrl();
+});
+
+// ✅ Get required value or throw with clear error
+test('authenticated API call', async ({ getEnvValueOrThrow, request }) => {
+  const token = getEnvValueOrThrow('PW_AUTH_TOKEN');
+  const res = await request.get('/api/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  await expect(res).toBeOK();
+});
+```
+
+```typescript
+// Using extends to share common variables
+import { createEnv } from '@playwright-labs/fixture-env/ajv-ts';
+
+const baseEnv = createEnv({
+  env: { NODE_ENV: process.env.NODE_ENV },
+});
+
+export const env = createEnv({
+  extends: [baseEnv],
+  prefix: 'PW_',
+  schema: {
+    API_BASE_URL: s.string().format('uri'),
+  },
+  env: process.env,
+});
+// env.NODE_ENV inherited from baseEnv
+```
+
+Reference: [@playwright-labs/fixture-env](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-env)
+
+---
+
+### 6.6. Use Custom Fixtures for Reusable Test Setup and Teardown
 
 **Tags:** fixtures, reusability, custom-fixtures, merge, test-organization  
 **Impact:** MEDIUM (Reduces code duplication by 60-80% and improves test maintainability)
@@ -2751,7 +3674,7 @@ Reference: [Playwright Custom Fixtures](https://playwright.dev/docs/test-fixture
 
 ---
 
-### 6.2. Use test.describe for Logical Test Grouping
+### 6.7. Use test.describe for Logical Test Grouping
 
 **Tags:** organization, fixtures, describe, maintainability  
 **Impact:** MEDIUM (Improves test organization and makes test reports more readable)
@@ -3141,7 +4064,1014 @@ Reference: [Playwright Test Steps](https://playwright.dev/docs/api/class-test#te
 **Impact:** LOW  
 **Description:** Advanced patterns for specific use cases such as visual testing, API interception, custom matchers, and performance testing.
 
-### 8.1. Use API Mocking for Reliable and Fast Tests
+### 8.1. Export Test Traces and Metrics to OpenTelemetry Backends with reporter-otel
+
+**Tags:** opentelemetry, otel, reporter, traces, metrics, jaeger, grafana, prometheus, observability, ci  
+**Impact:** MEDIUM (transforms raw test results into queryable time-series metrics and distributed traces for CI observability)
+
+**Impact: MEDIUM (transforms raw test results into queryable time-series metrics and distributed traces for CI observability)**
+
+Playwright's built-in reporter surfaces results as HTML or JSON snapshots. The `@playwright-labs/reporter-otel` package sends every test run as OpenTelemetry traces and metrics to any OTLP-compatible backend — Jaeger, Grafana Tempo, Prometheus, Datadog, Grafana Cloud. Every test becomes a span with step-level children, and built-in metrics track pass rate, duration p95, retries, and process memory without any extra code.
+
+## When to Use
+
+- **Use reporter-otel when**: You want long-term test health trends, flakiness dashboards, or Playwright traces in the same system as your service traces
+- **Add fixture-otel when**: Individual tests need custom business counters, latency histograms, or need to propagate a `traceparent` into the system under test
+- **Required for**: Teams running CI at scale who need to answer "which tests are getting slower?" or "what's our pass rate over the last 7 days?"
+
+## Guidelines
+
+### Do
+
+- Add `resourceAttributes` with deployment environment and service version — makes dashboards filterable by branch or release
+- Pass CI environment variables via `env` option so they appear as span attributes
+- Use the `prefix` option to namespace your metrics when sharing a collector with other services
+- Set up the full stack (OTel Collector → Jaeger + Prometheus + Grafana) for local development using the provided Docker Compose example
+- Query pass rate and duration p95 in Grafana/Prometheus to detect degradation before it becomes a crisis
+
+### Don't
+
+- Don't point Playwright directly at Jaeger or Prometheus — always go through an OTel Collector; it handles buffering, retries, and fan-out
+- Don't set `exportIntervalMillis` too low (< 10s) in large parallel runs — it creates unnecessary load on the collector
+- Don't skip `satisfies OtelReporterOptions` on the config object — TypeScript type checking prevents misconfigured endpoints from silently dropping data
+- Don't use HTTPS without valid certificates unless you set the appropriate Node TLS env vars
+
+### Tool Usage Patterns
+
+- **Install**: `npm install @playwright-labs/reporter-otel`
+- **Default endpoint**: `localhost:4318` (OTLP/HTTP) — standard OTel Collector port
+- **Backends tested**: Jaeger, Grafana Tempo, Grafana Cloud, Prometheus (via Collector), Datadog OTLP intake
+- **Config key options**: `host`, `port`, `protocol`, `headers`, `auth`, `prefix`, `resourceAttributes`, `env`, `exportIntervalMillis`
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- The reporter creates the test span at `onTestEnd` (not `onTestBegin`) — this is intentional so that annotations pushed during the test are available before the span is created. All timing is preserved via explicit `startTime`.
+- `fixture-otel` metrics are sent over a stdout bridge (`__pw_otel__` prefix) — they arrive in the reporter's `onStdOut` hook, not through a direct SDK call. This works across worker boundaries but requires the reporter to be active.
+- Without the reporter running, `startWorkerSdk()` in `fixture-otel` exits silently — safe for local runs without a collector
+
+### Edge Cases
+
+1. **Grafana Cloud auth**: Use `auth.username` = instance ID, `auth.password` = API key. Protocol must be `https` and port `443`.
+2. **Missing spans in Jaeger**: If spans appear in Prometheus metrics but not Jaeger, the collector is routing traces and metrics to different exporters — check collector pipeline config.
+3. **High-cardinality attributes**: Adding unique IDs (user IDs, order IDs) to `resourceAttributes` can exhaust Prometheus label space. Use span attributes via `pw_otel.*` annotations for per-test data instead.
+
+### What Breaks If Ignored
+
+- **Without reporter**: Test results exist only as ephemeral JSON — no trend analysis, no flakiness detection by historical rate
+- **Without resourceAttributes**: All spans from all branches land in the same unlabeled bucket — impossible to compare staging vs. main
+- **Without OTel Collector**: Pointing directly at Jaeger's OTLP endpoint works but loses the ability to fan-out to Prometheus simultaneously
+
+**Incorrect (no observability, raw JSON only):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  reporter: [
+    ["json", { outputFile: "results.json" }], // ❌ ephemeral, not queryable over time
+  ],
+});
+```
+
+**Correct (reporter-otel with full CI enrichment):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+import { type OtelReporterOptions } from "@playwright-labs/reporter-otel";
+
+export default defineConfig({
+  reporter: [
+    ["list"],  // keep console output
+    [
+      "@playwright-labs/reporter-otel",
+      {
+        host: "localhost",
+        port: 4318,
+        prefix: "e2e_",
+        // ✅ Enriches every metric with deployment context
+        resourceAttributes: {
+          "deployment.environment": process.env.ENVIRONMENT ?? "local",
+          "service.version": process.env.APP_VERSION ?? "0.0.0",
+          "service.name": "playwright-e2e",
+        },
+        // ✅ CI variables become span attributes — queryable in Jaeger
+        env: {
+          CI: process.env.CI,
+          BUILD_ID: process.env.BUILD_ID,
+          GIT_BRANCH: process.env.GIT_BRANCH,
+          GIT_COMMIT: process.env.GIT_COMMIT,
+        },
+      } satisfies OtelReporterOptions,
+    ],
+  ],
+});
+```
+
+```typescript
+// Grafana Cloud configuration
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-otel",
+      {
+        host: "otlp-gateway-prod-eu-west-0.grafana.net",
+        port: 443,
+        protocol: "https",
+        auth: {
+          username: process.env.GRAFANA_INSTANCE_ID!,  // numeric instance ID
+          password: process.env.GRAFANA_API_KEY!,       // Grafana API key
+        },
+        prefix: "pw_",
+        resourceAttributes: {
+          "deployment.environment": process.env.ENVIRONMENT ?? "local",
+        },
+      } satisfies OtelReporterOptions,
+    ],
+  ],
+});
+```
+
+```typescript
+// Remote collector with auth headers (Datadog, Honeycomb, etc.)
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-otel",
+      {
+        host: "otel-collector.internal",
+        port: 4318,
+        protocol: "https",
+        headers: {
+          "X-Scope-OrgID": "team-frontend",
+          "DD-API-KEY": process.env.DD_API_KEY!,
+        },
+      } satisfies OtelReporterOptions,
+    ],
+  ],
+});
+```
+
+```promql
+# Useful PromQL queries once data is in Prometheus / Grafana
+
+# Overall pass rate (%)
+100 * sum(e2e_tests_total{test_result="pass"}) / sum(e2e_tests_total)
+
+# Pass rate by test suite (identify which suites are flaky)
+100 * sum by (test_suite) (e2e_tests_total{test_result="pass"})
+  / sum by (test_suite) (e2e_tests_total)
+
+# 95th percentile test duration
+histogram_quantile(0.95,
+  sum by (le) (rate(e2e_test_duration_milliseconds_bucket[1h]))
+)
+
+# Average test duration in seconds (by project)
+sum by (test_project) (e2e_test_duration_milliseconds_sum)
+  / sum by (test_project) (e2e_test_duration_milliseconds_count)
+  / 1000
+
+# Total retries (flakiness signal)
+sum(e2e_test_retries_total)
+
+# Tests by browser
+sum by (browser_name) (e2e_tests_total)
+
+# Heap memory during test run (MB)
+e2e_process_memory_heap_used_bytes / 1024 / 1024
+```
+
+```yaml
+# docker-compose.yml — local OTel stack for development
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    ports:
+      - "4318:4318"   # OTLP/HTTP
+      - "8889:8889"   # Prometheus metrics endpoint
+    volumes:
+      - ./otel-collector.yaml:/etc/otel-collector.yaml
+    command: ["--config=/etc/otel-collector.yaml"]
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4317:4317"   # OTLP/gRPC
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+```
+
+```typescript
+// Adding custom span attributes via annotations (no fixture-otel needed)
+import { test } from "@playwright/test";
+import { annotationLabel } from "@playwright-labs/reporter-otel";
+
+test("checkout flow", async ({ page }) => {
+  // ✅ These annotations become span attributes in Jaeger/Tempo
+  test.info().annotations.push(
+    { type: annotationLabel("feature"), description: "checkout" },
+    { type: annotationLabel("team"),    description: "payments" },
+    { type: annotationLabel("sprint"),  description: "2026-Q2-W3" },
+  );
+
+  await page.goto("/checkout");
+  // span attributes: { feature: 'checkout', team: 'payments', sprint: '2026-Q2-W3' }
+});
+```
+
+Reference: [@playwright-labs/reporter-otel](https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-otel)
+
+---
+
+### 8.2. Organize Tests with OOP Decorator Pattern for Large Scalable Test Suites
+
+**Tags:** decorators, OOP, class-based, describe, test, beforeAll, afterAll, scalability, large-teams, e2e  
+**Impact:** MEDIUM (reduces boilerplate by 40-60% and enables class-based test organization for large teams)
+
+**Impact: MEDIUM (reduces boilerplate by 40-60% and enables class-based test organization for large teams)**
+
+Playwright's functional `test.describe` / `test.beforeEach` style works well for small suites but becomes verbose and hard to share across a large team. The `@playwright-labs/decorators` package provides TC39 Stage 3 decorators — `@describe`, `@test`, `@beforeAll`, `@beforeEach`, `@afterEach`, `@afterAll`, `@skip`, `@tag`, `@timeout`, `@test.each` — that map directly to Playwright's test runner while enabling class inheritance, shared lifecycle methods, and Page Object Model integration.
+
+## When to Use
+
+- **Use decorators when**: You have 10+ tests per area, need class inheritance for shared setup, or want Page Object Model tests to feel cohesive
+- **Prefer functional style when**: Writing simple one-off tests or scripts — decorators add a tsconfig requirement
+- **Use @beforeAll/@afterAll (static) when**: Setting up expensive shared resources (DB connections, auth state)
+- **Use @beforeEach/@afterEach (instance) when**: Resetting per-test state (navigate to page, clear cookies)
+- **Required for**: Large teams where test suites span multiple files and share base class setups
+
+## Guidelines
+
+### Do
+
+- Use `@describe` on class to define a test suite, `@test` on methods to define test cases
+- Use `static` methods for `@beforeAll`/`@afterAll` — they run once per suite on the class, not instances
+- Extend base test classes to share lifecycle hooks across related suites
+- Use `@test.each(data, 'title $1')` for data-driven tests
+- Use `@before(async self => {...})` and `@after(async self => {...})` for test-specific setup
+- Set `"experimentalDecorators": false` and `"target": "ES2022"` in `tsconfig.json` — this uses TC39 decorators, not legacy
+
+### Don't
+
+- Don't mix decorator-style and functional-style tests in the same file
+- Don't enable `experimentalDecorators: true` — these are TC39 Stage 3 decorators, not legacy TypeScript decorators
+- Don't put expensive one-time setup in `@beforeEach` — use `@beforeAll` static methods
+- Don't access `this.page` without a `@use('page')` decorator or fixture setup
+
+### Tool Usage Patterns
+
+- **Install**: `npm install @playwright-labs/decorators @playwright/test`
+- **Decorators**: `@describe(title)`, `@test(title)`, `@test.each(data, title)`, `@beforeAll()`, `@afterAll()`, `@beforeEach()`, `@afterEach()`, `@before(fn)`, `@after(fn)`, `@skip()`, `@fixme()`, `@slow()`, `@tag(...tags)`, `@timeout(ms)`, `@annotate(type, value)`, `@use(...fixtures)`, `@use.define(fixtures)`
+- **tsconfig.json**: `"target": "ES2022"`, `"experimentalDecorators": false`
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Requires TypeScript 5.0+ and `"target": "ES2022"` or higher
+- Does not support `experimentalDecorators: true` — uses TC39 Stage 3 syntax
+- Static `@beforeAll`/`@afterAll` methods set properties on the owning class, not the subclass — access shared state via the base class
+- `@test.each` data is bound at class definition time, not at runtime
+
+### Edge Cases
+
+1. **Inheritance and @beforeAll**: When a child class calls an inherited static `@beforeAll`, it runs on the base class. Access shared state from `BaseCass.connection`, not `ChildClass.connection`.
+2. **Multiple @beforeEach in hierarchy**: Both parent and child `@beforeEach` run — parent first, then child.
+3. **Test timeout override**: `@timeout(ms)` on a method overrides the class-level `@timeout` for that specific test.
+
+### What Breaks If Ignored
+
+- **Without @describe on class**: Tests are registered flat without suite grouping
+- **Without static @beforeAll**: Database connections or auth setup re-runs before every test instead of once
+- **With experimentalDecorators: true**: Runtime errors — decorator metadata API is incompatible
+
+**Incorrect (functional style repeated across many files, no sharing):**
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+// ❌ Same setup copy-pasted in every file
+test.describe('User Profile Tests', () => {
+  let db: Database;
+
+  test.beforeAll(async () => {
+    db = await Database.connect(); // repeated in every suite
+  });
+
+  test.afterAll(async () => {
+    await db.close(); // repeated in every suite
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/profile'); // repeated in every test
+  });
+
+  test('shows user name', async ({ page }) => {
+    await expect(page.locator('.name')).toBeVisible();
+  });
+});
+```
+
+**Correct (OOP decorators with inheritance):**
+
+```typescript
+// tsconfig.json
+// { "compilerOptions": { "experimentalDecorators": false, "target": "ES2022" } }
+
+// base/database-test.ts — shared base class
+import { describe, beforeAll, afterAll } from '@playwright-labs/decorators';
+import { Database } from '../db';
+
+@describe('Database Test Base')
+export class DatabaseTest {
+  static connection: Database;
+
+  @beforeAll()
+  static async connect() {
+    DatabaseTest.connection = await Database.connect();
+  }
+
+  @afterAll()
+  static async disconnect() {
+    await DatabaseTest.connection.close();
+  }
+}
+```
+
+```typescript
+// tests/users.spec.ts — inherit shared lifecycle
+import { describe, test, beforeEach, afterEach, tag } from '@playwright-labs/decorators';
+import { DatabaseTest } from '../base/database-test';
+import { expect } from '@playwright/test';
+
+@describe('User Management')
+@tag('users', 'e2e')
+class UserTests extends DatabaseTest {
+  @beforeEach()
+  async navigateToUsers() {
+    await this.page.goto('/users');
+  }
+
+  @test('lists all users')
+  async testListUsers() {
+    await expect(this.page.locator('[data-testid="user-row"]')).toHaveCount(3);
+  }
+
+  @test('can create a user')
+  async testCreateUser() {
+    await this.page.click('[data-testid="create-user"]');
+    await this.page.fill('[name="email"]', 'new@example.com');
+    await this.page.click('[type="submit"]');
+    await expect(this.page.locator('.success-toast')).toBeVisible();
+  }
+}
+```
+
+```typescript
+// Data-driven tests with @test.each
+import { describe, test } from '@playwright-labs/decorators';
+import { expect } from '@playwright/test';
+
+@describe('Login - Parameterized')
+class LoginTests {
+  @test.each([
+    ['user@example.com', 'pass123', '/dashboard'],
+    ['admin@example.com', 'admin', '/admin'],
+  ], 'login as $1 redirects to $3')
+  async testLogin(email: string, password: string, redirectTo: string) {
+    await this.page.fill('[name="email"]', email);
+    await this.page.fill('[name="password"]', password);
+    await this.page.click('[type="submit"]');
+    await expect(this.page).toHaveURL(redirectTo);
+  }
+}
+```
+
+```typescript
+// Test-specific setup/teardown with @before and @after
+import { describe, test, before, after } from '@playwright-labs/decorators';
+
+@describe('Checkout Flow')
+class CheckoutTests {
+  private orderId: string;
+
+  @test('place order and verify confirmation')
+  @before(async (self) => {
+    // runs before this test only
+    self.orderId = await self.api.createDraftOrder();
+  })
+  @after(async (self) => {
+    // runs after this test even if it fails
+    await self.api.cancelOrder(self.orderId);
+  })
+  async testPlaceOrder() {
+    await this.page.goto(`/checkout/${this.orderId}`);
+    await this.page.click('[data-testid="place-order"]');
+    await expect(this.page.locator('.confirmation-number')).toBeVisible();
+  }
+}
+```
+
+```typescript
+// Annotations, skips, and timeouts
+import { describe, test, skip, fixme, slow, timeout, annotate } from '@playwright-labs/decorators';
+
+@describe('Performance Tests')
+@timeout(60_000) // 60s for all tests in suite
+class PerformanceTests {
+  @test('fast path completes quickly')
+  @timeout(5_000) // override for this test
+  async testFastPath() { /* ... */ }
+
+  @test('slow benchmark')
+  @slow() // marks test as slow, triples timeout
+  @annotate('category', 'performance')
+  async testSlowBenchmark() { /* ... */ }
+
+  @test('known broken test')
+  @fixme() // fails and reports as expected failure
+  async testBrokenFeature() { /* ... */ }
+}
+```
+
+Reference: [@playwright-labs/decorators](https://github.com/vitalics/playwright-labs/tree/main/packages/decorators)
+
+---
+
+### 8.3. Send Test Results to Slack with Rich Block Kit Messages via reporter-slack
+
+**Tags:** slack, reporter, notifications, block-kit, ci, on-failure, webhooks, bot-token  
+**Impact:** LOW (keeps teams informed of CI failures in their existing communication channel without checking dashboards)
+
+**Impact: LOW (keeps teams informed of CI failures in their existing communication channel without checking dashboards)**
+
+Checking a CI dashboard for test results requires context-switching. The `@playwright-labs/reporter-slack` package sends Playwright results directly to a Slack channel as interactive [Block Kit](https://api.slack.com/block-kit) messages — with pass/fail counts, failed test list, duration, and a "View Report" button. Use the built-in `BaseTemplate`, compose blocks via builder functions, or write a full JSX template with the `@playwright-labs/slack-buildkit/react` runtime.
+
+## When to Use
+
+- **Use `send: "on-failure"`** (default): Notify the team only when the run has failures — avoids noise on green runs
+- **Use `send: "always"`**: Daily scheduled runs where the team wants a success summary too
+- **Use Incoming Webhook** when: The target channel is fixed and you don't need dynamic routing — simplest setup
+- **Use Bot token** when: You need to post to different channels per project, reply in threads, or set a custom bot name
+- **Use custom template** when: `BaseTemplate` doesn't match your team's format — add project links, environment badges, or assignee mentions
+
+## Guidelines
+
+### Do
+
+- Store `SLACK_WEBHOOK_URL` / `SLACK_BOT_TOKEN` in CI secrets, never hardcode them
+- Use `satisfies ReporterOptions` on the config object to catch misconfigured options at compile time
+- Set `send: "on-failure"` on CI and `send: "never"` locally to avoid spamming the channel during development
+- Add `reportUrl` to `BaseTemplate` so recipients can jump directly to the HTML report
+- Use `@playwright-labs/slack-buildkit/react` JSX templates for complex layouts — the custom JSX runtime compiles to Block Kit JSON, not HTML
+
+### Don't
+
+- Don't put the Webhook URL or Bot token as a plain string in `playwright.config.ts` — use `process.env`
+- Don't use `send: "always"` on per-PR CI runs — only on scheduled / main-branch runs
+- Don't import `react` in config unless you add `@playwright-labs/slack-buildkit/react` as the `jsxImportSource` — the JSX runtime is not React DOM
+- Don't exceed Slack's 50-block limit per message with very large test suites — filter or paginate the failed tests list
+
+### Tool Usage Patterns
+
+- **Install**: `npm install @playwright-labs/reporter-slack @playwright-labs/slack-buildkit`
+- **JSX templates (optional)**: `npm install react` + `/** @jsxImportSource @playwright-labs/slack-buildkit/react */`
+- **Transport**: `webhookUrl` (Incoming Webhook) or `token` + `channel` (Web API, requires `chat:write` scope)
+- **Built-in template**: `import { BaseTemplate } from "@playwright-labs/reporter-slack/templates"`
+- **Block builders**: `header()`, `section()`, `divider()`, `actions()`, `button()`, `context()` from `@playwright-labs/slack-buildkit`
+- **`send` option**: `"always"` | `"on-failure"` (default) | `"never"`
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Slack Incoming Webhooks are tied to one channel — use Bot token + `channel` option for dynamic routing
+- Block Kit messages have a 50-block limit — `BaseTemplate` caps the failed tests list at 10 to stay within bounds
+- `@playwright-labs/slack-buildkit/react` is a custom JSX runtime that outputs Block Kit JSON, not HTML — do not mix with `react-dom`
+
+### Edge Cases
+
+1. **Multiple Playwright projects**: Run the reporter once with a single `blocks` function that combines results from all projects, or add one reporter entry per project with different channel IDs.
+2. **Monorepo / matrix CI**: Pass a unique `reportUrl` per job so each notification links to the correct artifact.
+3. **Rate limiting**: Slack's Incoming Webhook rate limit is 1 message/second. For very long test runs with `send: "always"`, the single end-of-run message is well within limits.
+
+### What Breaks If Ignored
+
+- **Without reporter-slack**: Teams discover failures only when they manually check CI — delayed response to broken main
+- **Without `reportUrl`**: Recipients have no direct link to the HTML report and must navigate CI manually
+- **Without `send: "on-failure"`**: Every green run generates a Slack notification — channel becomes noisy and notifications are ignored
+
+**Incorrect (no Slack notification, hardcoded secrets):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  reporter: [["html"]],
+  // ❌ Team never learns about failures until someone checks CI
+});
+```
+
+**Correct (BaseTemplate with Incoming Webhook):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+import { BaseTemplate } from "@playwright-labs/reporter-slack/templates";
+import { type ReporterOptions } from "@playwright-labs/reporter-slack";
+
+export default defineConfig({
+  reporter: [
+    ["html"],
+    [
+      "@playwright-labs/reporter-slack",
+      {
+        // ✅ Secrets from environment — never hardcoded
+        webhookUrl: process.env.SLACK_WEBHOOK_URL!,
+        // ✅ Only notify on failures — no noise on green runs
+        send: "on-failure",
+        blocks: (result, testCases) =>
+          BaseTemplate(result, testCases, {
+            projectName: "My App — E2E",
+            // ✅ Link to the HTML report artifact in CI
+            reportUrl: process.env.CI_REPORT_URL,
+          }),
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+```
+
+**Custom template with builder functions:**
+
+```typescript
+import { defineConfig } from "@playwright/test";
+import {
+  header, section, divider, actions, button, context,
+} from "@playwright-labs/slack-buildkit";
+import { type ReporterOptions } from "@playwright-labs/reporter-slack";
+
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-slack",
+      {
+        webhookUrl: process.env.SLACK_WEBHOOK_URL!,
+        send: "on-failure",
+        blocks: (result, testCases) => {
+          const passed  = testCases.filter(([, r]) => r.status === "passed").length;
+          const failed  = testCases.filter(([, r]) => r.status === "failed").length;
+          const skipped = testCases.filter(([, r]) => r.status === "skipped").length;
+          const emoji   = failed > 0 ? "🔴" : "✅";
+
+          const blocks = [
+            header(`${emoji} E2E — ${result.status.toUpperCase()}`),
+            section(
+              `*Passed:* ${passed}  •  *Failed:* ${failed}  •  *Skipped:* ${skipped}`,
+            ),
+            divider(),
+          ];
+
+          // ✅ List failed tests (capped to avoid hitting Slack's 50-block limit)
+          if (failed > 0) {
+            const failedTests = testCases
+              .filter(([, r]) => r.status === "failed")
+              .slice(0, 8);
+
+            for (const [tc, r] of failedTests) {
+              const err = r.errors[0]?.message?.split("\n")[0] ?? "unknown error";
+              blocks.push(section(`• \`${tc.title}\`\n_${err}_`));
+            }
+
+            if (failed > 8) {
+              blocks.push(section(`_…and ${failed - 8} more failures_`));
+            }
+
+            blocks.push(divider());
+          }
+
+          if (process.env.CI_REPORT_URL) {
+            blocks.push(
+              actions([
+                button("view_report", "View Report", process.env.CI_REPORT_URL, "primary"),
+              ]),
+            );
+          }
+
+          blocks.push(context([
+            `Branch: ${process.env.GIT_BRANCH ?? "local"}`,
+            new Date().toUTCString(),
+          ]));
+
+          return blocks;
+        },
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+```
+
+**JSX template (React-like syntax → Block Kit JSON):**
+
+```tsx
+// playwright.config.tsx (rename from .ts)
+/** @jsxImportSource @playwright-labs/slack-buildkit/react */
+import { defineConfig } from "@playwright/test";
+import {
+  Blocks, Header, Section, Divider, Actions, Button, Context,
+} from "@playwright-labs/slack-buildkit/react";
+import { type ReporterOptions } from "@playwright-labs/reporter-slack";
+
+function TestReport({
+  passed, failed, skipped, url, branch,
+}: {
+  passed: number; failed: number; skipped: number;
+  url?: string; branch?: string;
+}) {
+  return (
+    <Blocks>
+      <Header>{failed > 0 ? "🔴 Tests Failed" : "✅ Tests Passed"}</Header>
+      <Section>
+        {`*Passed:* ${passed}   *Failed:* ${failed}   *Skipped:* ${skipped}`}
+      </Section>
+      {branch && <Section>{`Branch: \`${branch}\``}</Section>}
+      <Divider />
+      {url && (
+        <Actions>
+          <Button url={url} style="primary" action_id="view_report">
+            View Report
+          </Button>
+        </Actions>
+      )}
+      <Context>{`${new Date().toUTCString()}`}</Context>
+    </Blocks>
+  );
+}
+
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-slack",
+      {
+        webhookUrl: process.env.SLACK_WEBHOOK_URL!,
+        send: "on-failure",
+        blocks: (result, testCases) => {
+          const passed  = testCases.filter(([, r]) => r.status === "passed").length;
+          const failed  = testCases.filter(([, r]) => r.status === "failed").length;
+          const skipped = testCases.filter(([, r]) => r.status === "skipped").length;
+          // ✅ JSX is compiled to Block Kit JSON by @playwright-labs/slack-buildkit/react
+          return (
+            <TestReport
+              passed={passed}
+              failed={failed}
+              skipped={skipped}
+              url={process.env.CI_REPORT_URL}
+              branch={process.env.GIT_BRANCH}
+            />
+          );
+        },
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+```
+
+**Bot token (Web API) for dynamic channels:**
+
+```typescript
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-slack",
+      {
+        // ✅ Web API transport — allows dynamic channel selection
+        token: process.env.SLACK_BOT_TOKEN!,
+        // ✅ Channel ID (starts with C) or channel name
+        channel: process.env.SLACK_CHANNEL_ID ?? "C12345678",
+        send: "on-failure",
+        blocks: (result, testCases) =>
+          BaseTemplate(result, testCases, { projectName: "E2E Suite" }),
+        onSend: (response) => {
+          console.log("Slack notification sent:", response.ts); // thread timestamp
+        },
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+```
+
+Reference: [@playwright-labs/reporter-slack](https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-slack)
+
+---
+
+### 8.4. Send Test Run Reports via Email with React Email Templates via reporter-email
+
+**Tags:** email, reporter, notifications, react-email, nodemailer, ci, on-failure, html-template  
+**Impact:** LOW (delivers structured test reports to stakeholders who don't have CI access)
+
+**Impact: LOW (delivers structured test reports to stakeholders who don't have CI access)**
+
+CI dashboards are only accessible to engineers. Stakeholders, QA managers, and on-call teams often need test results delivered to their inbox. The `@playwright-labs/reporter-email` package sends Playwright results as formatted emails via any SMTP provider (Gmail, SendGrid, AWS SES, Mailgun, and 50+ others powered by nodemailer). Use the built-in React Email templates, write a custom HTML string, or author a full React component for pixel-perfect email design.
+
+## When to Use
+
+- **Use `send: "on-failure"`** (default): Notify only when the run breaks — avoids inbox noise on healthy runs
+- **Use `send: "always"`**: Scheduled nightly runs where stakeholders want a daily summary regardless of result
+- **Use built-in templates** when: You need a polished email out of the box — `PlaywrightReportEmail`, `PlaywrightReportTailwindEmail`, `PlaywrightReportShadcnEmail`
+- **Use custom React template** when: You need to match brand colors, add logo, or include environment-specific information
+- **Use local Maildev** when: Testing the reporter locally without sending real email
+
+## Guidelines
+
+### Do
+
+- Store SMTP credentials in CI secrets and read from `process.env` — never hardcode passwords
+- Use `satisfies ReporterOptions` on the config object for compile-time type checking
+- Install `@react-email/components` and `@react-email/render` for email-client-compatible HTML — the renderer inlines CSS automatically for Gmail and Outlook compatibility
+- Use a dynamic `subject` function that includes pass/fail status so recipients can triage from the subject line alone
+- Set `send: "never"` in a local `.env` override to avoid sending emails during local development
+- Test with [Maildev](https://github.com/maildev/maildev) locally (`docker run -p 1080:1080 -p 1025:1025 maildev/maildev`) before connecting a real SMTP service
+
+### Don't
+
+- Don't pass `html` and `text` simultaneously — they are mutually exclusive; `html` takes precedence
+- Don't use `react-dom/server`'s `renderToString` directly for email — it does not inline CSS; use `@react-email/render` which handles it
+- Don't name the config file `.tsx` unless `tsconfig.json` has `"jsx": "react-jsx"` — JSX in config only works when the compiler is configured for it
+- Don't send large attachments (screenshots, traces) as inline email content — link to CI artifacts instead
+
+### Tool Usage Patterns
+
+- **Install**: `npm install @playwright-labs/reporter-email`
+- **React Email (recommended)**: `npm install react react-dom @react-email/components @react-email/render`
+- **Built-in templates**: `import { PlaywrightReportEmail, PlaywrightReportTailwindEmail, PlaywrightReportShadcnEmail } from "@playwright-labs/reporter-email/templates"`
+- **SMTP services**: Gmail, SendGrid, AWS SES, Mailgun, Outlook365, Postmark, Brevo, Maildev (local) — 50+ via nodemailer `service` option
+- **`send` option**: `"always"` | `"on-failure"` (default) | `"never"`
+- **Attachments**: `attachments: [{ path: "...", name: "..." }]` — standard nodemailer attachment format
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- React Email requires `@react-email/render` to inline CSS — without it the reporter falls back to `react-dom/server` which produces class-based CSS that breaks in Gmail
+- Gmail with `service: "Gmail"` requires an App Password when 2FA is enabled — not the account password
+- AWS SES requires the `from` address to be verified in SES before sending
+- File attachments add to email size — Outlook and Gmail enforce ~25MB limits
+
+### Edge Cases
+
+1. **Image attachments as inline CID**: Reference the attachment in HTML as `<img src="cid:image.png">` and include the same `name` in the `attachments` array with a matching `contentType`.
+2. **Rendering custom JSX in `.ts` config**: Use `React.createElement(MyComponent, props)` instead of JSX syntax — no `tsconfig.json` changes needed.
+3. **Large test suites**: The built-in templates render every test row — for 500+ tests, consider filtering to only failed tests in your `html` function to keep email size manageable.
+
+### What Breaks If Ignored
+
+- **Without email reporter**: Stakeholders without CI access never learn about failures until an engineer escalates manually
+- **Without `@react-email/render`**: Emails render correctly in a browser preview but break in Gmail (CSS stripped) and Outlook (CSS not supported)
+- **Without dynamic subject**: Subject line reads "Playwright Test Report" on both pass and fail — recipients cannot triage without opening the email
+
+**Incorrect (no email, or hardcoded credentials with plain HTML):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  reporter: [["html"]],
+  // ❌ Stakeholders have no visibility without CI access
+});
+```
+
+```typescript
+// ❌ Hardcoded credentials + static subject + no template
+[
+  "@playwright-labs/reporter-email",
+  {
+    from: "bot@company.com",
+    to: "team@company.com",
+    subject: "Playwright Report",          // ❌ same subject always — impossible to triage
+    html: "<p>Tests ran.</p>",             // ❌ no results, useless
+    // ❌ SMTP password in plaintext in source code
+    auth: { user: "bot@company.com", pass: "s3cr3t" },
+  },
+]
+```
+
+**Correct (built-in React Email template via Incoming credentials from env):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+import React from "react";
+import { type ReporterOptions } from "@playwright-labs/reporter-email";
+import { PlaywrightReportEmail } from "@playwright-labs/reporter-email/templates";
+
+export default defineConfig({
+  reporter: [
+    ["html"],
+    [
+      "@playwright-labs/reporter-email",
+      {
+        // ✅ Credentials from CI secrets
+        service: "SendGrid",
+        auth: {
+          user: "apikey",
+          pass: process.env.SENDGRID_API_KEY!,
+        },
+        from: "ci@company.com",
+        to: ["qa-team@company.com", "product@company.com"],
+        // ✅ Dynamic subject makes triage possible from inbox
+        subject: (result) =>
+          `[E2E] ${result.status === "passed" ? "✅ Passed" : "❌ Failed"} — ${new Date().toLocaleDateString()}`,
+        // ✅ Built-in template — polished, email-client compatible
+        html: (result, testCases) =>
+          React.createElement(PlaywrightReportEmail, { result, testCases }),
+        // ✅ Only send on failure — no inbox noise on green runs
+        send: "on-failure",
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+```
+
+**Swap templates — three built-in styles:**
+
+```typescript
+// Default (inline styles — maximum compatibility)
+import { PlaywrightReportEmail } from "@playwright-labs/reporter-email/templates";
+
+// Tailwind CSS layout
+import { PlaywrightReportTailwindEmail } from "@playwright-labs/reporter-email/templates";
+
+// shadcn/ui-inspired design (status badge, card border)
+import { PlaywrightReportShadcnEmail } from "@playwright-labs/reporter-email/templates";
+
+// All accept identical props: { result, testCases }
+html: (result, testCases) =>
+  React.createElement(PlaywrightReportShadcnEmail, { result, testCases }),
+```
+
+**Custom React Email template:**
+
+```tsx
+// emails/report.tsx
+import React from "react";
+import {
+  Html, Head, Body, Container, Heading, Text, Hr, Row, Column,
+} from "@react-email/components";
+import type { FullResult } from "@playwright/test/reporter";
+import type { TestCases } from "@playwright-labs/reporter-email";
+
+export function CompanyReport({
+  result,
+  testCases,
+  env,
+}: {
+  result: FullResult;
+  testCases: TestCases;
+  env?: string;
+}) {
+  const failed  = testCases.filter(([, r]) => r.status === "failed");
+  const passed  = testCases.filter(([, r]) => r.status === "passed");
+
+  return (
+    <Html lang="en">
+      <Head />
+      <Body style={{ fontFamily: "sans-serif", background: "#f4f4f4" }}>
+        <Container style={{ background: "#fff", padding: "24px", borderRadius: "8px" }}>
+          <Heading style={{ color: failed.length > 0 ? "#dc2626" : "#16a34a" }}>
+            {failed.length > 0 ? "❌ Tests Failed" : "✅ All Tests Passed"}
+          </Heading>
+          {env && <Text style={{ color: "#6b7280" }}>Environment: {env}</Text>}
+          <Hr />
+          <Row>
+            <Column><Text><strong>Passed:</strong> {passed.length}</Text></Column>
+            <Column><Text><strong>Failed:</strong> {failed.length}</Text></Column>
+          </Row>
+          {failed.length > 0 && (
+            <>
+              <Hr />
+              <Heading as="h3">Failed Tests</Heading>
+              {failed.slice(0, 10).map(([tc, r], i) => (
+                <Text key={i} style={{ color: "#dc2626" }}>
+                  • {tc.title}
+                  {r.errors[0]?.message && (
+                    <span style={{ color: "#6b7280", fontSize: "12px" }}>
+                      {" — "}{r.errors[0].message.split("\n")[0]}
+                    </span>
+                  )}
+                </Text>
+              ))}
+            </>
+          )}
+          <Hr />
+          <Text style={{ color: "#9ca3af", fontSize: "12px" }}>
+            {new Date().toUTCString()}
+          </Text>
+        </Container>
+      </Body>
+    </Html>
+  );
+}
+```
+
+```typescript
+// playwright.config.ts — use custom template
+import React from "react";
+import { CompanyReport } from "./emails/report";
+
+html: (result, testCases) =>
+  React.createElement(CompanyReport, {
+    result,
+    testCases,
+    env: process.env.ENVIRONMENT ?? "staging",
+  }),
+```
+
+**Local development with Maildev:**
+
+```bash
+# Start Maildev — local SMTP + web UI (no real emails sent)
+docker run -p 1080:1080 -p 1025:1025 maildev/maildev
+```
+
+```typescript
+// playwright.config.ts — local testing config
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-email",
+      {
+        service: "Maildev",
+        port: 1025,
+        from: "ci@local.dev",
+        to: "team@local.dev",
+        subject: (r) => `[LOCAL] ${r.status}`,
+        send: "always",
+        html: (result, testCases) =>
+          React.createElement(PlaywrightReportEmail, { result, testCases }),
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+// Open http://localhost:1080 to view the rendered email
+```
+
+**AWS SES with attachments:**
+
+```typescript
+export default defineConfig({
+  reporter: [
+    [
+      "@playwright-labs/reporter-email",
+      {
+        service: "SES-EU-WEST-1",
+        auth: {
+          user: process.env.AWS_SES_ACCESS_KEY!,
+          pass: process.env.AWS_SES_SECRET_KEY!,
+        },
+        from: "noreply@company.com",   // must be SES-verified
+        to: "team@company.com",
+        subject: (r) =>
+          `[E2E] ${r.status === "passed" ? "✅" : "❌"} ${process.env.ENVIRONMENT}`,
+        html: (result, testCases) =>
+          React.createElement(PlaywrightReportEmail, { result, testCases }),
+        send: "on-failure",
+        // ✅ Attach the Playwright HTML report
+        attachments: [
+          {
+            path: "playwright-report/index.html",
+            name: "playwright-report.html",
+          },
+        ],
+      } satisfies ReporterOptions,
+    ],
+  ],
+});
+```
+
+Reference: [@playwright-labs/reporter-email](https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-email)
+
+---
+
+### 8.5. Use API Mocking for Reliable and Fast Tests
 
 **Tags:** api, mocking, performance, reliability, advanced  
 **Impact:** LOW (Improves test reliability and reduces execution time by 40-60% for API-dependent tests)
@@ -3753,6 +5683,172 @@ Reference: [Playwright Network Mocking](https://playwright.dev/docs/network)
 
 ---
 
+### 8.6. Validate API Response JSON Schemas with toMatchSchema Custom Matcher
+
+**Tags:** schema, validation, api-testing, json-schema, ajv-ts, toMatchSchema, fixtures  
+**Impact:** MEDIUM (catches contract regressions instantly without writing per-field assertions)
+
+**Impact: MEDIUM (catches contract regressions instantly without writing per-field assertions)**
+
+Manually asserting every field of an API response is tedious and misses unexpected fields or type changes. The `@playwright-labs/fixture-ajv-ts` package provides a `schema` fixture (powered by [ajv-ts](https://npmjs.com/package/ajv-ts)) and a `toMatchSchema` custom matcher that validates any value against a JSON schema in one assertion. Schema definitions live outside tests, can be shared across suites, and produce structured error messages on failure.
+
+## When to Use
+
+- **Use toMatchSchema when**: Validating API response bodies, webhook payloads, form submissions, or any structured JSON
+- **Define schemas separately when**: Multiple tests share the same endpoint contract — define once, import everywhere
+- **Use inline schema (via `schema` fixture) when**: Schema is test-specific and small
+- **Required for**: API contract testing, preventing silent response structure changes in CI
+
+## Guidelines
+
+### Do
+
+- Define schemas in `schemas/` files colocated with the feature they describe
+- Use `s.object()` with explicit required fields — do not rely on loose matching
+- Use `s.string().format('email')`, `s.string().format('uri')` for semantic validation
+- Use `.optional()` on nullable/optional fields rather than `s.union(s.string(), s.undefined())`
+- Combine `toBeOK()` (HTTP status) with `toMatchSchema()` (body shape) for full coverage
+- Add the fixture to your `mergeTests`/`mergeExpects` composite — see `fixture-merge-tests-expects` rule
+
+### Don't
+
+- Don't use `toMatchSchema` for non-JSON values like HTML strings or binary buffers
+- Don't define schemas inline with `schema` fixture for schemas shared across test files
+- Don't ignore the `Errors:` section in failed assertions — it pinpoints the exact failing field
+- Don't use `s.any()` to silence schema errors — fix the schema or the API
+
+### Tool Usage Patterns
+
+- **Install**: `npm install @playwright-labs/fixture-ajv-ts ajv-ts`
+- **Fixture**: `schema` — alias for `s` (ajv-ts schema builder) usable inside tests
+- **Matcher**: `expect(value).toMatchSchema(schema, options?)` — works on any value, not just locators
+- **Schema builders**: `s.object()`, `s.array()`, `s.string()`, `s.number()`, `s.boolean()`, `s.enum()`, `.optional()`, `.nullable()`, `.format()`
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- `toMatchSchema` uses strict mode by default — extra fields not defined in the schema will fail validation unless explicitly allowed with `s.object().additionalProperties(true)`
+- Nested object schemas are validated recursively; deeply nested errors report the full JSON path
+- Schema builder API follows [ajv-ts](https://npmjs.com/package/ajv-ts) — refer to its docs for advanced formats
+
+### Edge Cases
+
+1. **Paginated list responses**: Wrap per-item schema in `s.array(ItemSchema)` and assert on the array root.
+2. **Polymorphic responses** (`data` is string or number): Use `s.string().or(s.number())`.
+3. **Optional nested object**: Use `AddressSchema.optional()` — if the field is present it must match the schema, if absent it's valid.
+
+### What Breaks If Ignored
+
+- **Without schema validation**: API silently changes `email` to `emailAddress` — all tests pass, feature breaks in production
+- **Without `toBeOK()` check first**: `toMatchSchema` runs against the error body (4xx/5xx), producing confusing schema errors
+- **Without shared schemas**: Same schema defined in 5 test files — one endpoint changes, 4 tests fail, 1 is forgotten
+
+**Incorrect (manual per-field assertions, no schema):**
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test('GET /users/1 returns user', async ({ request }) => {
+  const res = await request.get('/api/users/1');
+  const body = await res.json();
+
+  // ❌ Manual field checks — misses type errors and extra/missing fields
+  expect(body.id).toBeDefined();
+  expect(typeof body.name).toBe('string');
+  expect(typeof body.email).toBe('string');
+  // ❌ Never checks that `createdAt` is a date string, `role` is an enum, etc.
+  // ❌ If the API adds a `password` field by mistake, this test still passes
+});
+```
+
+**Correct (schema fixture + toMatchSchema):**
+
+```typescript
+// fixtures/index.ts
+import { mergeTests, mergeExpects } from '@playwright/test';
+import {
+  test as ajvTest,
+  expect as ajvExpect,
+} from '@playwright-labs/fixture-ajv-ts';
+
+export const test = mergeTests(ajvTest);
+export const expect = mergeExpects(ajvExpect);
+```
+
+```typescript
+// schemas/user.ts — shared schema, import everywhere
+import { s } from 'ajv-ts';
+
+export const UserSchema = s.object({
+  id: s.number(),
+  name: s.string().min(1),
+  email: s.string().format('email'),
+  role: s.enum('admin', 'user', 'guest'),
+  createdAt: s.string().format('date-time'),
+  address: s.object({
+    street: s.string(),
+    city: s.string(),
+    country: s.string(),
+  }).optional(),
+});
+
+export const UsersListSchema = s.array(UserSchema);
+```
+
+```typescript
+// tests/users.spec.ts
+import { test, expect } from '../fixtures';
+import { UserSchema, UsersListSchema } from '../schemas/user';
+
+// ✅ Single assertion covers all fields, types, and formats
+test('GET /users/1 returns valid user', async ({ request }) => {
+  const res = await request.get('/api/users/1');
+  await expect(res).toBeOK();
+  expect(await res.json()).toMatchSchema(UserSchema);
+});
+
+// ✅ Array response validation
+test('GET /users returns array of valid users', async ({ request }) => {
+  const res = await request.get('/api/users');
+  await expect(res).toBeOK();
+  const body = await res.json();
+  expect(body).toMatchSchema(UsersListSchema);
+  expect(body.length).toBeGreaterThan(0);
+});
+
+// ✅ Inline schema with `schema` fixture for one-off tests
+test('POST /auth/token returns token shape', async ({ request, schema }) => {
+  const TokenSchema = schema.object({
+    accessToken: schema.string().min(10),
+    expiresIn: schema.number().min(0),
+    tokenType: schema.enum('Bearer'),
+  });
+
+  const res = await request.post('/api/auth/token', {
+    data: { username: 'user', password: 'pass' },
+  });
+  await expect(res).toBeOK();
+  expect(await res.json()).toMatchSchema(TokenSchema);
+});
+
+// ✅ Negative test — verify error response shape
+test('GET /users/999 returns error schema', async ({ request, schema }) => {
+  const ErrorSchema = schema.object({
+    error: schema.string(),
+    code: schema.number(),
+  });
+
+  const res = await request.get('/api/users/999');
+  expect(res.status()).toBe(404);
+  expect(await res.json()).toMatchSchema(ErrorSchema);
+});
+```
+
+Reference: [@playwright-labs/fixture-ajv-ts](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-ajv-ts)
+
+---
+
 ## References
 
 - https://playwright.dev
@@ -3765,8 +5861,17 @@ Reference: [Playwright Network Mocking](https://playwright.dev/docs/network)
 - https://playwright.dev/docs/trace-viewer
 - https://playwright.dev/docs/test-fixtures
 - https://playwright.dev/docs/test-fixtures#custom-fixture-title
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-timers
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-ajv-ts
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-env
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-abort
+- https://github.com/vitalics/playwright-labs/tree/main/packages/decorators
+- https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-otel
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-otel
+- https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-slack
+- https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-email
 
 ---
 
 *This document was automatically generated from individual rule files.*  
-*Last updated: 2026-01-23*
+*Last updated: 2026-05-20*
