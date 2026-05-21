@@ -1,5 +1,12 @@
 # @playwright-labs/fixture-otel
 
+## 1.1.1
+
+### Patch Changes
+
+- Updated dependencies [0235886]
+  - @playwright-labs/otel-core@1.1.1
+
 ## 1.1.0
 
 ### Minor Changes
