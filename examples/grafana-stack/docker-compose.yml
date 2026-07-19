@@ -1,0 +1,49 @@
+services:
+  # ── Prometheus (metrics) ──────────────────────────────────────────────────────
+  # Receives the metrics pushed by the Playwright reporter via Prometheus
+  # remote write and stores them. Browse at http://localhost:9090.
+  # Try querying pw_tests_total_count.
+  #
+  # NOTE: --web.enable-remote-write-receiver is CRITICAL — it is what turns
+  # the push endpoint http://localhost:9090/api/v1/write on. Without this flag
+  # Prometheus rejects the reporter's POSTs with 404.
+  # (Prometheus 2.x used --enable-feature=remote-write-receiver; in 3.x the
+  # flag moved to --web.enable-remote-write-receiver.)
+  prometheus:
+    image: prom/prometheus:v3.3.0
+    ports:
+      - "9090:9090"   # Prometheus UI  ← open in browser
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--web.enable-remote-write-receiver"]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Grafana (unified UI) ──────────────────────────────────────────────────────
+  # Pre-configured with a Prometheus datasource. No login required.
+  # Browse at http://localhost:3000 → Explore → pick the Prometheus datasource.
+  #
+  # Useful starting point:
+  #   Metrics  → Explore → Prometheus → pw_tests_total_count
+  grafana:
+    image: grafana/grafana:11.6.0
+    ports:
+      - "3000:3000"   # Grafana UI  ← open in browser
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/dashboards
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 10s
+      retries: 15

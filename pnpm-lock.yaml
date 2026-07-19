@@ -48,6 +48,21 @@ importers:
         specifier: 1.57.0
         version: 1.57.0
 
+  examples/grafana-stack:
+    dependencies:
+      '@playwright-labs/fixture-prometheus':
+        specifier: workspace:*
+        version: link:../../packages/fixture-prometheus
+      '@playwright-labs/prometheus-core':
+        specifier: workspace:*
+        version: link:../../packages/prometheus-core
+      '@playwright-labs/reporter-prometheus-remote-write':
+        specifier: workspace:*
+        version: link:../../packages/reporter-prometheus-remote-write
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
   examples/reporter-email:
     dependencies:
       '@playwright-labs/reporter-email':
@@ -189,6 +204,16 @@ importers:
         specifier: 1.57.0
         version: 1.57.0
 
+  packages/fixture-prometheus:
+    dependencies:
+      '@playwright-labs/prometheus-core':
+        specifier: workspace:*
+        version: link:../prometheus-core
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
   packages/fixture-sql:
     dependencies:
       '@playwright-labs/sql-core':
@@ -257,6 +282,16 @@ importers:
         specifier: ^1.28.0
         version: 1.40.0
 
+  packages/prometheus-core:
+    dependencies:
+      prometheus-remote-write:
+        specifier: 0.5.0
+        version: 0.5.0
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
   packages/reporter-email:
     dependencies:
       class-variance-authority:
@@ -314,6 +349,19 @@ importers:
       '@playwright-labs/otel-core':
         specifier: workspace:*
         version: link:../otel-core
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
+  packages/reporter-prometheus-remote-write:
+    dependencies:
+      '@playwright-labs/prometheus-core':
+        specifier: workspace:*
+        version: link:../prometheus-core
+      prometheus-remote-write:
+        specifier: 0.5.0
+        version: 0.5.0
     devDependencies:
       '@playwright/test':
         specifier: 1.57.0
@@ -2869,6 +2917,14 @@ packages:
     resolution: {integrity: sha512-cdGef/drWFoydD1JsMzuFf8100nZl+GT+yacc2bEced5f9Rjk4z+WtFUTBu9PhOi9j/jfmBPu0mMEY4wIdAF8A==}
     engines: {node: '>= 0.6.0'}
 
+  prometheus-remote-write@0.5.0:
+    resolution: {integrity: sha512-lhJQcDPnTeQBtkt5iHhs6deyIMURTk2ToqMza3FuB9Ke11Duno2mGaBkFFQPlshw80fsrXG0WbFYX+C0RPNpYQ==}
+    peerDependencies:
+      node-fetch: ^2.6.7
+    peerDependenciesMeta:
+      node-fetch:
+        optional: true
+
   prompts@2.4.2:
     resolution: {integrity: sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==}
     engines: {node: '>= 6'}
@@ -3032,6 +3088,9 @@ packages:
   slash@3.0.0:
     resolution: {integrity: sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==}
     engines: {node: '>=8'}
+
+  snappyjs@0.6.1:
+    resolution: {integrity: sha512-YIK6I2lsH072UE0aOFxxY1dPDCS43I5ktqHpeAsuLNYWkE5pGxRGWfDM4/vSUfNzXjC1Ivzt3qx31PCLmc9yqg==}
 
   socket.io-adapter@2.5.6:
     resolution: {integrity: sha512-DkkO/dz7MGln0dHn5bmN3pPy+JmywNICWrJqVWiVOyvXjWQFIv9c2h24JrQLLFJ2aQVQf/Cvl1vblnd4r2apLQ==}
@@ -5630,6 +5689,11 @@ snapshots:
 
   process@0.11.10: {}
 
+  prometheus-remote-write@0.5.0:
+    dependencies:
+      protobufjs: 7.5.8
+      snappyjs: 0.6.1
+
   prompts@2.4.2:
     dependencies:
       kleur: 3.0.3
@@ -5885,6 +5949,8 @@ snapshots:
   sisteransi@1.0.5: {}
 
   slash@3.0.0: {}
+
+  snappyjs@0.6.1: {}
 
   socket.io-adapter@2.5.6:
     dependencies:

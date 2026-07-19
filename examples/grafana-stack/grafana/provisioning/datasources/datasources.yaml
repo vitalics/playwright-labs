@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  # ── Prometheus — metrics ──────────────────────────────────────────────────────
+  # Explore → Prometheus → try: pw_tests_total_count, pw_test_duration
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

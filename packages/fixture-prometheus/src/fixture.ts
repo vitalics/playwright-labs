@@ -1,0 +1,145 @@
+import {
+  expect as baseExpect,
+  test as baseTest,
+  PlaywrightTestArgs,
+  PlaywrightTestOptions,
+  PlaywrightWorkerArgs,
+  PlaywrightWorkerOptions,
+  TestType,
+} from "@playwright/test";
+
+import { Counter, Gauge } from "@playwright-labs/prometheus-core";
+
+export interface PromRWFixture {
+  /**
+   * Creates a Counter metric with the specified name and optional labels.
+   * @param name - The name of the counter metric.
+   * @param labels - Optional key-value pairs for metric labeling.
+   * @returns A Counter instance that can be used to track incremental values.
+   * @example
+   * ```ts
+   * test('track API request count', async ({ useCounterMetric, page }) => {
+   *   // Create a counter metric for API requests
+   *   const apiRequestCounter = useCounterMetric(
+   *     'api_requests', {
+   *       endpoint: '/users' // endpoint is a custom label
+   *     });
+   *
+   *   // Increment counter when API is called
+   *   await page.goto('/users');
+   *   apiRequestCounter.inc();
+   *
+   *   // Increment by specific amount
+   *   await page.click('.load-more-users');
+   *   apiRequestCounter.inc(5);
+   *
+   *   // Add additional labels and collect metrics
+   *   apiRequestCounter.labels({ status: 'success' }).collect();
+   * });
+   * ```
+   */
+  useCounterMetric: <
+    const Name extends string = string,
+    const Labels extends Record<string, string> = Record<string, string>
+  >(
+    name: Name,
+    labels?: Labels
+  ) => Counter<Name, Labels>;
+  /**
+   * Creates a Gauge metric with the specified name and optional labels.
+   * @param name - The name of the gauge metric.
+   * @param labels - Optional key-value pairs for metric labeling.
+   * @returns A Gauge instance that can be used to track values that can go up and down.
+   * @example
+   * ```ts
+   * test('track active users', async ({ useGaugeMetric, page }) => {
+   *   // Create a gauge metric for active users
+   *   const activeUsersGauge = useGaugeMetric('active_users', { region: 'us-east' });
+   *
+   *   // Set gauge to initial value
+   *   activeUsersGauge.set(10);
+   *
+   *   // Increment gauge when users log in
+   *   await page.goto('/login');
+   *   await page.fill('#username', 'testuser');
+   *   await page.fill('#password', 'password');
+   *   await page.click('#login-button');
+   *   activeUsersGauge.inc();
+   *
+   *   // Decrement gauge when users log out
+   *   await page.click('#logout-button');
+   *   activeUsersGauge.dec();
+   *
+   *   // Reset to zero and collect metrics
+   *   activeUsersGauge.zero().collect();
+   * });
+   * ```
+   */
+  useGaugeMetric: (name: string, labels?: Record<string, string>) => Gauge;
+}
+
+/**
+ * Extended Playwright `test` with Prometheus metric fixtures.
+ *
+ * Requires `@playwright-labs/reporter-prometheus-remote-write` to be
+ * configured as a reporter in `playwright.config.ts` so the emitted metrics
+ * are collected and pushed to Prometheus via the remote-write endpoint.
+ *
+ * @example
+ * ```ts
+ * // playwright.config.ts
+ * export default defineConfig({
+ *   reporter: [
+ *     ['@playwright-labs/reporter-prometheus-remote-write', {
+ *       serverUrl: 'http://localhost:9090/api/v1/write',
+ *     }],
+ *   ],
+ * });
+ *
+ * // my.spec.ts
+ * import { test, expect } from '@playwright-labs/fixture-prometheus';
+ *
+ * test('track API request count', async ({ useCounterMetric, page }) => {
+ *   const apiRequestCounter = useCounterMetric('api_requests', {
+ *     endpoint: '/users',
+ *   });
+ *   await page.goto('/users');
+ *   apiRequestCounter.inc();
+ *   apiRequestCounter.collect();
+ * });
+ * ```
+ */
+export const test: TestType<
+  PlaywrightTestArgs & PlaywrightTestOptions & PromRWFixture,
+  PlaywrightWorkerArgs & PlaywrightWorkerOptions
+> = baseTest.extend<PromRWFixture>({
+  useCounterMetric: [
+    async ({}, use) => {
+      await use(
+        <
+          Name extends string = string,
+          Labels extends Record<string, string> = Record<string, string>
+        >(
+          name: Name,
+          labels?: Labels
+        ) => {
+          if (labels && typeof labels === "object" && labels !== null) {
+            return new Counter<Name, Labels>({ name, ...labels });
+          }
+          return new Counter<Name, Labels>({ name, ...({} as Labels) });
+        }
+      );
+    },
+    { box: true },
+  ],
+  useGaugeMetric: [
+    async ({}, use) => {
+      await use((name, labels) => {
+        return new Gauge({ name, ...labels });
+      });
+    },
+    { box: true },
+  ],
+});
+
+export const expect = baseExpect.extend({});

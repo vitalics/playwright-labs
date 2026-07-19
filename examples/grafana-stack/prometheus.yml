@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # The Playwright reporter pushes all pw_* metrics directly into Prometheus
+  # via the remote-write endpoint (http://localhost:9090/api/v1/write), so no
+  # extra scrape jobs are needed — Prometheus only scrapes itself here.
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090

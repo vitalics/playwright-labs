@@ -1,0 +1,19 @@
+{
+  "name": "@playwright-labs/grafana-stack-example",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Full working example: reporter-prometheus-remote-write + fixture-prometheus with a real Prometheus + Grafana infrastructure",
+  "type": "module",
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "infra:up": "docker compose up -d --wait",
+    "infra:down": "docker compose down --remove-orphans"
+  },
+  "dependencies": {
+    "@playwright-labs/fixture-prometheus": "workspace:*",
+    "@playwright-labs/prometheus-core": "workspace:*",
+    "@playwright-labs/reporter-prometheus-remote-write": "workspace:*",
+    "@playwright/test": "1.57.0"
+  }
+}
