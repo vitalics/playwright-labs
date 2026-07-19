@@ -2,6 +2,7 @@ packages:
   - packages/*
   - examples/reporter-email
   - examples/reporter-otel
+  - examples/grafana-stack
   - examples/sql
   - examples/ghost-cursor
   - '!packages/playwright-best-practices'
