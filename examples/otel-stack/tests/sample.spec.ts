@@ -174,3 +174,48 @@ test.describe("OTel reporter — sample data generation", () => {
     expect(traceparent).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/);
   });
 });
+
+
+test.describe("OTel reporter — global metrics (shared across tests)", () => {
+  // Global fixtures return ONE shared instance per worker: values accumulate
+  // across tests and the metrics are flushed automatically at every test
+  // teardown — no manual collect() needed.
+
+  test("global counter accumulates URL calls (1st call)", async ({
+    useGlobalCounter,
+  }) => {
+    const urlCalls = useGlobalCounter("e2e_global_url_calls");
+    urlCalls.add(1, { url: "playwright.dev" });
+    expect(urlCalls.callCount).toBe(1);
+  });
+
+  test("global counter accumulates URL calls (2nd call)", async ({
+    useGlobalCounter,
+  }) => {
+    // Same instance as in the previous test — callCount does not reset.
+    const urlCalls = useGlobalCounter("e2e_global_url_calls");
+    expect(urlCalls.callCount).toBe(1);
+
+    urlCalls.add(1, { url: "playwright.dev" });
+    expect(urlCalls.callCount).toBe(2);
+  });
+
+  test("global histogram records step durations (1st)", async ({
+    useGlobalHistogram,
+  }) => {
+    const stepDuration = useGlobalHistogram("e2e_global_step_ms", {
+      unit: "ms",
+    });
+    stepDuration.record(120, { step: "search" });
+  });
+
+  test("global histogram records step durations (2nd)", async ({
+    useGlobalHistogram,
+  }) => {
+    const stepDuration = useGlobalHistogram("e2e_global_step_ms");
+    expect(stepDuration.callCount).toBe(1); // same instance from the 1st test
+
+    stepDuration.record(240, { step: "checkout" });
+    expect(stepDuration.callCount).toBe(2);
+  });
+});

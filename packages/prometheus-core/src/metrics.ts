@@ -59,7 +59,9 @@ export abstract class Metric<
       return this;
     }
     const event = new Event(this._drainSeries());
-    process.stdout.write(JSON.stringify(event));
+    // Newline-terminated so back-to-back events can be split into single
+    // JSON lines by the reporter (`JSON.parse` tolerates the trailing "\n").
+    process.stdout.write(JSON.stringify(event) + "\n");
     return this;
   }
   /** revert metric to initial state */
@@ -163,5 +165,117 @@ export class Gauge<
 
   reset(): this {
     return new Gauge(this.metadata, this.initialValue) as never;
+  }
+}
+
+/** Default bucket bounds used by Prometheus client libraries. */
+export const DEFAULT_BUCKETS = [
+  0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10,
+];
+
+/**
+ * A histogram samples observations (usually request durations or response
+ * sizes) and counts them in configurable buckets.
+ *
+ * Implemented as a composition of counters — a histogram is multi-series and
+ * therefore does not extend `Metric`:
+ *
+ * - `${name}_bucket{le="<bound>"}` — one counter per bound plus `le="+Inf"`,
+ *   cumulative (an observation increments every bucket whose bound is `>=`
+ *   the observed value).
+ * - `${name}_sum` — sum of all observed values.
+ * - `${name}_count` — total number of observations (always equals the
+ *   `le="+Inf"` bucket).
+ *
+ * Each child counter drains independently, so `collect()` emits one
+ * newline-terminated JSON event per child with pending samples.
+ */
+export class Histogram<const MetricName extends string = string> {
+  /** One counter per bucket bound, with the `+Inf` bucket as the last element. */
+  readonly buckets: Counter[];
+  /** Sum of all observed values (`${name}_sum`). */
+  readonly sum: Counter;
+  /** Total number of observations (`${name}_count`). */
+  readonly count: Counter;
+  /** Bucket upper bounds (without the implicit `+Inf` bound). */
+  private readonly bounds: number[];
+
+  constructor(
+    protected readonly metadata: Record<"name", MetricName> & {
+      buckets?: number[];
+    } & Record<string, unknown>,
+  ) {
+    const { name, buckets, ...restMetadata } = metadata;
+    if (!name) {
+      throw new Error(`"name" property for metadata is required`);
+    }
+    if (
+      buckets !== undefined &&
+      (buckets.length === 0 ||
+        buckets.some((bound) => !Number.isFinite(bound)) ||
+        buckets.some((bound, index) => index > 0 && bound <= buckets[index - 1]))
+    ) {
+      throw new Error(
+        `"buckets" must be a non-empty array of finite numbers in strictly ascending order`,
+      );
+    }
+    this.bounds = buckets ?? [...DEFAULT_BUCKETS];
+    // Extra metadata labels are spread onto every child series.
+    const labels = restMetadata as Record<string, string>;
+    this.buckets = [
+      ...this.bounds.map(
+        (bound) =>
+          new Counter({
+            name: `${name}_bucket`,
+            ...labels,
+            le: `${bound}`,
+          }),
+      ),
+      new Counter({ name: `${name}_bucket`, ...labels, le: "+Inf" }),
+    ];
+    this.sum = new Counter({ name: `${name}_sum`, ...labels });
+    this.count = new Counter({ name: `${name}_count`, ...labels });
+  }
+
+  /**
+   * Record an observation: increments every bucket whose bound is `>= value`
+   * (the `+Inf` bucket always matches), adds `value` to the sum and increments
+   * the observation count.
+   */
+  observe(value: number): this {
+    this.bounds.forEach((bound, index) => {
+      if (bound >= value) {
+        this.buckets[index].inc();
+      }
+    });
+    // The `+Inf` bucket is the last one and is always incremented.
+    this.buckets[this.buckets.length - 1].inc();
+    this.sum.inc(value);
+    this.count.inc();
+    return this;
+  }
+
+  /**
+   * Send metrics to prometheus.
+   *
+   * Collects every child counter — each drains independently and writes its
+   * own single-line JSON event to stdout. Children without pending samples
+   * are skipped automatically (their `collect()` is a no-op).
+   */
+  collect(): this {
+    [...this.buckets, this.sum, this.count].forEach((counter) =>
+      counter.collect(),
+    );
+    return this;
+  }
+
+  /** revert metric to initial state */
+  reset(): this {
+    return new Histogram(this.metadata) as never;
+  }
+
+  [Symbol.dispose]() {
+    this.collect();
+    this.reset();
   }
 }

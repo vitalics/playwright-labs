@@ -407,6 +407,72 @@ test.describe("PrometheusReporter — onStdOut", () => {
 
     expect(reporter.sentFlat).toHaveLength(0);
   });
+
+  test("forwards two newline-separated events from a single chunk", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    const event1 = new Event({
+      labels: { __name__: "metric_one" },
+      samples: [{ value: 1, timestamp: Date.now() }],
+    });
+    const event2 = new Event({
+      labels: { __name__: "metric_two" },
+      samples: [{ value: 2, timestamp: Date.now() }],
+    });
+
+    await reporter.onStdOut(
+      `${JSON.stringify(event1)}\n${JSON.stringify(event2)}\n`,
+      undefined,
+      undefined,
+    );
+
+    expect(reporter.sentFlat).toHaveLength(2);
+    expect(reporter.sentFlat[0].labels.__name__).toBe("pw_metric_one");
+    expect(reporter.sentFlat[1].labels.__name__).toBe("pw_metric_two");
+  });
+
+  test("forwards an event split across two chunks only after the second chunk", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    const event = new Event({
+      labels: { __name__: "my_metric", foo: "bar" },
+      samples: [{ value: 1, timestamp: Date.now() }],
+    });
+    const text = JSON.stringify(event);
+    const mid = Math.floor(text.length / 2);
+
+    await reporter.onStdOut(text.slice(0, mid), undefined, undefined);
+    expect(reporter.sentFlat).toHaveLength(0);
+
+    await reporter.onStdOut(text.slice(mid), undefined, undefined);
+    expect(reporter.sentFlat).toHaveLength(1);
+    expect(reporter.sentFlat[0].labels.__name__).toBe("pw_my_metric");
+  });
+
+  test("plain text lines increment pw_stdout with internal=false", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+
+    await reporter.onStdOut("just some logs\nmore logs\n", undefined, undefined);
+    await reporter.onExit();
+
+    const stdout = findSeries(reporter, "pw_stdout");
+    expect(stdout).toBeDefined();
+    expect(stdout?.labels.internal).toBe("false");
+    expect(stdout?.samples.at(-1)?.value).toBe(2);
+  });
+
+  test("flushes a buffered non-JSON remainder on onExit", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+
+    await reporter.onStdOut("unterminated plain text", undefined, undefined);
+    expect(reporter.sentFlat).toHaveLength(0);
+
+    await reporter.onExit();
+
+    const stdout = findSeries(reporter, "pw_stdout");
+    expect(stdout).toBeDefined();
+    expect(stdout?.labels.internal).toBe("false");
+    expect(stdout?.labels.text).toBe("unterminated plain text");
+    expect(stdout?.samples.at(-1)?.value).toBe(1);
+  });
 });
 
 // ── Reporter — onBegin ────────────────────────────────────────────────────────
