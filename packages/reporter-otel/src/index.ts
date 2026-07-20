@@ -5,6 +5,8 @@ export {
   ANNOTATION_PREFIX,
   TRACEPARENT_ANNOTATION,
   parseTraceparent,
+  resolveRuntime,
+  type RuntimeInfo,
   type OtelReporterOptions,
 } from "./reporter";
 

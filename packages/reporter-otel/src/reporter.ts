@@ -127,6 +127,10 @@ export default class OtelReporter implements Reporter {
   private testAttachmentCount: Counter | undefined;
   private testAttachmentSize: Histogram | undefined;
   private testErrorCount: Counter | undefined;
+  private testStepCount: Counter | undefined;
+  private testStepDuration: Histogram | undefined;
+  private testAnnotationCount: Counter | undefined;
+  private runDuration: Histogram | undefined;
 
   // ── Observable gauge backing values ──────────────────────────────────────────
   private _heapUsed = 0;
@@ -157,6 +161,7 @@ export default class OtelReporter implements Reporter {
   // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
   onBegin(config: FullConfig, _suite: Suite): void {
+    const runtime = resolveRuntime();
     const resource = resourceFromAttributes({
       [ATTR_SERVICE_NAME]: "playwright",
       [ATTR_SERVICE_VERSION]: config.version,
@@ -176,9 +181,18 @@ export default class OtelReporter implements Reporter {
       "host.name": hostname(),
       "host.ip": getHostIp(),
       "host.user": userInfo().username,
-      "process.runtime.name": "nodejs",
-      "process.runtime.version": versions.node,
+      "process.runtime.name": runtime.name,
+      "process.runtime.version": runtime.version,
       "process.argv": argv.join(" "),
+      // Full runtime component versions: process.runtime.versions.node,
+      // process.runtime.versions.v8, process.runtime.versions.openssl, …
+      // (process.runtime.versions.bun under Bun, .deno under Deno)
+      ...Object.fromEntries(
+        Object.entries(versions).map(([key, value]) => [
+          `process.runtime.versions.${key}`,
+          value,
+        ]),
+      ),
       ...this.resourceAttributes,
     });
 
@@ -294,6 +308,19 @@ export default class OtelReporter implements Reporter {
       });
       if (size > 0) this.testAttachmentSize?.record(size);
     }
+    for (const annotation of test.annotations) {
+      this.testAnnotationCount?.add(1, {
+        "annotation.type": annotation.type,
+        "test.suite": test.parent.title,
+      });
+    }
+
+    // Step metrics — walked separately from span creation so they are
+    // recorded even when no tracer is available.
+    this.recordStepMetrics(result.steps, {
+      "test.suite": test.parent.title,
+      ...browserAttrs,
+    });
 
     this.updateNodejsStats();
   }
@@ -345,7 +372,10 @@ export default class OtelReporter implements Reporter {
     this.updateNodejsStats();
   }
 
-  onEnd(_result: FullResult): void {
+  onEnd(result: FullResult): void {
+    // Wall-clock duration of the whole run — the OTel equivalent of the
+    // remote-write reporter's tests_total_duration.
+    this.runDuration?.record(result.duration);
     this.updateNodejsStats();
   }
 
@@ -425,6 +455,23 @@ export default class OtelReporter implements Reporter {
       this.createStepSpan(child, span);
     }
     span.end(new Date(step.startTime.getTime() + step.duration));
+  }
+
+  /**
+   * Recursively records step count/duration metrics for a TestStep tree.
+   * Called from onTestEnd independently of span creation so the metrics are
+   * exported even when tracing is disabled.
+   */
+  private recordStepMetrics(
+    steps: TestStep[],
+    attrs: Record<string, string>,
+  ): void {
+    for (const step of steps) {
+      const stepAttrs = { ...attrs, "test.step.category": step.category };
+      this.testStepCount?.add(1, stepAttrs);
+      this.testStepDuration?.record(step.duration, stepAttrs);
+      this.recordStepMetrics(step.steps, attrs);
+    }
   }
 
   /**
@@ -529,6 +576,20 @@ export default class OtelReporter implements Reporter {
     });
     this.testErrorCount = m.createCounter(`${p}test_error_count`, {
       description: "Number of global test errors",
+    });
+    this.testStepCount = m.createCounter(`${p}test_step_count`, {
+      description: "Total number of test steps partitioned by category",
+    });
+    this.testStepDuration = m.createHistogram(`${p}test_step_duration`, {
+      description: "Test step execution duration",
+      unit: "ms",
+    });
+    this.testAnnotationCount = m.createCounter(`${p}test_annotation_count`, {
+      description: "Number of test annotations partitioned by type",
+    });
+    this.runDuration = m.createHistogram(`${p}run_duration`, {
+      description: "Total test run duration (wall clock)",
+      unit: "ms",
     });
 
     // Observable gauges — backing values are updated on every lifecycle event
@@ -652,6 +713,41 @@ function topoSort(payloads: SpanPayload[]): SpanPayload[] {
 
   for (const p of payloads) visit(p);
   return result;
+}
+
+/** Runtime identity used for the `process.runtime.*` resource attributes. */
+export type RuntimeInfo = {
+  /** OTel `process.runtime.name` value: `nodejs`, `bun`, or `deno`. */
+  name: "nodejs" | "bun" | "deno";
+  /** OTel `process.runtime.version` value — the runtime's own version. */
+  version: string;
+};
+
+/**
+ * Detects the JavaScript runtime executing the test process.
+ *
+ * Playwright normally runs on Node.js, but the reporter also works when the
+ * process runs under Bun or Deno — both expose a `bun` / `deno` key in
+ * `process.versions`.
+ *
+ * @example
+ * ```ts
+ * resolveRuntime({ node: "20.11.0", v8: "11.3.244.8" });
+ * // { name: "nodejs", version: "20.11.0" }
+ * resolveRuntime({ bun: "1.1.29", node: "20.11.0" });
+ * // { name: "bun", version: "1.1.29" }
+ * ```
+ */
+export function resolveRuntime(
+  processVersions: Record<string, string | undefined> = versions,
+): RuntimeInfo {
+  if (processVersions.bun) {
+    return { name: "bun", version: processVersions.bun };
+  }
+  if (processVersions.deno) {
+    return { name: "deno", version: processVersions.deno };
+  }
+  return { name: "nodejs", version: processVersions.node ?? "unknown" };
 }
 
 /**
