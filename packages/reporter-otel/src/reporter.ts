@@ -161,6 +161,7 @@ export default class OtelReporter implements Reporter {
   // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
   onBegin(config: FullConfig, _suite: Suite): void {
+    const runtime = resolveRuntime();
     const resource = resourceFromAttributes({
       [ATTR_SERVICE_NAME]: "playwright",
       [ATTR_SERVICE_VERSION]: config.version,
@@ -180,14 +181,15 @@ export default class OtelReporter implements Reporter {
       "host.name": hostname(),
       "host.ip": getHostIp(),
       "host.user": userInfo().username,
-      "process.runtime.name": "nodejs",
-      "process.runtime.version": versions.node,
+      "process.runtime.name": runtime.name,
+      "process.runtime.version": runtime.version,
       "process.argv": argv.join(" "),
-      // Full Node.js runtime component versions: nodejs.versions.node,
-      // nodejs.versions.v8, nodejs.versions.openssl, …
+      // Full runtime component versions: process.runtime.versions.node,
+      // process.runtime.versions.v8, process.runtime.versions.openssl, …
+      // (process.runtime.versions.bun under Bun, .deno under Deno)
       ...Object.fromEntries(
         Object.entries(versions).map(([key, value]) => [
-          `nodejs.versions.${key}`,
+          `process.runtime.versions.${key}`,
           value,
         ]),
       ),
@@ -711,6 +713,41 @@ function topoSort(payloads: SpanPayload[]): SpanPayload[] {
 
   for (const p of payloads) visit(p);
   return result;
+}
+
+/** Runtime identity used for the `process.runtime.*` resource attributes. */
+export type RuntimeInfo = {
+  /** OTel `process.runtime.name` value: `nodejs`, `bun`, or `deno`. */
+  name: "nodejs" | "bun" | "deno";
+  /** OTel `process.runtime.version` value — the runtime's own version. */
+  version: string;
+};
+
+/**
+ * Detects the JavaScript runtime executing the test process.
+ *
+ * Playwright normally runs on Node.js, but the reporter also works when the
+ * process runs under Bun or Deno — both expose a `bun` / `deno` key in
+ * `process.versions`.
+ *
+ * @example
+ * ```ts
+ * resolveRuntime({ node: "20.11.0", v8: "11.3.244.8" });
+ * // { name: "nodejs", version: "20.11.0" }
+ * resolveRuntime({ bun: "1.1.29", node: "20.11.0" });
+ * // { name: "bun", version: "1.1.29" }
+ * ```
+ */
+export function resolveRuntime(
+  processVersions: Record<string, string | undefined> = versions,
+): RuntimeInfo {
+  if (processVersions.bun) {
+    return { name: "bun", version: processVersions.bun };
+  }
+  if (processVersions.deno) {
+    return { name: "deno", version: processVersions.deno };
+  }
+  return { name: "nodejs", version: processVersions.node ?? "unknown" };
 }
 
 /**

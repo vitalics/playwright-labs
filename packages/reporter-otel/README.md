@@ -207,8 +207,9 @@ The reporter attaches these as OTel resource attributes (available in `target_in
 | `os.arch` | CPU architecture |
 | `playwright.workers` | Number of workers |
 | `playwright.config_file` | Path to `playwright.config.ts` |
-| `process.runtime.version` | Node.js version |
-| `nodejs.versions.*` | Full Node.js component versions (`nodejs.versions.node`, `nodejs.versions.v8`, `nodejs.versions.openssl`, …) |
+| `process.runtime.name` | Detected runtime: `nodejs`, `bun`, or `deno` (via `process.versions`) |
+| `process.runtime.version` | Version of the detected runtime |
+| `process.runtime.versions.*` | Full runtime component versions (`process.runtime.versions.node`, `.v8`, `.openssl`, …; `.bun` under Bun, `.deno` under Deno) |
 
 ## Traces
 

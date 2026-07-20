@@ -12,6 +12,7 @@ New built-in metrics (no code changes required in tests):
 
 New resource attributes on every signal (traces + metrics):
 
-- `nodejs.versions.*` — full Node.js component versions (`nodejs.versions.node`, `nodejs.versions.v8`, `nodejs.versions.openssl`, …), alongside the existing `process.runtime.version`.
+- `process.runtime.name` now reflects the actual runtime — `nodejs`, `bun`, or `deno` (detected via `process.versions`; previously hardcoded to `nodejs`), with `process.runtime.version` holding the detected runtime's own version.
+- `process.runtime.versions.*` — full runtime component versions (`process.runtime.versions.node`, `.v8`, `.openssl`, …; `.bun` under Bun, `.deno` under Deno). Also exported for reuse: `resolveRuntime()`.
 
 Reminder of what was already auto-collected: `pw_tests_total` (per status/result/suite/project), `pw_test_duration`, `pw_test_retries`, `pw_test_attachment_count` / `pw_test_attachment_size`, `pw_test_error_count`, Node.js memory/CPU gauges, OS/host/playwright-config resource attributes, and opt-in `env.<key>` attributes via the `env` option.

@@ -20,6 +20,7 @@ import {
 
 import OtelReporter, {
   parseTraceparent,
+  resolveRuntime,
   TRACEPARENT_ANNOTATION,
 } from "../src/reporter";
 
@@ -850,14 +851,16 @@ test.describe("OtelReporter — run duration", () => {
 // ── Reporter — resource attributes ────────────────────────────────────────────
 
 test.describe("OtelReporter — resource attributes", () => {
-  test("includes nodejs.versions.* component versions", () => {
+  test("includes process.runtime.versions.* component versions", () => {
     const reporter = new ResourceCapturingReporter();
     reporter.onBegin(makeConfig(), makeSuite());
 
     const attrs = reporter.capturedResource?.attributes ?? {};
-    expect(attrs["nodejs.versions.node"]).toBe(process.versions.node);
-    expect(attrs["nodejs.versions.v8"]).toBe(process.versions.v8);
-    expect(attrs["nodejs.versions.openssl"]).toBe(process.versions.openssl);
+    expect(attrs["process.runtime.versions.node"]).toBe(process.versions.node);
+    expect(attrs["process.runtime.versions.v8"]).toBe(process.versions.v8);
+    expect(attrs["process.runtime.versions.openssl"]).toBe(
+      process.versions.openssl,
+    );
   });
 
   test("includes playwright config and os/host attributes", () => {
@@ -868,6 +871,7 @@ test.describe("OtelReporter — resource attributes", () => {
     expect(attrs["service.name"]).toBe("playwright");
     expect(attrs["playwright.workers"]).toBe(1);
     expect(attrs["os.platform"]).toBe(process.platform);
+    expect(attrs["process.runtime.name"]).toBe("nodejs");
     expect(attrs["process.runtime.version"]).toBe(process.versions.node);
   });
 
@@ -880,5 +884,41 @@ test.describe("OtelReporter — resource attributes", () => {
     const attrs = reporter.capturedResource?.attributes ?? {};
     expect(attrs["env.MY_PRODUCT_VERSION"]).toBe("2.4.8");
     expect(attrs["env.SKIP_ME"]).toBeUndefined();
+  });
+});
+
+
+// ── resolveRuntime ────────────────────────────────────────────────────────────
+
+test.describe("resolveRuntime", () => {
+  test("detects Node.js", () => {
+    expect(resolveRuntime({ node: "20.11.0", v8: "11.3.244.8" })).toEqual({
+      name: "nodejs",
+      version: "20.11.0",
+    });
+  });
+
+  test("detects Bun — prefers the bun version over the emulated node one", () => {
+    expect(resolveRuntime({ bun: "1.1.29", node: "20.11.0" })).toEqual({
+      name: "bun",
+      version: "1.1.29",
+    });
+  });
+
+  test("detects Deno", () => {
+    expect(resolveRuntime({ deno: "2.0.0", v8: "12.9.202.13" })).toEqual({
+      name: "deno",
+      version: "2.0.0",
+    });
+  });
+
+  test("falls back to nodejs with unknown version when node is missing", () => {
+    expect(resolveRuntime({})).toEqual({ name: "nodejs", version: "unknown" });
+  });
+
+  test("defaults to the real process.versions", () => {
+    const runtime = resolveRuntime();
+    expect(runtime.name).toBe("nodejs");
+    expect(runtime.version).toBe(process.versions.node);
   });
 });
