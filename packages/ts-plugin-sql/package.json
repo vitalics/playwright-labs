@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/ts-plugin-sql",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "TypeScript language service plugin for SQL tagged template literals — autocomplete, diagnostics, and hover info",
   "main": "dist/plugin.cjs",
   "types": "dist/index.d.ts",

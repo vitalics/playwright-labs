@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/fixture-ghost-cursor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Ghost cursor fixture integration for Playwright/test",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
