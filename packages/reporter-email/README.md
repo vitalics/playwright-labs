@@ -54,9 +54,12 @@ import {
 } from "@playwright-labs/reporter-email";
 
 function formatTable(result: TestResult, testCases: TestCases) {
-  const str = Object.values(testCases).forEach((testCase) => {
-    return `<tr><td>${testCase.test.name}</td><td>${testCase.result.status}</td></tr>`;
-  });
+  const str = testCases
+    .map(
+      ([testCase, testResult]) =>
+        `<tr><td>${testCase.title}</td><td>${testResult.status}</td></tr>`,
+    )
+    .join("");
   return `<table>${str}</table>`;
 }
 
@@ -145,25 +148,25 @@ When `@react-email/render` is installed, the reporter uses its `render()` functi
 
 ### Preview template in the browser
 
-The `examples/` directory contains a fully runnable setup. It includes the React Email dev server so you can inspect the template visually without sending a real email.
+The `examples/reporter-email/` directory contains a fully runnable setup. It includes the React Email dev server so you can inspect the template visually without sending a real email.
 
 ```bash
-cd examples
+cd examples/reporter-email
 pnpm install
 pnpm email:preview   # starts http://localhost:3000
 ```
 
-The `emails/playwright-report.tsx` file inside `examples/` provides mock data and is picked up automatically by the React Email dev server.
+The `emails/playwright-report.tsx` file inside `examples/reporter-email/` provides mock data and is picked up automatically by the React Email dev server.
 
 To run the actual tests and receive an email (requires local [Maildev](https://github.com/maildev/maildev)):
 
 ```bash
 docker run -p 1080:1080 -p 1025:1025 maildev/maildev
-pnpm test            # from examples/
+pnpm test:e2e        # from examples/reporter-email/
 open http://localhost:1080
 ```
 
-A full working example is in [`examples/`](./examples/).
+A full working example is in [`examples/reporter-email/`](../../examples/reporter-email/).
 
 ## React Email templates
 
@@ -419,12 +422,12 @@ export default defineConfig({
                     tr(fragment(td("Test Name"), td("Status"), td("Duration"))),
                   ),
                   tbody(
-                    testCases.map((testCase) =>
+                    testCases.map(([testCase, testResult]) =>
                       tr(
                         fragment(
                           td(testCase.title),
-                          td(testCase.status),
-                          td(testCase.duration),
+                          td(testResult.status),
+                          td(`${testResult.duration}ms`),
                         ),
                       ),
                     ),
@@ -533,8 +536,8 @@ export default defineConfig({
         send: "always",
         from: "your-email@example.com",
         to: "recipient-email@example.com",
-        subject: (result) => `Playwright Test Report for ${result.testId}`,
-        html: (result) => `<p>Test report for ${result.testId}</p>
+        subject: (result) => `Playwright Test Report for ${result.status}`,
+        html: (result) => `<p>Test report for ${result.status}</p>
         <img src="cid:image.png" alt="Image Attachment" />`,
         attachments: [
           {

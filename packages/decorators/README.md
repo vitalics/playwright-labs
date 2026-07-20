@@ -244,7 +244,7 @@ class FullLifecycleTests {
 
 ### 🔧 Additional Resources
 
-- [**Validation Guide**](./validation-guide.md) - Runtime validation details
+- [**Validation Guide**](./docs/validation-guide.md) - Runtime validation details
 - [**Examples Directory**](./tests/examples/) - Real-world code examples
 
 ## Examples
@@ -433,7 +433,7 @@ MIT
 
 ## Contributing
 
-Contributions are welcome! Please read our [contributing guidelines](../../CONTRIBUTING.md) first.
+Contributions are welcome!
 
 ## Support
 

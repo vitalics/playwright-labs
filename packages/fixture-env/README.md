@@ -21,6 +21,7 @@ yarn add ajv-ts # yarn
 ```ts
 // filename: env.ts
 import { s } from "ajv-ts";
+import { createEnv } from "@playwright-labs/fixture-env/ajv-ts";
 
 export const env = createEnv({
   prefix: "PW_",
@@ -30,7 +31,7 @@ export const env = createEnv({
   },
   env: process.env,
   onValidationError: (error) => {
-    console.error("Validation error:", errors);
+    console.error("Validation error:", error);
     process.exit(1);
   },
   extends: [],
@@ -50,16 +51,17 @@ yarn add zod # yarn
 ```ts
 // filename: env.ts
 import z from "zod";
+import { createEnv } from "@playwright-labs/fixture-env/zod";
 
 export const env = createEnv({
   prefix: "PW_",
   schema: {
-    DATABASE_URL: s.url(), // expect PW_DATABASE_URL
-    OPEN_AI_API_KEY: s.string(), // expect PW_OPEN_AI_API_KEY
+    DATABASE_URL: z.url(), // expect PW_DATABASE_URL
+    OPEN_AI_API_KEY: z.string(), // expect PW_OPEN_AI_API_KEY
   },
   env: process.env,
   onValidationError: (error) => {
-    console.error("Validation error:", errors);
+    console.error("Validation error:", error);
     process.exit(1);
   },
   extends: [],
@@ -69,13 +71,12 @@ export const env = createEnv({
 ## Usage
 
 ```ts
-// filename: playwright.config.ts
+// filename: example.spec.ts
+import { test } from "@playwright-labs/fixture-env";
 import { env } from "./env";
 
-export default defineConfig({
-  use: {
-    env: env,
-  },
+test("env variables are available", () => {
+  console.log(env.PW_DATABASE_URL); // validated value
 });
 ```
 

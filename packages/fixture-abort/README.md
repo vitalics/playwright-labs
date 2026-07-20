@@ -98,13 +98,13 @@ test("with cleanup callback", async ({ useAbortController }) => {
 });
 ```
 
-#### `useAbortSignalWithTimeout(timeout)`
+#### `useSignalWithTimeout(timeout)`
 
 Creates an AbortSignal that automatically aborts after the specified timeout. Also sets the Playwright test timeout.
 
 ```typescript
-test("timeout operation", async ({ useAbortSignalWithTimeout }) => {
-  const signal = useAbortSignalWithTimeout(5000); // 5 seconds
+test("timeout operation", async ({ useSignalWithTimeout }) => {
+  const signal = useSignalWithTimeout(5000); // 5 seconds
 
   const operation = fetch("https://api.example.com", { signal });
   // Will abort after 5 seconds
@@ -120,9 +120,9 @@ Intuitive assertions for testing abort controllers and signals.
 Asserts that an AbortSignal has been aborted.
 
 ```typescript
-test("signal is aborted", async ({ abortSignal, abortController }) => {
+test("signal is aborted", async ({ signal, abortController }) => {
   abortController.abort();
-  expect(abortSignal).toBeAborted();
+  expect(signal).toBeAborted();
 });
 ```
 
@@ -131,9 +131,9 @@ test("signal is aborted", async ({ abortSignal, abortController }) => {
 Asserts that an AbortSignal is active (not aborted).
 
 ```typescript
-test("signal is active", async ({ abortSignal }) => {
-  expect(abortSignal).toBeActive();
-  expect(abortSignal).not.toBeAborted();
+test("signal is active", async ({ signal }) => {
+  expect(signal).toBeActive();
+  expect(signal).not.toBeAborted();
 });
 ```
 
@@ -142,11 +142,11 @@ test("signal is active", async ({ abortSignal }) => {
 Asserts that a signal was aborted with a specific reason.
 
 ```typescript
-test("aborted with reason", async ({ abortSignal, abortController }) => {
+test("aborted with reason", async ({ signal, abortController }) => {
   const reason = "User cancelled";
   abortController.abort(reason);
 
-  expect(abortSignal).toBeAbortedWithReason(reason);
+  expect(signal).toBeAbortedWithReason(reason);
 });
 ```
 
@@ -199,29 +199,29 @@ test("timeout error", async () => {
 #### Cancelling API Requests
 
 ```typescript
-import { test, expect } from "@playwright-labs/fixture-generic";
+import { test, expect } from "@playwright-labs/fixture-abort";
 
-test("cancel slow API request", async ({ abortController, abortSignal }) => {
-  expect(abortSignal).toBeActive();
+test("cancel slow API request", async ({ abortController, signal }) => {
+  expect(signal).toBeActive();
 
   const apiCall = fetch("https://slow-api.example.com/data", {
-    signal: abortSignal,
+    signal: signal,
   });
 
   // Cancel after 1 second
   setTimeout(() => abortController.abort("Timeout"), 1000);
 
   await expect(apiCall).rejects.toThrow();
-  expect(abortSignal).toBeAborted();
-  expect(abortSignal).toBeAbortedWithReason("Timeout");
+  expect(signal).toBeAborted();
+  expect(signal).toBeAbortedWithReason("Timeout");
 });
 ```
 
 #### Handling Timeouts
 
 ```typescript
-test("operation with timeout", async ({ useAbortSignalWithTimeout }) => {
-  const signal = useAbortSignalWithTimeout(3000);
+test("operation with timeout", async ({ useSignalWithTimeout }) => {
+  const signal = useSignalWithTimeout(3000);
 
   const longOperation = new Promise((resolve, reject) => {
     signal.addEventListener("abort", () => {
@@ -241,15 +241,15 @@ test("operation with timeout", async ({ useAbortSignalWithTimeout }) => {
 #### Multiple Abort Listeners
 
 ```typescript
-test("multiple listeners", async ({ abortController, abortSignal }) => {
+test("multiple listeners", async ({ abortController, signal }) => {
   let cleanup1Done = false;
   let cleanup2Done = false;
 
-  abortSignal.addEventListener("abort", () => {
+  signal.addEventListener("abort", () => {
     cleanup1Done = true;
   });
 
-  abortSignal.addEventListener("abort", () => {
+  signal.addEventListener("abort", () => {
     cleanup2Done = true;
   });
 
@@ -257,7 +257,7 @@ test("multiple listeners", async ({ abortController, abortSignal }) => {
 
   expect(cleanup1Done).toBe(true);
   expect(cleanup2Done).toBe(true);
-  expect(abortSignal).toBeAborted();
+  expect(signal).toBeAborted();
 });
 ```
 
@@ -270,9 +270,9 @@ test("multiple listeners", async ({ abortController, abortSignal }) => {
 | Fixture                     | Type              | Description                                             |
 | --------------------------- | ----------------- | ------------------------------------------------------- |
 | `abortController`           | `AbortController` | Controller instance for managing cancellable operations |
-| `abortSignal`               | `AbortSignal`     | Signal for passing to async operations                  |
+| `signal`                    | `AbortSignal`     | Signal for passing to async operations                  |
 | `useAbortController`        | `options`         | Get controller with optional callback                   |
-| `useAbortSignalWithTimeout` | `options`         | Create signal with automatic timeout                    |
+| `useSignalWithTimeout` | `options`         | Create signal with automatic timeout                    |
 
 ### Custom Matchers
 
