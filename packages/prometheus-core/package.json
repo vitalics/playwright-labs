@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/prometheus-core",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Core Prometheus remote-write primitives (Counter, Gauge, stdout event bridge) for Playwright Labs",
   "keywords": [
     "playwright",

@@ -1,5 +1,14 @@
 # @playwright-labs/reporter-otel-example
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [88c0c58]
+- Updated dependencies [73cfa0f]
+  - @playwright-labs/fixture-otel@1.2.0
+  - @playwright-labs/reporter-otel@1.2.0
+
 ## 0.0.4
 
 ### Patch Changes
