@@ -42,12 +42,12 @@ test("my test", async ({ page, faker }) => {
 // filename: custom-fixture.ts
 import { mergeExpects, mergeTests } from "@playwright/test";
 import {
-  expect as allureExpect,
-  test as allureTests,
-} from "@playwright-labs/fixture-allure";
+  expect as fakerExpect,
+  test as fakerTest,
+} from "@playwright-labs/fixture-faker";
 
-export const expect = mergeExpects(allureExpect);
-export const test = mergeTests(allureTests);
+export const expect = mergeExpects(fakerExpect);
+export const test = mergeTests(fakerTest);
 ```
 
 And now you are ready to use the custom fixture in your tests.

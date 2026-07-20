@@ -4,14 +4,21 @@ A structured repository for creating and maintaining Playwright TypeScript Best 
 
 ## Structure
 
-- `rules/` - Individual rule files (one per rule)
-  - `_sections.md` - Section metadata (titles, impacts, descriptions)
-  - `_template.md` - Template for creating new rules
-  - `area-description.md` - Individual rule files
-- `src/` - Build scripts and utilities
-- `metadata.json` - Document metadata (version, organization, abstract)
-- **`AGENTS.md`** - Compiled output (generated)
-- **`test-cases.json`** - Test cases for LLM evaluation (generated)
+The project is split across two directories:
+
+- `playwright-best-practices/` - The guide itself
+  - `rules/` - Individual rule files (one per rule)
+    - `_sections.md` - Section metadata (titles, impacts, descriptions)
+    - `_template.md` - Template for creating new rules
+    - `area-description.md` - Individual rule files
+  - **`AGENTS.md`** - Compiled output (generated)
+  - `SKILL.md` - Agent skill manifest
+- `playwright-best-practices-build/` - Buildable package with validation tooling
+  - `src/` - Build scripts and utilities
+  - `metadata.json` - Document metadata (version, organization, abstract)
+  - `package.json` - Scripts and package definition
+
+The build package reads the rules from `playwright-best-practices/rules/` and writes the compiled `AGENTS.md` back into `playwright-best-practices/`.
 
 ## Getting Started
 
@@ -21,6 +28,8 @@ npx add-skill https://github.com/vitalics/playwright-labs/tree/main/packages/pla
 ```
 
 ## Getting Started (contributing)
+
+All commands below run from the `playwright-best-practices-build` directory (the `playwright-best-practices` directory has no `package.json`).
 
 1. Install dependencies:
 
@@ -59,7 +68,7 @@ npx add-skill https://github.com/vitalics/playwright-labs/tree/main/packages/pla
    - `advanced-` for Advanced Patterns (Section 8)
 3. Fill in the frontmatter and content
 4. Ensure you have clear examples with explanations
-5. Run `pnpm build` to regenerate AGENTS.md and test-cases.json
+5. Run `pnpm build` from `playwright-best-practices-build` to regenerate AGENTS.md
 
 ## Rule File Structure
 
@@ -113,6 +122,8 @@ Reference: [Link](https://example.com)
 
 ## Scripts
 
+All scripts run from the `playwright-best-practices-build` directory:
+
 - `pnpm build` - Compile rules into AGENTS.md
 - `pnpm validate` - Validate all rule files
 - `pnpm extract-tests` - Extract test cases for LLM evaluation
@@ -126,7 +137,7 @@ When adding or modifying rules:
 2. Follow the `_template.md` structure
 3. Include clear bad/good examples with explanations
 4. Add appropriate tags
-5. Run `pnpm build` to regenerate AGENTS.md and test-cases.json
+5. Run `pnpm build` from `playwright-best-practices-build` to regenerate AGENTS.md
 6. Rules are automatically sorted by title - no need to manage numbers!
 
 ## Categories Overview

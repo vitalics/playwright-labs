@@ -157,7 +157,7 @@ test.describe("abortSignal fixture", () => {
   });
 });
 
-test.describe("useAbortSignalWithTimeout fixture", () => {
+test.describe("useSignalWithTimeout fixture", () => {
   test("should create a signal with timeout", ({
     useSignalWithTimeout: useAbortSignalWithTimeout,
   }) => {
@@ -170,7 +170,7 @@ test.describe("useAbortSignalWithTimeout fixture", () => {
     useSignalWithTimeout: useAbortSignalWithTimeout,
   }) => {
     expect(() => useAbortSignalWithTimeout(0)).toThrow(
-      "useAbortSignalWithTimeout: timeout parameter must be greater than 0",
+      "useSignalWithTimeout: timeout parameter must be greater than 0",
     );
   });
 
@@ -178,7 +178,7 @@ test.describe("useAbortSignalWithTimeout fixture", () => {
     useSignalWithTimeout: useAbortSignalWithTimeout,
   }) => {
     expect(() => useAbortSignalWithTimeout(-1000)).toThrow(
-      "useAbortSignalWithTimeout: timeout parameter must be greater than 0",
+      "useSignalWithTimeout: timeout parameter must be greater than 0",
     );
   });
 

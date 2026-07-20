@@ -580,9 +580,9 @@ The fixture system uses a **stdout event bridge** between Playwright workers and
 
 This design works seamlessly across Playwright's multi-worker architecture without additional network setup.
 
-## E2E Example (`example/`)
+## E2E Example (`examples/otel-stack/`)
 
-The package includes a fully wired example under `packages/reporter-otel/example/` with a Docker Compose stack:
+The monorepo includes a fully wired example under `examples/otel-stack/` with a Docker Compose stack:
 
 | Service | Port | Purpose |
 |---|---|---|
@@ -594,7 +594,7 @@ The package includes a fully wired example under `packages/reporter-otel/example
 ### Start the stack
 
 ```bash
-cd packages/reporter-otel/example
+cd examples/otel-stack
 docker compose up -d --wait
 ```
 

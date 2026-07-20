@@ -87,8 +87,8 @@ export type Fixture = {
    *
    * @example
    * ```typescript
-   * test('timeout example', async ({ useAbortSignalWithTimeout }) => {
-   *   const signal = useAbortSignalWithTimeout(5000);
+   * test('timeout example', async ({ useSignalWithTimeout }) => {
+   *   const signal = useSignalWithTimeout(5000);
    *   const operation = fetch('https://api.example.com', { signal });
    *   // Operation will be aborted after 5 seconds
    * });
@@ -175,8 +175,8 @@ export const test = baseTest.extend<Fixture>({
    *
    * @example
    * ```typescript
-   * test('with timeout', async ({ useAbortSignalWithTimeout }) => {
-   *   const signal = useAbortSignalWithTimeout(3000);
+   * test('with timeout', async ({ useSignalWithTimeout }) => {
+   *   const signal = useSignalWithTimeout(3000);
    *   await longRunningOperation(signal); // Will abort after 3 seconds
    * });
    * ```
@@ -187,7 +187,7 @@ export const test = baseTest.extend<Fixture>({
     await use((timeout, options) => {
       if (timeout <= 0) {
         throw new RangeError(
-          "useAbortSignalWithTimeout: timeout parameter must be greater than 0",
+          "useSignalWithTimeout: timeout parameter must be greater than 0",
         );
       }
       if (options?.abortTest) {

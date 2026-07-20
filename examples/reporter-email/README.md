@@ -13,7 +13,7 @@ pnpm --filter @playwright-labs/reporter-email build
 Then start the preview server from this directory:
 
 ```bash
-cd packages/reporter-email/examples
+cd examples/reporter-email
 pnpm email:preview
 ```
 
@@ -44,11 +44,8 @@ Open any file in `emails/` and edit the constants at the top:
 // shadcn-base-themes.tsx
 const PREVIEW_THEME: ShadcnTheme = "blue"; // change theme
 
-// shadcn-base-select.tsx
-const STATUS_FILTER: TestStatus[] = ["failed", "timedOut"]; // change filter
-
-// shadcn-base-button.tsx
-const REPORT_URL = "https://ci.example.com/report/123"; // add your URL
+// shadcn-base-button.tsx — URLs are passed as props, not constants
+reportUrl="https://ci.example.com/builds/42/report" // add your URL
 ```
 
 The dev server picks up changes instantly — no rebuild required.
@@ -56,7 +53,7 @@ The dev server picks up changes instantly — no rebuild required.
 ## Running tests
 
 ```bash
-pnpm test
+pnpm test:e2e
 ```
 
 Playwright tests are in the `tests/` directory and render each template with `@react-email/render`, asserting on the generated HTML.

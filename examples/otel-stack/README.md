@@ -62,8 +62,8 @@ Open the Graph tab and try these queries:
 |-------|--------------|
 | `pw_tests_total` | Total tests by status (passed / failed / skipped) |
 | `rate(pw_tests_total[1m])` | Test throughput |
-| `pw_test_duration_sum / pw_test_duration_count` | Average test duration |
-| `pw_process_memory_heap_used` | Node.js heap during the run |
+| `pw_test_duration_milliseconds_sum / pw_test_duration_milliseconds_count` | Average test duration |
+| `pw_process_memory_heap_used_bytes` | Node.js heap during the run |
 | `e2e_api_requests_total` | Custom counter from the sample test |
 | `e2e_page_load_ms_bucket` | Custom histogram buckets |
 

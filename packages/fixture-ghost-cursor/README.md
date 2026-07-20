@@ -59,10 +59,10 @@ test('debug with visible cursor overlay', async ({ page, useGhostCursor }) => {
 ### Merging with other fixtures
 
 ```typescript
-import { test as base } from '@playwright/test'
+import { mergeTests, test as base } from '@playwright/test'
 import { test as ghostTest } from '@playwright-labs/fixture-ghost-cursor'
 
-export const test = base.extend(ghostTest.fixtures)
+export const test = mergeTests(base, ghostTest)
 ```
 
 ## Fixtures
