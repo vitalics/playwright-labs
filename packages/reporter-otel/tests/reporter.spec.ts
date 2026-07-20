@@ -25,6 +25,7 @@ import OtelReporter, {
 
 import type {
   FullConfig,
+  FullResult,
   Suite,
   TestCase,
   TestResult,
@@ -656,5 +657,228 @@ test.describe("OtelReporter — span status on failure", () => {
     reporter.onTestEnd(test_, result);
 
     expect(reporter.spyTracer.spans[0].statusCode).toBeUndefined();
+  });
+});
+
+
+// ── Auto-instrumentation: metric doubles ──────────────────────────────────────
+
+import type { NodeSDK } from "@opentelemetry/sdk-node";
+import type { Resource } from "@opentelemetry/resources";
+
+/** Records add()/record() calls for a single instrument. */
+class SpyInstrument {
+  readonly calls: { value: number; attrs?: Attributes }[] = [];
+  add(value: number, attrs?: Attributes): void {
+    this.calls.push({ value, attrs });
+  }
+  record(value: number, attrs?: Attributes): void {
+    this.calls.push({ value, attrs });
+  }
+}
+
+/** Minimal Meter spy — instruments are looked up by name in assertions. */
+class SpyMeter {
+  readonly counters = new Map<string, SpyInstrument>();
+  readonly histograms = new Map<string, SpyInstrument>();
+
+  createCounter(name: string): SpyInstrument {
+    const instrument = new SpyInstrument();
+    this.counters.set(name, instrument);
+    return instrument;
+  }
+  createHistogram(name: string): SpyInstrument {
+    const instrument = new SpyInstrument();
+    this.histograms.set(name, instrument);
+    return instrument;
+  }
+  createUpDownCounter(name: string): SpyInstrument {
+    return this.createCounter(name);
+  }
+  createObservableGauge(): { addCallback(): void } {
+    return { addCallback: () => {} };
+  }
+}
+
+/**
+ * Reporter subclass that skips NodeSDK/resource setup and initialises the
+ * built-in instruments against a SpyMeter instead.
+ */
+class MetricsTestReporter extends OtelReporter {
+  readonly spyMeter = new SpyMeter();
+
+  onBegin(_config: FullConfig, _suite: Suite): void {
+    this.meter = this.spyMeter as never;
+    (
+      this as unknown as { initMetricInstruments(): void }
+    ).initMetricInstruments();
+  }
+}
+
+/** Reporter subclass that captures the resource passed to createSdk. */
+class ResourceCapturingReporter extends OtelReporter {
+  capturedResource: Resource | undefined;
+
+  protected createSdk(resource: Resource): NodeSDK {
+    this.capturedResource = resource;
+    return {
+      start: () => {},
+      shutdown: async () => {},
+    } as unknown as NodeSDK;
+  }
+}
+
+// ── Reporter — step metrics ───────────────────────────────────────────────────
+
+test.describe("OtelReporter — step metrics", () => {
+  function makeStep(overrides: {
+    title?: string;
+    category?: string;
+    duration?: number;
+    steps?: TestStep[];
+  }): TestStep {
+    return {
+      title: overrides.title ?? "click button",
+      category: overrides.category ?? "action",
+      startTime: new Date("2024-01-01T00:00:00Z"),
+      duration: overrides.duration ?? 10,
+      location: { file: "/tmp/test.spec.ts", line: 5, column: 0 },
+      steps: overrides.steps ?? [],
+    } as unknown as TestStep;
+  }
+
+  test("counts every step including nested ones", () => {
+    const reporter = new MetricsTestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const inner = makeStep({ title: "inner", category: "expect" });
+    const outer = makeStep({ title: "outer", steps: [inner] });
+    const result = makeResult({ steps: [outer, makeStep({})] });
+
+    reporter.onTestBegin(makeTest({}), result);
+    reporter.onTestEnd(makeTest({}), result);
+
+    const counter = reporter.spyMeter.counters.get("pw_test_step_count");
+    expect(counter?.calls).toHaveLength(3);
+    expect(
+      counter?.calls.some((c) => c.attrs?.["test.step.category"] === "expect"),
+    ).toBe(true);
+  });
+
+  test("records step durations with category attributes", () => {
+    const reporter = new MetricsTestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const result = makeResult({
+      steps: [makeStep({ title: "checkout", category: "test.step", duration: 250 })],
+    });
+    reporter.onTestBegin(makeTest({}), result);
+    reporter.onTestEnd(makeTest({}), result);
+
+    const histogram = reporter.spyMeter.histograms.get("pw_test_step_duration");
+    expect(histogram?.calls).toHaveLength(1);
+    expect(histogram?.calls[0].value).toBe(250);
+    expect(histogram?.calls[0].attrs?.["test.step.category"]).toBe("test.step");
+  });
+
+  test("step metrics are recorded even without a tracer", () => {
+    // MetricsTestReporter never sets a tracer — spans are skipped entirely.
+    const reporter = new MetricsTestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const result = makeResult({ steps: [makeStep({})] });
+    reporter.onTestBegin(makeTest({}), result);
+    reporter.onTestEnd(makeTest({}), result);
+
+    expect(
+      reporter.spyMeter.counters.get("pw_test_step_count")?.calls,
+    ).toHaveLength(1);
+  });
+});
+
+// ── Reporter — annotation metric ─────────────────────────────────────────────
+
+test.describe("OtelReporter — annotation metric", () => {
+  test("counts annotations by type", () => {
+    const reporter = new MetricsTestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const test_ = makeTest({
+      annotations: [
+        { type: "issue", description: "JIRA-1" },
+        { type: "issue", description: "JIRA-2" },
+        { type: "feature", description: "checkout" },
+      ],
+    });
+    reporter.onTestBegin(test_, makeResult({}));
+    reporter.onTestEnd(test_, makeResult({}));
+
+    const counter = reporter.spyMeter.counters.get("pw_test_annotation_count");
+    expect(counter?.calls).toHaveLength(3);
+    const types = counter?.calls.map((c) => c.attrs?.["annotation.type"]);
+    expect(types).toEqual(["issue", "issue", "feature"]);
+  });
+
+  test("no annotations → no calls", () => {
+    const reporter = new MetricsTestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    reporter.onTestBegin(makeTest({}), makeResult({}));
+    reporter.onTestEnd(makeTest({}), makeResult({}));
+
+    expect(
+      reporter.spyMeter.counters.get("pw_test_annotation_count")?.calls ?? [],
+    ).toHaveLength(0);
+  });
+});
+
+// ── Reporter — run duration ──────────────────────────────────────────────────
+
+test.describe("OtelReporter — run duration", () => {
+  test("records FullResult duration on onEnd", () => {
+    const reporter = new MetricsTestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    reporter.onEnd({ duration: 45_678 } as unknown as FullResult);
+
+    const histogram = reporter.spyMeter.histograms.get("pw_run_duration");
+    expect(histogram?.calls).toHaveLength(1);
+    expect(histogram?.calls[0].value).toBe(45_678);
+  });
+});
+
+// ── Reporter — resource attributes ────────────────────────────────────────────
+
+test.describe("OtelReporter — resource attributes", () => {
+  test("includes nodejs.versions.* component versions", () => {
+    const reporter = new ResourceCapturingReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const attrs = reporter.capturedResource?.attributes ?? {};
+    expect(attrs["nodejs.versions.node"]).toBe(process.versions.node);
+    expect(attrs["nodejs.versions.v8"]).toBe(process.versions.v8);
+    expect(attrs["nodejs.versions.openssl"]).toBe(process.versions.openssl);
+  });
+
+  test("includes playwright config and os/host attributes", () => {
+    const reporter = new ResourceCapturingReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const attrs = reporter.capturedResource?.attributes ?? {};
+    expect(attrs["service.name"]).toBe("playwright");
+    expect(attrs["playwright.workers"]).toBe(1);
+    expect(attrs["os.platform"]).toBe(process.platform);
+    expect(attrs["process.runtime.version"]).toBe(process.versions.node);
+  });
+
+  test("env option values land as env.* resource attributes", () => {
+    const reporter = new ResourceCapturingReporter({
+      env: { MY_PRODUCT_VERSION: "2.4.8", SKIP_ME: undefined },
+    });
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const attrs = reporter.capturedResource?.attributes ?? {};
+    expect(attrs["env.MY_PRODUCT_VERSION"]).toBe("2.4.8");
+    expect(attrs["env.SKIP_ME"]).toBeUndefined();
   });
 });

@@ -127,6 +127,10 @@ export default class OtelReporter implements Reporter {
   private testAttachmentCount: Counter | undefined;
   private testAttachmentSize: Histogram | undefined;
   private testErrorCount: Counter | undefined;
+  private testStepCount: Counter | undefined;
+  private testStepDuration: Histogram | undefined;
+  private testAnnotationCount: Counter | undefined;
+  private runDuration: Histogram | undefined;
 
   // ── Observable gauge backing values ──────────────────────────────────────────
   private _heapUsed = 0;
@@ -179,6 +183,14 @@ export default class OtelReporter implements Reporter {
       "process.runtime.name": "nodejs",
       "process.runtime.version": versions.node,
       "process.argv": argv.join(" "),
+      // Full Node.js runtime component versions: nodejs.versions.node,
+      // nodejs.versions.v8, nodejs.versions.openssl, …
+      ...Object.fromEntries(
+        Object.entries(versions).map(([key, value]) => [
+          `nodejs.versions.${key}`,
+          value,
+        ]),
+      ),
       ...this.resourceAttributes,
     });
 
@@ -294,6 +306,19 @@ export default class OtelReporter implements Reporter {
       });
       if (size > 0) this.testAttachmentSize?.record(size);
     }
+    for (const annotation of test.annotations) {
+      this.testAnnotationCount?.add(1, {
+        "annotation.type": annotation.type,
+        "test.suite": test.parent.title,
+      });
+    }
+
+    // Step metrics — walked separately from span creation so they are
+    // recorded even when no tracer is available.
+    this.recordStepMetrics(result.steps, {
+      "test.suite": test.parent.title,
+      ...browserAttrs,
+    });
 
     this.updateNodejsStats();
   }
@@ -345,7 +370,10 @@ export default class OtelReporter implements Reporter {
     this.updateNodejsStats();
   }
 
-  onEnd(_result: FullResult): void {
+  onEnd(result: FullResult): void {
+    // Wall-clock duration of the whole run — the OTel equivalent of the
+    // remote-write reporter's tests_total_duration.
+    this.runDuration?.record(result.duration);
     this.updateNodejsStats();
   }
 
@@ -425,6 +453,23 @@ export default class OtelReporter implements Reporter {
       this.createStepSpan(child, span);
     }
     span.end(new Date(step.startTime.getTime() + step.duration));
+  }
+
+  /**
+   * Recursively records step count/duration metrics for a TestStep tree.
+   * Called from onTestEnd independently of span creation so the metrics are
+   * exported even when tracing is disabled.
+   */
+  private recordStepMetrics(
+    steps: TestStep[],
+    attrs: Record<string, string>,
+  ): void {
+    for (const step of steps) {
+      const stepAttrs = { ...attrs, "test.step.category": step.category };
+      this.testStepCount?.add(1, stepAttrs);
+      this.testStepDuration?.record(step.duration, stepAttrs);
+      this.recordStepMetrics(step.steps, attrs);
+    }
   }
 
   /**
@@ -529,6 +574,20 @@ export default class OtelReporter implements Reporter {
     });
     this.testErrorCount = m.createCounter(`${p}test_error_count`, {
       description: "Number of global test errors",
+    });
+    this.testStepCount = m.createCounter(`${p}test_step_count`, {
+      description: "Total number of test steps partitioned by category",
+    });
+    this.testStepDuration = m.createHistogram(`${p}test_step_duration`, {
+      description: "Test step execution duration",
+      unit: "ms",
+    });
+    this.testAnnotationCount = m.createCounter(`${p}test_annotation_count`, {
+      description: "Number of test annotations partitioned by type",
+    });
+    this.runDuration = m.createHistogram(`${p}run_duration`, {
+      description: "Total test run duration (wall clock)",
+      unit: "ms",
     });
 
     // Observable gauges — backing values are updated on every lifecycle event

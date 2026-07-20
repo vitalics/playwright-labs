@@ -274,6 +274,51 @@ test.describe("OTel reporter — built-in metric verification", () => {
       t.includes("pw_process_cpu_user_microseconds"),
     ).toBe(true);
   });
+
+  test("pw_test_step_count_total counter is exported", async ({ request }) => {
+    // sample.spec.ts uses test.step (withSpan demo) → step metrics exist
+    await pollMetrics(request, (t) =>
+      t.includes("pw_test_step_count_total"),
+    ).toBe(true);
+  });
+
+  test("pw_test_step_duration_milliseconds histogram is exported", async ({
+    request,
+  }) => {
+    await pollMetrics(request, (t) =>
+      t.includes("pw_test_step_duration_milliseconds_bucket") &&
+      t.includes("pw_test_step_duration_milliseconds_count"),
+    ).toBe(true);
+  });
+
+  test("pw_test_annotation_count_total has pw_otel.feature series", async ({
+    request,
+  }) => {
+    // sample.spec.ts pushes a pw_otel.feature annotation
+    await pollMetrics(
+      request,
+      (t) =>
+        t.includes("pw_test_annotation_count_total") &&
+        t.includes('annotation_type="pw_otel.feature"'),
+    ).toBe(true);
+  });
+
+  test("pw_run_duration is exported (flushed at onEnd)", async ({ request }) => {
+    // Recorded in reporter onEnd — i.e. after the whole run, so on a fresh
+    // Prometheus it is not queryable from inside the run itself.
+    const resp = await request.get(
+      "http://localhost:9090/api/v1/query?query=pw_run_duration_milliseconds_count",
+    );
+    const body = resp.ok() ? await resp.json() : undefined;
+    const result = body?.data?.result ?? [];
+    if (result.length === 0) {
+      console.log(
+        "  pw_run_duration is not present yet — it is recorded at reporter onEnd (after the whole run).",
+      );
+      return;
+    }
+    expect(parseFloat(result[0].value[1])).toBeGreaterThan(0);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

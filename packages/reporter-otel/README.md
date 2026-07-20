@@ -183,6 +183,10 @@ The OTel Collector's Prometheus exporter appends a unit suffix: `ms` → `_milli
 | `pw_test_attachment_count` | `pw_test_attachment_count_total` | Counter | `attachment.content_type` |
 | `pw_test_attachment_size` | `pw_test_attachment_size_bytes_bucket/sum/count` | Histogram (bytes) | — |
 | `pw_test_error_count` | `pw_test_error_count_total` | Counter | `error.location`, `error.message` |
+| `pw_test_step_count` | `pw_test_step_count_total` | Counter | `test.step.category`, `test.suite`, `test.project`, `browser.name`, `browser.channel`, `browser.headless`, `browser.viewport`, `browser.locale` |
+| `pw_test_step_duration` | `pw_test_step_duration_milliseconds_bucket/sum/count` | Histogram (ms) | same as above |
+| `pw_test_annotation_count` | `pw_test_annotation_count_total` | Counter | `annotation.type`, `test.suite` |
+| `pw_run_duration` | `pw_run_duration_milliseconds_bucket/sum/count` | Histogram (ms) | — |
 | `pw_process_memory_heap_used` | `pw_process_memory_heap_used_bytes` | Gauge | — |
 | `pw_process_memory_heap_total` | `pw_process_memory_heap_total_bytes` | Gauge | — |
 | `pw_process_memory_rss` | `pw_process_memory_rss_bytes` | Gauge | — |
@@ -204,6 +208,7 @@ The reporter attaches these as OTel resource attributes (available in `target_in
 | `playwright.workers` | Number of workers |
 | `playwright.config_file` | Path to `playwright.config.ts` |
 | `process.runtime.version` | Node.js version |
+| `nodejs.versions.*` | Full Node.js component versions (`nodejs.versions.node`, `nodejs.versions.v8`, `nodejs.versions.openssl`, …) |
 
 ## Traces
 
