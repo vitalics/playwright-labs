@@ -22,6 +22,7 @@ import {
   type SpanContext,
 } from "@playwright-labs/otel-core";
 import { Span } from "@playwright-labs/otel-core";
+import { collectGlobalMetrics, getGlobalCounter, getGlobalHistogram } from "./global";
 
 export {
   Counter,
@@ -131,6 +132,68 @@ export interface OtelFixture {
    * ```
    */
   useUpDownCounter: (name: string, options?: MetricOptions) => UpDownCounter;
+
+  /**
+   * Returns a shared OTel **Counter** — one instance per metric name for the
+   * whole worker process.
+   *
+   * Unlike {@link OtelFixture.useCounter}, which creates a fresh counter per
+   * test, `useGlobalCounter` caches the instance in a module-level registry:
+   * every test that asks for the same name receives the **same object**, and
+   * recorded values accumulate across the tests of a worker. Because
+   * Playwright runs each worker in its own process, "global" means
+   * **per worker** — each worker keeps its own registry.
+   *
+   * All global metrics are automatically flushed at the teardown of every
+   * test that used a global fixture. `collect()` drains, so untouched metrics
+   * are a no-op and manual mid-test flushes remain safe.
+   *
+   * @param name - Metric name as it will appear in your OTel backend.
+   * @param options - Optional description and unit. Applied only when the
+   *   metric is first created; ignored on subsequent calls for the same name.
+   *
+   * @example
+   * ```ts
+   * // Count page/URL calls across the whole run, not just one test.
+   * test('home page', async ({ useGlobalCounter, page }) => {
+   *   const urlCalls = useGlobalCounter('url_calls', { unit: 'requests' });
+   *   await page.goto('/home');
+   *   urlCalls.add(1, { url: '/home' });
+   * });
+   *
+   * test('dashboard', async ({ useGlobalCounter, page }) => {
+   *   const urlCalls = useGlobalCounter('url_calls'); // same instance
+   *   await page.goto('/dashboard');
+   *   urlCalls.add(1, { url: '/dashboard' });
+   *   expect(urlCalls).toHaveOtelCallCount(2); // accumulated across tests
+   * });
+   * ```
+   */
+  useGlobalCounter: (name: string, options?: MetricOptions) => Counter;
+
+  /**
+   * Returns a shared OTel **Histogram** — one instance per metric name for
+   * the whole worker process.
+   *
+   * Behaves exactly like {@link OtelFixture.useGlobalCounter}, but for
+   * histograms: the instance is cached per worker, values accumulate across
+   * tests, and it is auto-flushed at every test teardown.
+   *
+   * @param name - Metric name as it will appear in your OTel backend.
+   * @param options - Optional description and unit. Applied only when the
+   *   metric is first created; ignored on subsequent calls for the same name.
+   *
+   * @example
+   * ```ts
+   * test('page load', async ({ useGlobalHistogram, page }) => {
+   *   const loadTime = useGlobalHistogram('page_load_ms', { unit: 'ms' });
+   *   const start = Date.now();
+   *   await page.goto('/dashboard');
+   *   loadTime.record(Date.now() - start, { route: '/dashboard' });
+   * });
+   * ```
+   */
+  useGlobalHistogram: (name: string, options?: MetricOptions) => Histogram;
 
   /**
    * Creates a named **Span** nested under the current test span.
@@ -257,6 +320,32 @@ export const test: TestType<
         return counter;
       });
       created.forEach((m) => m.collect());
+    },
+    { box: true },
+  ],
+
+  useGlobalCounter: [
+    async ({}, use) => {
+      let used = false;
+      await use((name, options) => {
+        used = true;
+        return getGlobalCounter(name, options);
+      });
+      // Flush every registered global metric — draining makes collect() a
+      // no-op for metrics with no new data since the last flush.
+      if (used) collectGlobalMetrics();
+    },
+    { box: true },
+  ],
+
+  useGlobalHistogram: [
+    async ({}, use) => {
+      let used = false;
+      await use((name, options) => {
+        used = true;
+        return getGlobalHistogram(name, options);
+      });
+      if (used) collectGlobalMetrics();
     },
     { box: true },
   ],

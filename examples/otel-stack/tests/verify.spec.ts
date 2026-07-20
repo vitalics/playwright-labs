@@ -440,6 +440,62 @@ test.describe("OTel reporter — custom metric verification (worker fixtures)", 
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Global metric verification (useGlobalCounter / useGlobalHistogram)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe("OTel reporter — global metric verification", () => {
+  /**
+   * useGlobalCounter — e2e_global_url_calls
+   *
+   * sample.spec.ts calls add(1, { url: 'playwright.dev' }) in TWO different
+   * tests on the same shared instance → one series with value 2.
+   * (Counter without a unit → Prometheus exporter appends "_total".)
+   */
+  test("useGlobalCounter → e2e_global_url_calls_total accumulates across tests", async ({
+    request,
+  }) => {
+    await pollMetrics(request, (t) => {
+      const v = parseMetricValue(
+        t,
+        /e2e_global_url_calls_total\{[^}]*url="playwright\.dev"[^}]*\}\s+([\d.]+)/,
+      );
+      return !isNaN(v) && v >= 2;
+    }).toBe(true);
+  });
+
+  /**
+   * useGlobalHistogram — e2e_global_step_ms
+   *
+   * sample.spec.ts records 120 ms { step: 'search' } and 240 ms
+   * { step: 'checkout' } from two tests on the same shared instance.
+   * ("ms" maps to "milliseconds" in the unit table and the suffix IS appended.)
+   */
+  test("useGlobalHistogram → e2e_global_step_ms_milliseconds has series from both tests", async ({
+    request,
+  }) => {
+    await pollMetrics(
+      request,
+      (t) =>
+        t.includes("e2e_global_step_ms_milliseconds_count") &&
+        t.includes('step="search"') &&
+        t.includes('step="checkout"'),
+    ).toBe(true);
+  });
+
+  test("useGlobalHistogram → e2e_global_step_ms_milliseconds_sum{step='checkout'} is ≥ 240", async ({
+    request,
+  }) => {
+    await pollMetrics(request, (t) => {
+      const v = parseMetricValue(
+        t,
+        /e2e_global_step_ms_milliseconds_sum\{[^}]*step="checkout"[^}]*\}\s+([\d.]+)/,
+      );
+      return !isNaN(v) && v >= 240;
+    }).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Interactive UIs (smoke check + helpful console output)
 // ─────────────────────────────────────────────────────────────────────────────
 

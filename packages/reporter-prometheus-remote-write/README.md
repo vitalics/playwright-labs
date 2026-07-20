@@ -143,8 +143,14 @@ This metrics collects every reporter lifecycle.
 ## Using custom metrics
 
 Custom metrics are provided by the `@playwright-labs/prometheus-core` package
-(`Metric`, `Counter`, `Gauge`, `Event`) and are re-exported by this reporter,
+(`Metric`, `Counter`, `Gauge`, `Histogram`, `Event`) and are re-exported by this reporter,
 so you can import them from either package.
+
+Metrics recorded in test workers reach this reporter as **newline-delimited
+JSON events on stdout** (`collect()` writes one `{ name: "prometheus-remote-writer", payload }`
+line per series). The reporter buffers partial lines across `onStdOut` chunks,
+so several back-to-back events — e.g. a `Histogram` flush — are parsed
+individually.
 
 You can define own metrics following next code:
 
@@ -301,5 +307,5 @@ base.afterAll(() => {
 
 ## Related packages
 
-- [`@playwright-labs/prometheus-core`](../prometheus-core) — core metric primitives (`Metric`, `Counter`, `Gauge`, `Event`) used by this reporter.
-- [`@playwright-labs/fixture-prometheus`](../fixture-prometheus) — Playwright fixtures (`useCounterMetric`, `useGaugeMetric`) for creating metrics inside tests.
+- [`@playwright-labs/prometheus-core`](../prometheus-core) — core metric primitives (`Metric`, `Counter`, `Gauge`, `Histogram`, `Event`) used by this reporter.
+- [`@playwright-labs/fixture-prometheus`](../fixture-prometheus) — Playwright fixtures (`useCounterMetric`, `useGaugeMetric`, `useGlobalCounter`, `useGlobalHistogram`) for creating metrics inside tests.

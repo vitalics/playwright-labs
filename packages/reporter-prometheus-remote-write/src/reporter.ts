@@ -587,21 +587,28 @@ export default defineConfig({
     return timeseries;
   }
 
-  async onStdOut(
-    chunk: string | Buffer,
+  /** Incomplete stdout line carried over to the next `onStdOut` chunk. */
+  private stdoutBuffer = "";
+
+  /**
+   * Processes a single stdout line: a `prometheus-remote-writer` event is
+   * forwarded to Prometheus, anything else is counted as plain test output.
+   */
+  private async processStdoutLine(
+    line: string,
     test: void | TestCase,
     result: void | TestResult,
   ) {
     const labels = {
-      text: Buffer.from(chunk).toString("utf-8"),
-      size: String(chunk.length),
+      text: line,
+      size: String(line.length),
       unit: "bytes",
       encoding: "utf8",
       testId: test?.id ?? "",
       testTitle: test?.title ?? "",
     };
     try {
-      const event = JSON.parse(String(chunk));
+      const event = JSON.parse(line);
       if (Event.is(event)) {
         const timeseries = this.mapTimeseries(event.payload);
         await this.send(timeseries);
@@ -612,16 +619,46 @@ export default defineConfig({
             ...labels,
           })
           .inc();
+        return;
       }
     } catch (e) {
-      // bypass
-      this.pw_stdout
-        .labels({
-          // rest reporter
-          internal: "false",
-          ...labels,
-        })
-        .inc();
+      // not JSON — plain text output
+    }
+    this.pw_stdout
+      .labels({
+        // rest reporter
+        internal: "false",
+        ...labels,
+      })
+      .inc();
+  }
+
+  async onStdOut(
+    chunk: string | Buffer,
+    test: void | TestCase,
+    result: void | TestResult,
+  ) {
+    const text = this.stdoutBuffer + Buffer.from(chunk).toString("utf-8");
+    const lines = text.split("\n");
+    // The last element is the trailing remainder — an incomplete line, or the
+    // whole chunk when it contains no newline at all.
+    this.stdoutBuffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      await this.processStdoutLine(line, test, result);
+    }
+
+    if (this.stdoutBuffer !== "") {
+      try {
+        // A newline-less but complete JSON event (e.g. a single collect()) is
+        // processed immediately; only an unparseable remainder stays buffered.
+        JSON.parse(this.stdoutBuffer);
+        const line = this.stdoutBuffer;
+        this.stdoutBuffer = "";
+        await this.processStdoutLine(line, test, result);
+      } catch (e) {
+        // incomplete JSON — wait for the rest of the line in the next chunk
+      }
     }
     this.updateNodejsStats();
   }
@@ -666,6 +703,12 @@ export default defineConfig({
   }
 
   async onExit(): Promise<void> {
+    // Flush a leftover incomplete stdout line before the final sends.
+    if (this.stdoutBuffer !== "") {
+      const line = this.stdoutBuffer;
+      this.stdoutBuffer = "";
+      await this.processStdoutLine(line, undefined, undefined);
+    }
     await this.send(this.timeseries);
     await this.send(
       [

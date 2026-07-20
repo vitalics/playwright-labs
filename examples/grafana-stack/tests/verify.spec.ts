@@ -254,6 +254,70 @@ test.describe("Prometheus reporter — built-in metric verification", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Global metric verification (useGlobalCounter / useGlobalHistogram)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe("Prometheus reporter — global metric verification", () => {
+  /**
+   * useGlobalCounter — e2e_global_url_calls
+   *
+   * sample.spec.ts calls inc() in TWO different tests on the same shared
+   * instance → one series pw_e2e_global_url_calls{url="playwright.dev"} = 2.
+   */
+  test("useGlobalCounter → pw_e2e_global_url_calls accumulates across tests", async ({
+    request,
+  }) => {
+    await pollQuery(
+      request,
+      'pw_e2e_global_url_calls{url="playwright.dev"}',
+      (r) => !isNaN(firstValue(r)) && firstValue(r) >= 2,
+    ).toBe(true);
+  });
+
+  /**
+   * useGlobalHistogram — e2e_global_step_duration (buckets 50/100/200/500)
+   *
+   * sample.spec.ts observes 80 and 240 from two tests on the same shared
+   * instance → count = 2, sum = 320, cumulative buckets:
+   *   le="50" → 0, le="100" → 1, le="200" → 1, le="500" → 2, le="+Inf" → 2
+   */
+  test("useGlobalHistogram → pw_e2e_global_step_duration_count is 2", async ({
+    request,
+  }) => {
+    await pollQuery(
+      request,
+      "pw_e2e_global_step_duration_count",
+      (r) => !isNaN(firstValue(r)) && firstValue(r) >= 2,
+    ).toBe(true);
+  });
+
+  test("useGlobalHistogram → pw_e2e_global_step_duration_sum is 320", async ({
+    request,
+  }) => {
+    await pollQuery(
+      request,
+      "pw_e2e_global_step_duration_sum",
+      (r) => !isNaN(firstValue(r)) && firstValue(r) >= 320,
+    ).toBe(true);
+  });
+
+  test("useGlobalHistogram → cumulative buckets le=100 → 1, le=+Inf → 2", async ({
+    request,
+  }) => {
+    await pollQuery(
+      request,
+      'pw_e2e_global_step_duration_bucket{le="100"}',
+      (r) => !isNaN(firstValue(r)) && firstValue(r) === 1,
+    ).toBe(true);
+    await pollQuery(
+      request,
+      'pw_e2e_global_step_duration_bucket{le="+Inf"}',
+      (r) => !isNaN(firstValue(r)) && firstValue(r) >= 2,
+    ).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Run-level metrics (flushed once at reporter onExit)
 // ─────────────────────────────────────────────────────────────────────────────
 

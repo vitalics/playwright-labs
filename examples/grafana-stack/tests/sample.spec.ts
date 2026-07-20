@@ -124,3 +124,46 @@ test.describe("Prometheus reporter — sample data generation", () => {
     });
   });
 });
+
+
+test.describe("Prometheus reporter — global metrics (shared across tests)", () => {
+  // Global fixtures return ONE shared instance per worker: values accumulate
+  // across tests and the metrics are flushed automatically at every test
+  // teardown — no manual collect() needed.
+
+  test("global counter accumulates URL calls (1st call)", async ({
+    useGlobalCounter,
+  }) => {
+    const urlCalls = useGlobalCounter("e2e_global_url_calls", {
+      url: "playwright.dev",
+    });
+    urlCalls.inc();
+    // → pw_e2e_global_url_calls{url="playwright.dev"} 1
+  });
+
+  test("global counter accumulates URL calls (2nd call)", async ({
+    useGlobalCounter,
+  }) => {
+    const urlCalls = useGlobalCounter("e2e_global_url_calls", {
+      url: "playwright.dev",
+    });
+    urlCalls.inc();
+    // same shared instance → pw_e2e_global_url_calls{url="playwright.dev"} 2
+  });
+
+  test("global histogram observes step durations (1st)", async ({
+    useGlobalHistogram,
+  }) => {
+    const stepDuration = useGlobalHistogram("e2e_global_step_duration", {
+      buckets: [50, 100, 200, 500],
+    });
+    stepDuration.observe(80); // → buckets ≤50? no; ≤100, ≤200, ≤500, +Inf
+  });
+
+  test("global histogram observes step durations (2nd)", async ({
+    useGlobalHistogram,
+  }) => {
+    const stepDuration = useGlobalHistogram("e2e_global_step_duration");
+    stepDuration.observe(240); // same shared instance → count 2, sum 320
+  });
+});

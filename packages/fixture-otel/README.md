@@ -55,6 +55,8 @@ All fixtures are automatically cleaned up after each test — metrics are flushe
 | `useCounter(name, options?)` | `Counter` | Monotonically increasing metric |
 | `useHistogram(name, options?)` | `Histogram` | Distribution of values (latency, size, …) |
 | `useUpDownCounter(name, options?)` | `UpDownCounter` | Value that can go up or down (queue depth, …) |
+| `useGlobalCounter(name, options?)` | `Counter` | Shared counter — one instance per worker, values accumulate across tests |
+| `useGlobalHistogram(name, options?)` | `Histogram` | Shared histogram — one instance per worker, values accumulate across tests |
 | `useSpan(name)` | `Span` | Named span nested under the test span |
 | `useTraceparent()` | `Traceparent` | W3C traceparent that ties the test and all downstream requests into one trace |
 
@@ -108,6 +110,47 @@ test("track in-flight requests", async ({ useUpDownCounter, page }) => {
 
   await page.goto("/dashboard");
   expect(inFlight).toHaveOtelMinCallCount(1);
+});
+```
+
+### `useGlobalCounter` / `useGlobalHistogram`
+
+Returns a **shared** metric instance — one per metric name for the whole worker process. Unlike `useCounter` / `useHistogram`, which create a fresh metric per test, the global fixtures cache the instance in a module-level registry: every test that asks for the same name receives the **same object**, and recorded values accumulate across the tests of a worker.
+
+Use them for run-wide numbers — e.g. counting page/URL calls across the whole suite:
+
+```typescript
+test("home page", async ({ useGlobalCounter, page }) => {
+  const urlCalls = useGlobalCounter("url_calls", { unit: "requests" });
+
+  await page.goto("/home");
+  urlCalls.add(1, { url: "/home" });
+});
+
+test("dashboard", async ({ useGlobalCounter, page }) => {
+  const urlCalls = useGlobalCounter("url_calls"); // same instance as above
+
+  await page.goto("/dashboard");
+  urlCalls.add(1, { url: "/dashboard" });
+
+  expect(urlCalls).toHaveOtelCallCount(2); // accumulated across tests
+});
+```
+
+Notes:
+
+- **Per worker, not per run.** Playwright runs each worker in its own process, so every worker keeps its own registry. The reporter deduplicates instruments by metric name, so data points from all workers still land in a single OTel instrument.
+- **Auto-flushed.** All global metrics are flushed at the teardown of every test that used a global fixture — no manual `collect()` needed. Flushing drains, so untouched metrics are a no-op and manual mid-test `collect()` calls remain safe.
+- **Options apply only at first creation** and are ignored on subsequent calls for the same name.
+- **One kind per name.** Requesting a name that is already registered as the other kind (e.g. `useGlobalHistogram("x")` after `useGlobalCounter("x")`) throws an error.
+
+```typescript
+test("run-wide latency", async ({ useGlobalHistogram, page }) => {
+  const loadTime = useGlobalHistogram("page_load_ms", { unit: "ms" });
+
+  const start = Date.now();
+  await page.goto("/dashboard");
+  loadTime.record(Date.now() - start, { route: "/dashboard" });
 });
 ```
 
