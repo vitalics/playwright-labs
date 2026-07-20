@@ -1,5 +1,12 @@
 # ghost-cursor-example
 
+## 0.0.2
+
+### Patch Changes
+
+- Updated dependencies [fef3bff]
+  - @playwright-labs/fixture-ghost-cursor@1.0.1
+
 ## 0.0.1
 
 ### Patch Changes
