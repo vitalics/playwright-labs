@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/reporter-slack",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Slack reporter for Playwright using slack-buildkit",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
