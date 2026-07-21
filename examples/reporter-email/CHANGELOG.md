@@ -1,5 +1,12 @@
 # reporter-email-example
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [e5fb985]
+  - @playwright-labs/reporter-email@1.1.4
+
 ## 0.0.4
 
 ### Patch Changes
