@@ -18,6 +18,8 @@ npm i -D @playwright-labs/reporter-core
 | `TestCases` | `[test: TestCase, result: TestResult][]` — every finished test with its result, in execution order |
 | `Template<T>` | `T \| ((result: FullResult, testCases: TestCases) => T \| Promise<T>)` — static value or dynamic template |
 | `StatusCounts` | `{ passed, failed, timedOut, skipped, interrupted }` |
+| `isExpectPollStep` | Detects `expect.poll` / `toPass` steps (by title or by expect-category child attempt steps) |
+| `getExpectPollInfo` | Returns `{ attempts, outcome: "pass" \| "timeout" }` for a poll step, `null` otherwise — used by reporters to export `expect_poll_*` metrics |
 
 ## Writing your own reporter
 

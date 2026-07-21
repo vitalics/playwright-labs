@@ -922,3 +922,112 @@ test.describe("resolveRuntime", () => {
     expect(runtime.version).toBe(process.versions.node);
   });
 });
+
+
+// ── Reporter — expect.poll metrics ───────────────────────────────────────────
+
+test.describe("OtelReporter — expect.poll metrics", () => {
+  function makePollStep(overrides: {
+    attempts?: number;
+    duration?: number;
+    error?: { message: string };
+    title?: string;
+  }): TestStep {
+    const attempts = overrides.attempts ?? 3;
+    const title = overrides.title ?? "counter";
+    return {
+      title,
+      category: "expect",
+      startTime: new Date("2024-01-01T00:00:00Z"),
+      duration: overrides.duration ?? 350,
+      location: { file: "/tmp/test.spec.ts", line: 5, column: 0 },
+      error: overrides.error,
+      steps: Array.from({ length: attempts }, (_, i) => ({
+        title,
+        category: "expect",
+        startTime: new Date("2024-01-01T00:00:00Z"),
+        duration: 1,
+        steps: [],
+        error: i + 1 < attempts ? { message: "not yet" } : undefined,
+      })),
+    } as unknown as TestStep;
+  }
+
+  test("successful poll: pass outcome, attempts and duration recorded", () => {
+    const reporter = new MetricsTestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const result = makeResult({ steps: [makePollStep({ attempts: 3, duration: 350 })] });
+    reporter.onTestBegin(makeTest({}), result);
+    reporter.onTestEnd(makeTest({}), result);
+
+    const total = reporter.spyMeter.counters.get("pw_expect_poll_total");
+    expect(total?.calls).toHaveLength(1);
+    expect(total?.calls[0].attrs?.["expect.poll.outcome"]).toBe("pass");
+
+    const attempts = reporter.spyMeter.histograms.get("pw_expect_poll_attempts");
+    expect(attempts?.calls[0].value).toBe(3);
+
+    const duration = reporter.spyMeter.histograms.get("pw_expect_poll_duration");
+    expect(duration?.calls[0].value).toBe(350);
+  });
+
+  test("timed-out poll is recorded with timeout outcome", () => {
+    const reporter = new MetricsTestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const result = makeResult({
+      steps: [makePollStep({ attempts: 2, error: { message: "poll timed out" } })],
+    });
+    reporter.onTestBegin(makeTest({}), result);
+    reporter.onTestEnd(makeTest({}), result);
+
+    const total = reporter.spyMeter.counters.get("pw_expect_poll_total");
+    expect(total?.calls[0].attrs?.["expect.poll.outcome"]).toBe("timeout");
+  });
+
+  test("toPass title is detected as a poll with one attempt", () => {
+    const reporter = new MetricsTestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const result = makeResult({
+      steps: [
+        {
+          title: 'Expect "toPass"',
+          category: "expect",
+          startTime: new Date("2024-01-01T00:00:00Z"),
+          duration: 12,
+          steps: [],
+        } as unknown as TestStep,
+      ],
+    });
+    reporter.onTestBegin(makeTest({}), result);
+    reporter.onTestEnd(makeTest({}), result);
+
+    const attempts = reporter.spyMeter.histograms.get("pw_expect_poll_attempts");
+    expect(attempts?.calls[0].value).toBe(1);
+  });
+
+  test("plain steps produce no poll metrics", () => {
+    const reporter = new MetricsTestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const result = makeResult({
+      steps: [
+        {
+          title: "click",
+          category: "pw:api",
+          startTime: new Date("2024-01-01T00:00:00Z"),
+          duration: 5,
+          steps: [],
+        } as unknown as TestStep,
+      ],
+    });
+    reporter.onTestBegin(makeTest({}), result);
+    reporter.onTestEnd(makeTest({}), result);
+
+    expect(
+      reporter.spyMeter.counters.get("pw_expect_poll_total")?.calls ?? [],
+    ).toHaveLength(0);
+  });
+});

@@ -104,13 +104,14 @@ function makeStep(overrides: {
   category?: string;
   duration?: number;
   error?: { message: string };
+  children?: TestStep[];
 }): TestStep {
   return {
     category: overrides.category ?? "test.step",
     title: overrides.title ?? "my step",
     startTime: new Date("2024-01-01T00:00:00Z"),
     duration: overrides.duration ?? 42,
-    steps: [],
+    steps: overrides.children ?? [],
     location: { file: "/tmp/test.spec.ts", line: 5, column: 0 },
     titlePath: () => ["", "my suite", "my test", overrides.title ?? "my step"],
     error: overrides.error,
@@ -511,5 +512,96 @@ test.describe("PrometheusReporter — printsToStdio", () => {
   test("returns false", () => {
     const reporter = new TestReporter({ serverUrl: SERVER_URL });
     expect(reporter.printsToStdio()).toBe(false);
+  });
+});
+
+
+// ── Reporter — expect.poll metrics ────────────────────────────────────────────
+
+test.describe("PrometheusReporter — expect.poll metrics", () => {
+  function makePollStep(overrides: {
+    attempts?: number;
+    duration?: number;
+    error?: { message: string };
+    title?: string;
+  }): TestStep {
+    const attempts = overrides.attempts ?? 3;
+    return makeStep({
+      title: overrides.title ?? "counter",
+      category: "expect",
+      duration: overrides.duration ?? 350,
+      error: overrides.error,
+      children: Array.from({ length: attempts }, (_, i) =>
+        makeStep({
+          title: overrides.title ?? "counter",
+          category: "expect",
+          duration: 1,
+          ...(i + 1 < attempts ? { error: { message: "not yet" } } : {}),
+        }),
+      ),
+    });
+  }
+
+  test("a successful poll produces pass/attempts/duration series", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    await reporter.onStepEnd(
+      makeTest({}),
+      makeResult({}),
+      makePollStep({ attempts: 3, duration: 350 }),
+    );
+
+    const total = findSeries(reporter, "pw_expect_poll_total");
+    expect(total?.labels.outcome).toBe("pass");
+    expect(total?.samples.at(-1)?.value).toBe(1);
+
+    const attempts = findSeries(reporter, "pw_expect_poll_attempts");
+    expect(attempts?.labels.outcome).toBe("pass");
+    expect(attempts?.samples.at(-1)?.value).toBe(3);
+
+    const duration = findSeries(reporter, "pw_expect_poll_duration");
+    expect(duration?.samples.at(-1)?.value).toBe(350);
+  });
+
+  test("a timed-out poll is labeled outcome=timeout", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    await reporter.onStepEnd(
+      makeTest({}),
+      makeResult({}),
+      makePollStep({ attempts: 2, error: { message: "poll timed out" } }),
+    );
+
+    const total = findSeries(reporter, "pw_expect_poll_total");
+    expect(total?.labels.outcome).toBe("timeout");
+  });
+
+  test("a toPass step is detected as a poll with one attempt", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    await reporter.onStepEnd(
+      makeTest({}),
+      makeResult({}),
+      makeStep({ title: 'Expect "toPass"', category: "expect", duration: 12 }),
+    );
+
+    const attempts = findSeries(reporter, "pw_expect_poll_attempts");
+    expect(attempts?.samples.at(-1)?.value).toBe(1);
+  });
+
+  test("plain steps produce no expect_poll series", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    await reporter.onStepEnd(
+      makeTest({}),
+      makeResult({}),
+      makeStep({ title: "click button", category: "pw:api" }),
+    );
+
+    expect(reporter.sentFlat.some((s) => s.labels.__name__?.startsWith("pw_expect_poll"))).toBe(false);
   });
 });

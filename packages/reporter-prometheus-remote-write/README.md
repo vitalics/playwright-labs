@@ -96,7 +96,10 @@ this metrics below sends periodically and you may found when they sends
 | tests_skipped_count          | count of all skipped tests                                   | onExit                 |
 | tests_failed_count           | count of all failed tests                                    | onExit                 |
 | tests_attachment_total_count | count of attachments across all tests                        | onExit                 |
-| error_count                  | count of errors across all tests                             | onError                |
+| error_count                  | count of errors across all tests                             | onExit                 |
+| expect_poll_total            | number of `expect.poll` / `toPass` assertions, label `outcome` (`pass`/`timeout`) | onStepEnd |
+| expect_poll_attempts         | attempts per `expect.poll` assertion (gauge)                 | onStepEnd              |
+| expect_poll_duration         | total polling duration per assertion in ms (gauge)           | onStepEnd              |
 | stdout                       | stdout for test. Reporter logs have label: `internal="true"` | onStdOut               |
 | stderr                       | stdout for test. Reporter logs have label: `internal="true"` | onStdErr               |
 
