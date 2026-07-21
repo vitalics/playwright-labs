@@ -1,9 +1,9 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "organization": "vitalics <vitalicset@yandex.ru>",
   "author": "Vitali Haradkou <vitalicset@yandex.ru>",
-  "date": "May 2026",
-  "abstract": "Comprehensive best practices guide for Playwright TypeScript test automation, designed for AI agents and LLMs. Contains 20+ rules across 8 categories, prioritized by impact from critical (test stability, execution speed) to incremental (advanced patterns). Covers modular fixture composition with mergeTests/mergeExpects, type-safe environment variables, JSON schema validation for API responses, AbortSignal-based cancellation, Node.js timer control, OOP decorator patterns for large teams, OpenTelemetry integration for test observability (custom metrics, distributed traces, Jaeger/Grafana/Prometheus), Slack Block Kit notifications, and email reporting with React Email templates. Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated test writing and refactoring.",
+  "date": "July 2026",
+  "abstract": "Comprehensive best practices guide for Playwright TypeScript test automation, designed for AI agents and LLMs. Contains 29 rules across 8 categories, prioritized by impact from critical (test stability, execution speed) to incremental (advanced patterns). Covers modular fixture composition with mergeTests/mergeExpects, type-safe environment variables, JSON schema validation for API responses, AbortSignal-based cancellation, Node.js timer control, OOP decorator patterns for large teams, OpenTelemetry integration for test observability (custom and global metrics, distributed traces, Jaeger/Grafana/Prometheus, auto-instrumented step/annotation/run metrics), Prometheus remote-write reporting with custom counters/gauges/histograms, Slack Block Kit notifications, email reporting with React Email templates, framework-aware selectors for Angular/React/Vue, realistic test data with faker, Allure report enrichment, real-service testing with Testcontainers, human-like input simulation, and type-safe SQL with compile-time validated queries. Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated test writing and refactoring.",
   "references": [
     "https://playwright.dev",
     "https://playwright.dev/docs/best-practices",
@@ -23,6 +23,20 @@
     "https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-otel",
     "https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-otel",
     "https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-slack",
-    "https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-email"
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-email",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-prometheus-remote-write",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-prometheus",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/prometheus-core",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/selectors-angular",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/selectors-react",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/selectors-vue",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-faker",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-allure",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-testcontainers",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/ghost-cursor",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-ghost-cursor",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/sql-core",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-sql",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/ts-plugin-sql"
   ]
 }

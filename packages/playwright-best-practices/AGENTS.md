@@ -1,12 +1,12 @@
 # Playwright TypeScript Best Practices
 
-**Version:** 1.1.0  
+**Version:** 1.2.0  
 **Organization:** vitalics <vitalicset@yandex.ru>  
-**Date:** May 2026
+**Date:** July 2026
 
 ## Abstract
 
-Comprehensive best practices guide for Playwright TypeScript test automation, designed for AI agents and LLMs. Contains 20+ rules across 8 categories, prioritized by impact from critical (test stability, execution speed) to incremental (advanced patterns). Covers modular fixture composition with mergeTests/mergeExpects, type-safe environment variables, JSON schema validation for API responses, AbortSignal-based cancellation, Node.js timer control, OOP decorator patterns for large teams, OpenTelemetry integration for test observability (custom metrics, distributed traces, Jaeger/Grafana/Prometheus), Slack Block Kit notifications, and email reporting with React Email templates. Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated test writing and refactoring.
+Comprehensive best practices guide for Playwright TypeScript test automation, designed for AI agents and LLMs. Contains 29 rules across 8 categories, prioritized by impact from critical (test stability, execution speed) to incremental (advanced patterns). Covers modular fixture composition with mergeTests/mergeExpects, type-safe environment variables, JSON schema validation for API responses, AbortSignal-based cancellation, Node.js timer control, OOP decorator patterns for large teams, OpenTelemetry integration for test observability (custom and global metrics, distributed traces, Jaeger/Grafana/Prometheus, auto-instrumented step/annotation/run metrics), Prometheus remote-write reporting with custom counters/gauges/histograms, Slack Block Kit notifications, email reporting with React Email templates, framework-aware selectors for Angular/React/Vue, realistic test data with faker, Allure report enrichment, real-service testing with Testcontainers, human-like input simulation, and type-safe SQL with compile-time validated queries. Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated test writing and refactoring.
 
 ---
 
@@ -27,19 +27,28 @@ Comprehensive best practices guide for Playwright TypeScript test automation, de
    - 6.1. [Cancel Async Operations and Network Requests with AbortSignal Fixtures](#6.1-cancel-async-operations-and-network-requests-with-abortsignal-fixtures)
    - 6.2. [Compose Fixtures with mergeTests and mergeExpects for Modular Test Suites](#6.2-compose-fixtures-with-mergetests-and-mergeexpects-for-modular-test-suites)
    - 6.3. [Control Node.js Timers in Tests with Promise-Based Timer Fixtures](#6.3-control-nodejs-timers-in-tests-with-promise-based-timer-fixtures)
-   - 6.4. [Instrument Tests with Custom OTel Metrics, Spans, and Distributed Trace Propagation](#6.4-instrument-tests-with-custom-otel-metrics-spans-and-distributed-trace-propagation)
-   - 6.5. [Manage Environment Variables with Type-Safe Validated Configuration](#6.5-manage-environment-variables-with-type-safe-validated-configuration)
-   - 6.6. [Use Custom Fixtures for Reusable Test Setup and Teardown](#6.6-use-custom-fixtures-for-reusable-test-setup-and-teardown)
-   - 6.7. [Use test.describe for Logical Test Grouping](#6.7-use-testdescribe-for-logical-test-grouping)
+   - 6.4. [Enrich Test Reports with fixture-allure](#6.4-enrich-test-reports-with-fixture-allure)
+   - 6.5. [Generate Realistic Test Data with fixture-faker](#6.5-generate-realistic-test-data-with-fixture-faker)
+   - 6.6. [Instrument Tests with Custom OTel Metrics, Spans, and Distributed Trace Propagation](#6.6-instrument-tests-with-custom-otel-metrics-spans-and-distributed-trace-propagation)
+   - 6.7. [Instrument Tests with Custom Prometheus Counters, Gauges, and Histograms](#6.7-instrument-tests-with-custom-prometheus-counters-gauges-and-histograms)
+   - 6.8. [Manage Environment Variables with Type-Safe Validated Configuration](#6.8-manage-environment-variables-with-type-safe-validated-configuration)
+   - 6.9. [Reuse Global Metrics Across Tests with useGlobalCounter and useGlobalHistogram](#6.9-reuse-global-metrics-across-tests-with-useglobalcounter-and-useglobalhistogram)
+   - 6.10. [Simulate Human-Like Input with ghost-cursor](#6.10-simulate-human-like-input-with-ghost-cursor)
+   - 6.11. [Test Against Real Services with fixture-testcontainers](#6.11-test-against-real-services-with-fixture-testcontainers)
+   - 6.12. [Use Custom Fixtures for Reusable Test Setup and Teardown](#6.12-use-custom-fixtures-for-reusable-test-setup-and-teardown)
+   - 6.13. [Use test.describe for Logical Test Grouping](#6.13-use-testdescribe-for-logical-test-grouping)
 7. [Debugging & Maintenance](#7-debugging--maintenance) (MEDIUM)
    - 7.1. [Use test.step for Better Test Readability and Debugging](#7.1-use-teststep-for-better-test-readability-and-debugging)
 8. [Advanced Patterns](#8-advanced-patterns) (LOW)
    - 8.1. [Export Test Traces and Metrics to OpenTelemetry Backends with reporter-otel](#8.1-export-test-traces-and-metrics-to-opentelemetry-backends-with-reporter-otel)
    - 8.2. [Organize Tests with OOP Decorator Pattern for Large Scalable Test Suites](#8.2-organize-tests-with-oop-decorator-pattern-for-large-scalable-test-suites)
-   - 8.3. [Send Test Results to Slack with Rich Block Kit Messages via reporter-slack](#8.3-send-test-results-to-slack-with-rich-block-kit-messages-via-reporter-slack)
-   - 8.4. [Send Test Run Reports via Email with React Email Templates via reporter-email](#8.4-send-test-run-reports-via-email-with-react-email-templates-via-reporter-email)
-   - 8.5. [Use API Mocking for Reliable and Fast Tests](#8.5-use-api-mocking-for-reliable-and-fast-tests)
-   - 8.6. [Validate API Response JSON Schemas with toMatchSchema Custom Matcher](#8.6-validate-api-response-json-schemas-with-tomatchschema-custom-matcher)
+   - 8.3. [Push Test Metrics to Prometheus in Real Time with reporter-prometheus-remote-write](#8.3-push-test-metrics-to-prometheus-in-real-time-with-reporter-prometheus-remote-write)
+   - 8.4. [Query Components with Framework-Aware Selectors (angular=, react=, vue=)](#8.4-query-components-with-framework-aware-selectors-angular-react-vue)
+   - 8.5. [Send Test Results to Slack with Rich Block Kit Messages via reporter-slack](#8.5-send-test-results-to-slack-with-rich-block-kit-messages-via-reporter-slack)
+   - 8.6. [Send Test Run Reports via Email with React Email Templates via reporter-email](#8.6-send-test-run-reports-via-email-with-react-email-templates-via-reporter-email)
+   - 8.7. [Type-Safe SQL in Tests with fixture-sql and ts-plugin-sql](#8.7-type-safe-sql-in-tests-with-fixture-sql-and-ts-plugin-sql)
+   - 8.8. [Use API Mocking for Reliable and Fast Tests](#8.8-use-api-mocking-for-reliable-and-fast-tests)
+   - 8.9. [Validate API Response JSON Schemas with toMatchSchema Custom Matcher](#8.9-validate-api-response-json-schemas-with-tomatchschema-custom-matcher)
 
 ---
 
@@ -2446,7 +2455,692 @@ Reference: [@playwright-labs/fixture-timers](https://github.com/vitalics/playwri
 
 ---
 
-### 6.4. Instrument Tests with Custom OTel Metrics, Spans, and Distributed Trace Propagation
+### 6.4. Enrich Test Reports with fixture-allure
+
+**Tags:** allure, reporting, fixtures, decorators, masking  
+**Impact:** MEDIUM (turns flat pass/fail output into structured Allure reports with steps, attachments, and masked secrets)
+
+**Impact: MEDIUM (turns flat pass/fail output into structured Allure reports with steps, attachments, and masked secrets)**
+
+A failing test without structure forces you to open a trace just to learn which of the 30 actions broke. The `@playwright-labs/fixture-allure` package gives you a `useAllure` fixture for test metadata (id, severity, owner, epic/feature/story, tags, issues, links), the full `allure-js-commons` runtime for named steps and attachments, and `functionDecorator`/`methodDecorator` helpers that wrap shared helpers and page-object methods in Allure steps automatically — with `PARAMETER.MASKED` to keep credentials out of the report.
+
+## When to Use
+
+- **Use useAllure when**: A test needs Allure metadata — `id`, `severity`, `owner`, `epic`, `feature`, `story`, `suite`, `component`, `labels`, `parameters`, `tags`, `issues`, `links`
+- **Use allure.step / allure.attachment when**: Grouping a multi-action flow into a named step, or attaching screenshots, payloads, and logs to the report
+- **Use functionDecorator / methodDecorator when**: A helper or page-object method is called from many tests and every call site should produce the same named step
+- **Use PARAMETER.MASKED when**: A credential or token must be visible as a parameter in the report but its value must stay hidden
+- **Use DEFAULT_CONFIG / makeReporterDescription when**: Wiring the `allure-playwright` reporter into `playwright.config.ts` with environment info
+- **Requires**: `allure-js-commons` (peer dependency) installed, and the `allure-playwright` reporter active — the reporter entry produced by `makeReporterDescription` targets it
+
+## Guidelines
+
+### Do
+
+- Call `useAllure({ ... })` once at the top of the test, before any steps — it returns the `allure-js-commons` runtime you use for `step`, `attachment`, and `parameter`
+- Merge the fixture into your project test object with `mergeTests`/`mergeExpects` instead of importing `test` from the package in every spec
+- Decorate shared helpers once with `functionDecorator` and page-object methods with `@methodDecorator` — every call site gets an identical, correctly named step
+- Mark every secret in decorator `args` as `PARAMETER.MASKED` (shown as masked in the report) or `PARAMETER.HIDDEN` (not shown at all)
+- Set `attachResult: false` on helpers that return tokens, sessions, or large objects — the return value is serialized into the report by default
+- Spread `ENVIRONMENT_INFO` into a custom `environmentInfo` so `os_platform`, `os_release`, `os_version`, `parallelism`, and `node_version` always reach the report
+
+### Don't
+
+- Don't pass secrets through `allure.parameter` or the `parameters` option without `options: { mode: "masked" }` — the report is an artifact that gets archived and shared in CI
+- Don't wrap every call site in manual `allure.step` blocks — names drift, steps get forgotten, and refactors break the report structure; decorate the helper instead
+- Don't call a decorated function without `await` — `functionDecorator` always returns a `Promise`, even when the wrapped function is synchronous
+- Don't apply `@methodDecorator` to non-async methods or non-method members — it is async-only and throws `AllureStep decorator can only be used on methods` on anything else
+- Don't enable `parametrizeArguments: true` on helpers that receive secrets — it serializes the entire arguments array into the report with no masking
+
+### Tool Usage Patterns
+
+- **Install**: `npm install @playwright-labs/fixture-allure allure-js-commons allure-playwright`
+- **Fixtures**: `useAllure(context)` (preferred) and `allure` (raw runtime) — both from the package's `test` export
+- **Runtime API** (returned by `useAllure`): `allure.step(name, body)`, `allure.attachment(name, content, contentType)`, `allure.parameter(name, value, options?)`
+- **Decorators**: `functionDecorator(fn, options?)`, `@methodDecorator(options?)` with options `name`, `args`, `attachResult`, `attachError`, `throwError`, `parametrizeArguments`, `parametrizeThis`
+- **Parameter modes**: `PARAMETER.DEFAULT`, `PARAMETER.HIDDEN`, `PARAMETER.MASKED`
+- **Config helpers**: `DEFAULT_CONFIG`, `REPORTER_DESCRIPTION`, `makeReporterDescription({ outputFolder, resultsDir, detail, environmentInfo })`, `ENVIRONMENT_INFO`
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- `functionDecorator` always returns a `Promise`, even for synchronous functions — this is by design because Allure steps and attachments are async; every caller must `await`
+- `@methodDecorator` uses the standard TC39 decorators syntax (TypeScript 5+), not the legacy `experimentalDecorators` transform, and works only on `async` methods
+- Steps and attachments need an active Allure runtime — provided by the `allure-playwright` reporter; without it, report data has nowhere to land
+- `attachResult` (default `true`) serializes the full return value with `util.inspect` at unlimited depth into a `return` attachment — large objects produce large attachments, and secrets are serialized as-is
+- Decorator `args` are **positional**: each `[name, mode]` entry maps to the call argument at the same array index, not to a parameter name
+
+### Edge Cases
+
+1. **Decorated helper receives `page` as its first argument**: The positional `args` mapping shifts — `[["username", PARAMETER.DEFAULT]]` would label the `page` object as "username". Either list every leading argument (`["page", PARAMETER.HIDDEN]`) or close over `page` instead of passing it.
+2. **Nested decorated calls**: A decorated helper calling another decorated helper produces a nested step tree in the report — this is desirable; you get the outer flow and inner operations for free.
+3. **`throwError: false`**: The error is captured as an `error` attachment and returned instead of thrown — the step stays green. Keep the default `throwError: true` unless you deliberately handle the returned error.
+
+### What Breaks If Ignored
+
+- **Without masking**: Credentials land in the Allure report in plain text — archived in CI artifacts, visible to anyone with report access, a credential leak
+- **Without steps and metadata**: A 30-action test renders as one flat row — triage means opening the trace for every failure, and the report can't be filtered by epic, feature, severity, or owner
+- **Without decorators**: Manual `allure.step` wrappers at every call site drift apart — three names for the same login flow, missing steps after refactors
+
+**Incorrect (plain-text secret, manual steps at every call site):**
+
+```typescript
+import { test } from "@playwright/test";
+import * as allure from "allure-js-commons";
+
+test("user can log in", async ({ page }) => {
+  // ❌ Secret written into the report in plain text — archived with CI artifacts
+  await allure.parameter("password", "SuperSecret123!");
+
+  // ❌ Manual step wrappers at every call site — easy to forget, names drift
+  await allure.step("fill username", async () => {
+    await page.fill("#username", "qa-user");
+  });
+  await allure.step("fill password", async () => {
+    await page.fill("#password", "SuperSecret123!");
+  });
+  await allure.step("submit the login form", async () => {
+    await page.click("#submit");
+  });
+
+  // ❌ No metadata — report can't be filtered by severity, owner, or feature
+});
+```
+
+**Why this fails:**
+- The password value is stored unmasked in the report and in every CI artifact archive
+- Step names are duplicated per call site; rename the flow and half the reports still show the old name
+- There is no `severity`, `owner`, `epic`, or `feature` — a 500-test run is one unsortable list
+
+**Correct (useAllure metadata + decorated helper with masked password):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+import {
+  makeReporterDescription,
+  ENVIRONMENT_INFO,
+} from "@playwright-labs/fixture-allure";
+
+export default defineConfig({
+  reporter: [
+    ["html"],
+    makeReporterDescription({
+      outputFolder: "output/allure-results",
+      environmentInfo: {
+        Environment: "staging",
+        ...ENVIRONMENT_INFO, // ✅ os_platform, os_release, os_version, parallelism, node_version
+      },
+    }),
+  ],
+});
+```
+
+```typescript
+// fixtures/index.ts — merge once, import everywhere
+import { mergeTests, mergeExpects } from "@playwright/test";
+import {
+  test as allureTest,
+  expect as allureExpect,
+} from "@playwright-labs/fixture-allure";
+
+export const test = mergeTests(allureTest);
+export const expect = mergeExpects(allureExpect);
+```
+
+```typescript
+// helpers/login.ts — decorate once, every call site gets the same step
+import { functionDecorator, PARAMETER } from "@playwright-labs/fixture-allure";
+import type { Page } from "@playwright/test";
+
+async function login(page: Page, username: string, password: string) {
+  await page.goto("/login");
+  await page.fill("#username", username);
+  await page.fill("#password", password);
+  await page.click("#submit");
+}
+
+export const loginStep = functionDecorator(login, {
+  name: "Login",
+  args: [
+    ["page", PARAMETER.HIDDEN], // ✅ positional: first entry maps to the first argument
+    ["username", PARAMETER.DEFAULT],
+    ["password", PARAMETER.MASKED], // ✅ shown masked in the report
+  ],
+  attachResult: false, // ✅ never serialize session data into the report
+});
+```
+
+```typescript
+// tests/login.spec.ts
+import { test, expect } from "../fixtures";
+import { loginStep } from "../helpers/login";
+
+test("user can log in", async ({ page, useAllure }) => {
+  const allure = useAllure({
+    id: 123456,
+    layer: "UI",
+    severity: "critical",
+    owner: "John Doe",
+    epic: "User Management",
+    feature: "Login",
+    story: "User can log in",
+    tags: ["ui", "regression"],
+    issues: [{ url: "https://example.com/issue1", name: "Issue 1" }],
+  });
+
+  // ✅ one named "Login" step, password masked — identical in every test that calls it
+  await loginStep(page, "qa-user", process.env.QA_PASSWORD!);
+
+  await allure.step("dashboard loads", async () => {
+    await expect(page).toHaveURL(/.*dashboard/);
+    // ✅ visual evidence attached to the step
+    await allure.attachment("dashboard", await page.screenshot(), "image/png");
+  });
+});
+```
+
+**Why this works:**
+- The password never appears in the report — `PARAMETER.MASKED` masks the value while keeping the parameter visible
+- The "Login" step is defined once on the helper; renaming it updates every test's report at once
+- Metadata makes the report filterable by severity, owner, epic, feature, and tags, and `ENVIRONMENT_INFO` records where the run happened
+
+## Common Mistakes
+
+### Mistake 1: Secrets in the report in plain text
+
+```typescript
+test("login", async ({ page, useAllure }) => {
+  const allure = useAllure({
+    // ❌ record-form parameters have no masking — value stored as-is
+    parameters: { username: "qa-user", password: "SuperSecret123!" },
+  });
+
+  // ❌ same problem through the runtime API
+  await allure.parameter("api_token", process.env.API_TOKEN!);
+});
+```
+
+**Why this is wrong**: The Allure report is a build artifact — it gets archived, attached to tickets, and shared. Any parameter without `mode: "masked"` is stored in plain text.
+
+**How to fix**:
+
+```typescript
+test("login", async ({ page, useAllure }) => {
+  const allure = useAllure({
+    // ✅ array form accepts per-parameter options
+    parameters: [
+      { name: "username", value: "qa-user" },
+      { name: "password", value: "SuperSecret123!", options: { mode: "masked" } },
+    ],
+  });
+
+  // ✅ same masking through the runtime API
+  await allure.parameter("api_token", process.env.API_TOKEN!, { mode: "masked" });
+});
+```
+
+### Mistake 2: Misaligned positional args in decorators
+
+```typescript
+const loginStep = functionDecorator(login, {
+  args: [
+    ["username", PARAMETER.DEFAULT],
+    ["password", PARAMETER.MASKED],
+  ],
+});
+// login(page, username, password) — ❌ "username" shows the serialized page object,
+// ❌ "password" masks the username, and the real password is never recorded or masked
+```
+
+**Why this is wrong**: Decorator `args` map to call arguments by array index, not by parameter name. When the helper's first parameter is `page`, every entry shifts by one — and the secret can end up under a `PARAMETER.DEFAULT` entry.
+
+**How to fix**:
+
+```typescript
+const loginStep = functionDecorator(login, {
+  args: [
+    ["page", PARAMETER.HIDDEN], // ✅ account for every leading argument
+    ["username", PARAMETER.DEFAULT],
+    ["password", PARAMETER.MASKED],
+  ],
+});
+```
+
+### Mistake 3: Forgetting to await a decorated function
+
+```typescript
+test("login then checkout", async ({ page }) => {
+  loginStep(page, "qa-user", process.env.QA_PASSWORD!); // ❌ missing await
+  await page.goto("/checkout"); // runs before the login step finishes
+});
+```
+
+**Why this is wrong**: `functionDecorator` returns a `Promise` even when the wrapped function is synchronous, because Allure steps and attachments are async. Without `await`, the next action races the decorated call — the test acts on an unauthenticated page and the step may never be recorded.
+
+**How to fix**:
+
+```typescript
+test("login then checkout", async ({ page }) => {
+  await loginStep(page, "qa-user", process.env.QA_PASSWORD!); // ✅
+  await page.goto("/checkout");
+});
+```
+
+### Mistake 4: Decorating a non-async or non-method member
+
+```typescript
+class AuthPage {
+  @methodDecorator({ name: "token" })
+  get token() {
+    // ❌ throws: AllureStep decorator can only be used on methods
+    return this._token;
+  }
+
+  @methodDecorator()
+  syncHelper() {
+    // ❌ methodDecorator works only with async methods
+    return 42;
+  }
+}
+```
+
+**Why this is wrong**: `@methodDecorator` validates `context.kind` and supports only `async` methods under the standard TC39 decorators syntax (TypeScript 5+).
+
+**How to fix**:
+
+```typescript
+class AuthPage {
+  @methodDecorator({ name: "Refresh token" })
+  async refreshToken() {
+    // ✅ async method — wrapped in an Allure step named "Refresh token"
+    this._token = await fetchNewToken();
+  }
+}
+```
+
+## Advanced Patterns
+
+Decorate an entire page object so the report mirrors the object's API, and combine it with per-test metadata:
+
+```typescript
+// pages/auth-page.ts
+import { methodDecorator, PARAMETER } from "@playwright-labs/fixture-allure";
+import type { Page } from "@playwright/test";
+
+export class AuthPage {
+  constructor(private page: Page) {}
+
+  @methodDecorator({
+    name: "Login via UI",
+    args: [
+      ["username", PARAMETER.DEFAULT],
+      ["password", PARAMETER.MASKED],
+    ],
+  })
+  async login(username: string, password: string) {
+    await this.page.goto("/login");
+    await this.page.fill("#username", username);
+    await this.page.fill("#password", password);
+    await this.page.click("#submit");
+  }
+
+  @methodDecorator() // ✅ step name defaults to the method name
+  async logout() {
+    await this.page.click("#user-menu");
+    await this.page.click("#logout");
+  }
+}
+```
+
+```typescript
+// tests/auth.spec.ts
+import { test, expect } from "../fixtures";
+import { AuthPage } from "../pages/auth-page";
+
+test("login and logout", async ({ page, useAllure }) => {
+  useAllure({
+    layer: "UI",
+    severity: "blocker",
+    feature: "Authentication",
+    suite: "Auth",
+    links: [{ url: "https://example.com/auth-spec", name: "Auth specification" }],
+  });
+
+  const auth = new AuthPage(page);
+  await auth.login("qa-user", process.env.QA_PASSWORD!); // "Login via UI" step, password masked
+  await expect(page).toHaveURL(/.*dashboard/);
+  await auth.logout(); // "logout" step
+});
+```
+
+**When to use this pattern**: Suites with stable page objects shared across many specs — the report structure stays consistent even as tests are added, and every method call is traceable without a single manual `allure.step`.
+
+For zero-config setup, spread `DEFAULT_CONFIG` (its reporter is `REPORTER_DESCRIPTION`, writing to `output/allure-results`) and override only what you need:
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+import { DEFAULT_CONFIG } from "@playwright-labs/fixture-allure";
+
+export default defineConfig({
+  ...DEFAULT_CONFIG, // ✅ allure-playwright reporter with default environment info
+  testMatch: "**/*.spec.ts",
+  use: { baseURL: "https://example.com" },
+});
+```
+
+## Integration with Other Best Practices
+
+- **Compose Fixtures with mergeTests and mergeExpects**: The package's `test`/`expect` are designed to be merged into your project's fixture object once — combine them with your own fixtures in a single `mergeTests` call instead of importing per-spec.
+- **Use Page Object Model for Reusability and Maintainability**: `@methodDecorator` on page-object methods gives you the POM's reuse benefits plus an automatic report structure that mirrors the object's API.
+- **Use test.step for Better Test Readability and Debugging**: Keep `test.step` for Trace Viewer grouping and `allure.step` (or decorators) for the Allure report — they serve different consumers and compose fine in the same test.
+- **Send Test Results to Slack / Email reporters**: The generated Allure report is the artifact those notifications should link to — masked parameters keep the linked report safe to share.
+
+Reference: [@playwright-labs/fixture-allure](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-allure)
+
+---
+
+### 6.5. Generate Realistic Test Data with fixture-faker
+
+**Tags:** faker, test-data, fixtures, data-generation  
+**Impact:** MEDIUM (eliminates hardcoded data collisions and makes every test run generate unique, locale-aware inputs)
+
+**Impact: MEDIUM (eliminates hardcoded data collisions and makes every test run generate unique, locale-aware inputs)**
+
+Hardcoded emails, usernames, and IDs are a quiet source of test failure: a second run hits a unique constraint in the database, a parallel worker collides with its neighbor, or a "test user" left over from last week makes an assertion ambiguous. The `@playwright-labs/fixture-faker` package wraps `@faker-js/faker` in Playwright fixtures — `faker` for immediate use and `useFaker` for configured instances (locale, seed, randomizer) — so every test gets realistic, freshly generated data that never repeats between runs.
+
+## When to Use
+
+- **Use the `faker` fixture when**: Any test fills a form, creates an entity, or registers a user — emails, passwords, names, phone numbers, addresses
+- **Use `useFaker` when**: You need a configured instance — a different locale (`useFaker({ locale: "fr" })`), a deterministic seed for reproducing a CI failure (`useFaker({ seed: 1234 })`), or a custom `randomizer`
+- **Use generation over constants when**: The system under test enforces uniqueness (emails, usernames, SKUs) or rejects duplicates
+- **Consider alternatives when**: The test asserts on a specific seeded entity (a known admin account, a fixture row inserted by a migration) — generate the *input*, not the *precondition*
+- **Required for**: CRUD and registration flows, tests that run more than once against the same environment, parallel suites sharing one database
+
+## Guidelines
+
+### Do
+
+- Store every generated value in a local variable and reuse that variable for both the action and the assertion
+- Generate data as close to the action as possible — at the top of the test or inside the `test.step` that uses it
+- Use domain-appropriate generators: `faker.internet.email()` for emails, `faker.person.fullName()` for names, `faker.string.uuid()` for opaque IDs
+- Use `useFaker({ locale })` for localized forms — a French locale produces French names, addresses, and phone formats that actually pass localized validation
+- Use `useFaker({ seed })` when you need byte-for-byte reproducibility — debugging a flaky run, snapshotting a generated payload
+- Merge the package's `test`/`expect` into your shared fixture file once with `mergeTests`/`mergeExpects`, then import from there everywhere
+
+### Don't
+
+- Don't call a generator twice and expect the same value — `faker.internet.email()` returns a **different** email on every call; capture it once
+- Don't hardcode `test@example.com` or `user-123` in tests that create resources — the second run against the same backend fails on uniqueness
+- Don't depend on data a previous test created with hardcoded values — test-order coupling breaks under sharding and retries
+- Don't assert exact equality against unseeded random data (`toBe(faker.lorem.sentence())` twice is a guaranteed mismatch) — assert shape, format, or the captured variable
+- Don't generate a new faker instance per assertion — one instance per test is enough; more instances only add entropy you have to track
+
+### Tool Usage Patterns
+
+- **Install**: `npm install @playwright-labs/fixture-faker` (peer deps: `@playwright/test` and `@faker-js/faker`)
+- **Fixtures**: `faker` (preconfigured, default locale `en_US`) and `useFaker(options?)` where `options` is `{ locale?, randomizer?, seed? }`; `locale` accepts any key of faker's `allLocales` (`"en_US"`, `"fr"`, `"de"`, `"ja"`, …)
+- **Exports**: `test`, `expect`, and the `Fixture` type from `@playwright-labs/fixture-faker`
+- **Matchers**: none — the exported `expect` is Playwright's base expect. It exists so it composes cleanly via `mergeExpects` with other Playwright-labs packages, not to add assertions
+- **Cleanup**: both fixtures return a `Faker & Disposable` — the `faker` fixture disposes its internal reference at teardown, so instances never leak between tests
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Generation is pseudo-random, not guaranteed-unique. Two calls to `faker.internet.email()` colliding is astronomically unlikely but not impossible — backends with hard uniqueness guarantees should still key off `faker.string.uuid()` or a worker-scoped prefix
+- The default `faker` fixture is fixed to `en_US`. Requesting another locale requires calling `useFaker({ locale })` yourself — there is no config-level locale override
+- A faker instance obtained from `useFaker` is only valid inside the current test — it is disposed with the fixture scope, so don't stash it in module-level state for reuse across tests
+
+### Edge Cases
+
+1. **Reproducing a failed CI run**: Regenerate the identical data by passing the seed — `useFaker({ seed: 1234 })` makes every subsequent generator call deterministic. Log generated values on failure so you can pick a seed or the raw values for local reproduction.
+2. **Parallel workers on a shared database**: Randomness alone is usually enough, but for strict uniqueness combine faker output with `test.info().workerIndex` or `test.info().testId` — e.g. an email local-part containing the test ID.
+3. **Localized validation**: A German postal-code field rejects a US ZIP. Generate with `useFaker({ locale: "de" })` so `faker.location.zipCode()` matches what the form validates.
+4. **Seeded vs. unseeded in one suite**: `useFaker` creates a fresh instance per call, so a seeded instance for one assertion doesn't affect the unseeded `faker` fixture used elsewhere in the same test.
+
+### What Breaks If Ignored
+
+- **Second-run failures**: `register.spec.ts` passes on a clean database, then fails forever with "email already taken" until someone wipes the environment
+- **Parallel collisions**: Two workers submit the same hardcoded username within the same second — one gets a 409, and the failure looks like a race in the app instead of the test data
+- **Order coupling**: `test B` logs in with the credentials `test A` created. Run `test B` alone, on a different shard, or after a retry — it fails for a missing precondition, not an app bug
+- **Stale-data ambiguity**: An assertion matches a leftover record from a previous run, so the test passes while the feature is actually broken
+
+**Incorrect (hardcoded data, second run collides, workers conflict):**
+
+```typescript
+import { test, expect } from "@playwright/test";
+
+test("user registration", async ({ page }) => {
+  await page.goto("/signup");
+
+  // ❌ Same values on every run — the second run hits "email already taken"
+  await page.fill("#email", "john.doe@example.com");
+  await page.fill("#username", "johndoe");
+  await page.fill("#password", "Password123!");
+  await page.click("#submit");
+
+  // ❌ Passes if ANY previous run left this user behind — proves nothing about this run
+  await expect(page.locator("#welcome")).toContainText("johndoe");
+});
+
+test("login with the registered user", async ({ page }) => {
+  // ❌ Depends on the previous test's hardcoded data — breaks alone, on shards, on retry
+  await page.goto("/login");
+  await page.fill("#email", "john.doe@example.com");
+  await page.fill("#password", "Password123!");
+  await page.click("#submit");
+});
+```
+
+**Why this fails:**
+- Fixed emails/usernames violate uniqueness constraints on any run after the first
+- Parallel workers submit identical data simultaneously — intermittent 409s misread as app races
+- Cross-test dependency on a hardcoded precondition makes tests non-runnable in isolation
+
+**Correct (generated data captured in variables, self-contained tests):**
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-faker";
+
+test("user registration and login", async ({ page, faker }) => {
+  // ✅ Fresh, realistic values on every run — no collisions, no stale matches
+  const email = faker.internet.email();
+  const username = faker.internet.username();
+  const password = faker.internet.password({ length: 16 });
+
+  await page.goto("/signup");
+  await page.fill("#email", email);
+  await page.fill("#username", username);
+  await page.fill("#password", password);
+  await page.click("#submit");
+
+  // ✅ Asserts against the values THIS run generated
+  await expect(page.locator("#welcome")).toContainText(username);
+
+  // ✅ Same test logs in with its own data — no cross-test dependency
+  await page.goto("/login");
+  await page.fill("#email", email);
+  await page.fill("#password", password);
+  await page.click("#submit");
+  await expect(page).toHaveURL(/\/dashboard/);
+});
+```
+
+**Why this works:**
+- Every run produces unique inputs, so uniqueness constraints never fire between runs
+- Actions and assertions share captured variables — no mismatch, no stale hits
+- The test carries its full lifecycle, so it passes alone, on any shard, in any order
+
+## Common Mistakes
+
+### Mistake 1: Generating the value twice — action and assertion diverge
+
+```typescript
+test("profile shows email", async ({ page, faker }) => {
+  await page.goto("/settings");
+  await page.fill("#email", faker.internet.email());
+  await page.click("#save");
+
+  // ❌ Second call generates a DIFFERENT email — assertion can never pass
+  await expect(page.locator("#email")).toHaveValue(faker.internet.email());
+});
+```
+
+**Why this is wrong**: Every generator call produces new random data. The value asserted is not the value submitted, so the test fails deterministically — or worse, passes by coincidence once in a million runs and hides the bug.
+
+**How to fix**:
+
+```typescript
+test("profile shows email", async ({ page, faker }) => {
+  const email = faker.internet.email(); // ✅ capture once
+
+  await page.goto("/settings");
+  await page.fill("#email", email);
+  await page.click("#save");
+
+  await expect(page.locator("#email")).toHaveValue(email); // ✅ same value
+});
+```
+
+### Mistake 2: Shared fixed test data across parallel workers
+
+```typescript
+const SKU = "SKU-0001"; // ❌ every worker creates the same SKU
+
+test("create product", async ({ page }) => {
+  await page.goto("/products/new");
+  await page.fill("#sku", SKU);
+  await page.click("#create");
+  // Worker B gets "duplicate SKU" whenever it overlaps with worker A
+});
+```
+
+**Why this is wrong**: Module-level constants are identical in every worker process. Any backend uniqueness rule turns parallelism into a coin flip.
+
+**How to fix**:
+
+```typescript
+test("create product", async ({ page, faker }) => {
+  // ✅ Unique per test execution; testId makes collisions structurally impossible
+  const sku = `SKU-${test.info().testId.slice(0, 8)}-${faker.string.alphanumeric(6)}`;
+
+  await page.goto("/products/new");
+  await page.fill("#sku", sku);
+  await page.click("#create");
+  await expect(page.locator("#sku-cell")).toHaveText(sku);
+});
+```
+
+### Mistake 3: Asserting exact content of unseeded random text
+
+```typescript
+test("bio saves", async ({ page, faker }) => {
+  await page.goto("/profile");
+  await page.fill("#bio", faker.lorem.sentence());
+  await page.click("#save");
+
+  // ❌ Compares against a freshly generated sentence, not the submitted one
+  await expect(page.locator("#bio-preview")).toHaveText(faker.lorem.sentence());
+});
+```
+
+**Why this is wrong**: Same double-generation bug as Mistake 1, but subtler with free text — it reads like a content assertion while actually asserting nothing.
+
+**How to fix**:
+
+```typescript
+test("bio saves", async ({ page, faker }) => {
+  const bio = faker.lorem.sentence(); // ✅ capture, submit, assert — one value
+
+  await page.goto("/profile");
+  await page.fill("#bio", bio);
+  await page.click("#save");
+  await expect(page.locator("#bio-preview")).toHaveText(bio);
+});
+```
+
+## Advanced Patterns
+
+### Multi-locale data for internationalized forms
+
+`useFaker` builds a fresh `Faker` instance for any locale exported by faker's `allLocales`, so one spec can cover several markets:
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-faker";
+
+const locales = ["en_US", "fr", "de", "ja"] as const;
+
+for (const locale of locales) {
+  test(`signup works for locale ${locale}`, async ({ page, useFaker }) => {
+    // ✅ Locale-aware names, addresses, phones that pass localized validation
+    const faker = await useFaker({ locale });
+
+    await page.goto(`/${locale}/signup`);
+    await page.fill("#name", faker.person.fullName());
+    await page.fill("#city", faker.location.city());
+    await page.fill("#email", faker.internet.email());
+    await page.click("#submit");
+    await expect(page.locator("#welcome")).toBeVisible();
+  });
+}
+```
+
+### Deterministic data with a seed
+
+When a CI failure needs exact local reproduction, trade randomness for determinism:
+
+```typescript
+test("invoice totals (seeded)", async ({ page, useFaker }) => {
+  // ✅ Identical data on every run — failures replay byte-for-byte
+  const faker = await useFaker({ seed: 1234 });
+
+  const product = faker.commerce.productName();
+  const price = faker.commerce.price();
+
+  await page.goto("/invoice/new");
+  await page.fill("#product", product);
+  await page.fill("#price", price);
+  await page.click("#save");
+  await expect(page.locator("#product-cell")).toHaveText(product);
+});
+```
+
+**When to use this pattern**: Seeds are for debugging and replay, not the default. Keeping the suite unseeded by default means the data itself explores the input space — occasionally surfacing edge cases (long names, apostrophes, unicode) that fixed data never would.
+
+### Merging into a shared fixture file
+
+Compose `faker` with your other fixtures once, following the merge pattern:
+
+```typescript
+// fixtures/index.ts
+import { mergeExpects, mergeTests } from "@playwright/test";
+import {
+  expect as fakerExpect,
+  test as fakerTest,
+} from "@playwright-labs/fixture-faker";
+
+export const test = mergeTests(fakerTest);
+export const expect = mergeExpects(fakerExpect);
+```
+
+Every spec then imports `test`/`expect` from `fixtures` and gets `faker` and `useFaker` alongside page objects and other custom fixtures — one import, no duplication.
+
+## Integration with Other Best Practices
+
+- **Merge Tests and Expects** (`fixture-merge-tests-expects`): `fixture-faker` is designed for `mergeTests`/`mergeExpects` — merging is the intended way to combine it with other Playwright-labs fixture packages
+- **Parallel Test Isolation** (`parallel-test-isolation`): generated data is the data-layer half of isolation — each test owns its entities, so workers and shards never share mutable state
+- **Web-First Assertions** (`assertion-web-first`): pair generated inputs with `expect(locator).toHaveValue(captured)` instead of reading input values manually — the assertion auto-waits while the captured variable stays stable
+- **API Mocking** (`advanced-api-mocking`): seed mock responses with faker data at route-setup time so UI assertions can match against the same captured values
+- **Scale considerations**: At 100+ tests, generated data turns "environment reset" from a nightly chore into a non-issue — but only if every test generates rather than borrows. Audit for module-level string constants; they are the residue that still collides
+
+Reference: [@playwright-labs/fixture-faker](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-faker)
+
+---
+
+### 6.6. Instrument Tests with Custom OTel Metrics, Spans, and Distributed Trace Propagation
 
 **Tags:** opentelemetry, otel, metrics, spans, tracing, traceparent, counter, histogram, useSpan, withSpan, fixture-otel  
 **Impact:** MEDIUM (adds business-level telemetry to tests and connects Playwright spans with upstream service traces)
@@ -2460,6 +3154,8 @@ The built-in reporter-otel metrics track test results and durations. The `@playw
 - **Use useCounter when**: Counting specific events inside a test — API calls made, items rendered, retries triggered
 - **Use useHistogram when**: Recording latency or size distributions — page load time, response sizes, render durations
 - **Use useUpDownCounter when**: Tracking values that go up and down — in-flight requests, queue depth, active connections
+- **Use useGlobalCounter when**: Counting events across the whole worker run — total URL/page calls, suite-wide API usage; one shared instance per worker, values accumulate between tests
+- **Use useGlobalHistogram when**: Recording distributions across the whole worker run — page-load latency for the entire suite, not a single test; one shared instance per worker, values accumulate between tests
 - **Use useSpan when**: Grouping a logical operation into a named span visible in Jaeger alongside Playwright steps
 - **Use withSpan when**: Wrapping a utility function in a span without needing a fixture
 - **Use useTraceparent when**: The test calls real services and you want Playwright and service spans in one trace
@@ -2485,7 +3181,7 @@ The built-in reporter-otel metrics track test results and durations. The `@playw
 ### Tool Usage Patterns
 
 - **Install**: `npm install @playwright-labs/fixture-otel @playwright-labs/reporter-otel`
-- **Fixtures**: `useCounter(name, options?)`, `useHistogram(name, options?)`, `useUpDownCounter(name, options?)`, `useSpan(name)`, `useTraceparent()`
+- **Fixtures**: `useCounter(name, options?)`, `useHistogram(name, options?)`, `useUpDownCounter(name, options?)`, `useGlobalCounter(name, options?)`, `useGlobalHistogram(name, options?)`, `useSpan(name)`, `useTraceparent()`
 - **Standalone helper**: `withSpan(name, callback)` — no fixture required
 - **Worker SDK**: `startWorkerSdk(options)` — call once per worker for auto-instrumented trace propagation
 - **Matchers**: `toBeOtelMetricCollected()`, `toHaveOtelCallCount(n)`, `toHaveOtelMinCallCount(min)`, `toBeOtelSpanEnded()`
@@ -2674,11 +3370,417 @@ test("user profile loads", async ({ page, useTraceparent }) => {
 });
 ```
 
+## Global Metrics Across Tests
+
+`useGlobalCounter` and `useGlobalHistogram` return a **shared** metric instance — one per metric name for the whole worker process, cached in a module-level registry. Every test that asks for the same name receives the same object, and recorded values accumulate across the tests of that worker. All global metrics are auto-flushed at the teardown of every test that used a global fixture — no manual `collect()` needed.
+
+Two constraints to keep in mind:
+
+- **Per worker, not per run**: each Playwright worker keeps its own registry. The reporter deduplicates instruments by metric name, so data points from all workers still land in a single OTel instrument.
+- **One kind per name**: requesting a name already registered as the other kind (e.g. `useGlobalHistogram("x")` after `useGlobalCounter("x")`) throws an error. Options apply only at first creation and are ignored on subsequent calls for the same name.
+
+```typescript
+// tests/navigation.spec.ts — url_calls counted across the whole worker run
+test("home page", async ({ useGlobalCounter, page }) => {
+  const urlCalls = useGlobalCounter("url_calls", { unit: "requests" });
+
+  await page.goto("/home");
+  urlCalls.add(1, { url: "/home" });
+  // ✅ auto-flushed at teardown — no collect() call needed
+});
+
+test("dashboard", async ({ useGlobalCounter, page }) => {
+  const urlCalls = useGlobalCounter("url_calls"); // ✅ same shared instance
+
+  await page.goto("/dashboard");
+  urlCalls.add(1, { url: "/dashboard" });
+
+  // ✅ values accumulate across tests within the worker
+  expect(urlCalls).toHaveOtelCallCount(2);
+});
+```
+
+```typescript
+// Run-wide latency distribution with a shared histogram
+test("run-wide latency", async ({ useGlobalHistogram, page }) => {
+  const loadTime = useGlobalHistogram("page_load_ms", { unit: "ms" });
+
+  const start = Date.now();
+  await page.goto("/dashboard");
+  loadTime.record(Date.now() - start, { route: "/dashboard" });
+});
+```
+
+## Integration with Other Best Practices
+
+- **fixture-global-metrics**: Dedicated rule for the shared global fixtures — registry semantics, naming conventions, and aggregation pitfalls when metrics span multiple tests and workers. Use this rule for per-test instrumentation; follow `fixture-global-metrics` when metrics must accumulate across a run.
+
 Reference: [@playwright-labs/fixture-otel](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-otel)
 
 ---
 
-### 6.5. Manage Environment Variables with Type-Safe Validated Configuration
+### 6.7. Instrument Tests with Custom Prometheus Counters, Gauges, and Histograms
+
+**Tags:** prometheus, metrics, counter, gauge, histogram, fixtures, monitoring  
+**Impact:** MEDIUM (turns test activity into queryable Prometheus metrics for CI dashboards and alerting)
+
+**Impact: MEDIUM (turns test activity into queryable Prometheus metrics for CI dashboards and alerting)**
+
+The `@playwright-labs/reporter-prometheus-remote-write` reporter ships built-in test metrics (durations, counts, step timings). The `@playwright-labs/fixture-prometheus` package adds custom business metrics from inside tests: per-test fixtures `useCounterMetric` / `useGaugeMetric`, and worker-shared `useGlobalCounter` / `useGlobalHistogram`. Under the hood all of them are `@playwright-labs/prometheus-core` primitives (`Counter`, `Gauge`, `Histogram`) that serialize timeseries to stdout on `collect()` — the reporter picks them up and pushes them to Prometheus via remote write. Without the reporter in your config, every metric you record goes nowhere.
+
+## When to Use
+
+- **Use useCounterMetric when**: Counting events inside a single test — API calls made, elements rendered, retries triggered
+- **Use useGaugeMetric when**: Tracking a value that goes up and down — in-flight requests, active sessions, items in a cart
+- **Use useGlobalCounter / useGlobalHistogram when**: The same metric should accumulate across all tests in a worker — total page visits, suite-wide load-time distribution
+- **Use standalone Counter / Gauge / Histogram when**: You need metrics outside test bodies — module scope, helper utilities, worker-scoped fixtures — via `@playwright-labs/prometheus-core` (also re-exported by the reporter)
+- **Required for**: Any setup where metrics must actually reach Prometheus — the reporter is not optional, it is the transport
+
+## Guidelines
+
+### Do
+
+- Configure `@playwright-labs/reporter-prometheus-remote-write` in `playwright.config.ts` with `serverUrl` before recording anything — no reporter, no delivery
+- Call `.collect()` explicitly on metrics from `useCounterMetric` / `useGaugeMetric` — per-test fixtures are **not** auto-flushed at teardown
+- Use the `using` keyword (TypeScript 5.2+) for scope-bound metrics — `Symbol.dispose` calls `collect()` and `reset()` on block exit
+- Choose custom histogram `buckets` that match your SLOs (e.g. `[0.1, 0.5, 1, 2.5, 5]` seconds) instead of always accepting `DEFAULT_BUCKETS`
+- Keep labels low-cardinality: route names, endpoints, regions — values from a small, bounded set
+- Use `useGlobalCounter` / `useGlobalHistogram` for cross-test accumulation — they auto-flush at every test's teardown
+
+### Don't
+
+- Don't assume per-test fixtures flush themselves — an uncollected `useCounterMetric` metric silently vanishes when the test ends
+- Don't record metrics without the reporter configured — `collect()` writes JSON events to `process.stdout`, and with nobody parsing them the data is lost
+- Don't call `collect()` in a tight loop expecting deltas to accumulate — each call drains pending samples; a call with no new samples is a no-op
+- Don't put test-unique values (test IDs, user IDs, timestamps) into labels — high cardinality exhausts the Prometheus label space
+- Don't register the same name via both `useGlobalCounter` and `useGlobalHistogram` — it throws `Global metric "<name>" is already registered as a <kind>`
+- Don't pass unsorted or empty `buckets` to a `Histogram` — the constructor throws `"buckets" must be a non-empty array of finite numbers in strictly ascending order`
+
+### Tool Usage Patterns
+
+- **Install**: `npm install @playwright-labs/fixture-prometheus @playwright-labs/reporter-prometheus-remote-write`
+- **Per-test fixtures**: `useCounterMetric(name, labels?)` → `Counter`, `useGaugeMetric(name, labels?)` → `Gauge`
+- **Worker-shared fixtures**: `useGlobalCounter(name, labels?)`, `useGlobalHistogram(name, { buckets?, labels? })`
+- **Standalone primitives**: `new Counter({ name, ...labels }, initialValue?)`, `new Gauge({ name, ...labels })`, `new Histogram({ name, buckets?, ...labels })` from `@playwright-labs/prometheus-core`
+- **Metric API**: `inc(value?)`, `dec(value?)`, `set(value)`, `zero()`, `observe(value)`, `labels(extra)`, `collect()`, `reset()`
+- **Reporter options**: `serverUrl` (required, throws if missing), `prefix` (default `pw_`, applied to every metric name), `headers`, `auth.username` / `auth.password`, `labels`, `env`
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Metrics travel over a **stdout event bridge**: `collect()` writes a newline-terminated single-line JSON event (`{ name: "prometheus-remote-writer", payload }`) per series, and the reporter's `onStdOut` hook parses and pushes them. This requires the reporter to be active in the same Playwright run — standalone use silently discards data.
+- `collect()` has **drain semantics**: it flushes only samples recorded since the previous flush. A repeated `collect()` with no new samples writes nothing. This is deliberate — Prometheus 3.x rejects remote-write requests that re-send already-pushed samples ("out of order sample"), which would break the entire batch.
+- Sample timestamps are **strictly increasing**: several `inc()` calls within the same millisecond still get distinct timestamps (`Math.max(Date.now(), last + 1)`), because Prometheus keeps only the first sample when several share a timestamp.
+- "Global" fixtures are global **per worker process**, not per run. With N workers you get N independent instances of the same metric.
+- A `Histogram` is multi-series: one flush emits one stdout event per child counter with pending samples — one per bucket plus `_sum` and `_count`.
+
+### Edge Cases
+
+1. **Histogram composition**: A `Histogram` is a composition of `Counter`s, not a `Metric` subclass: cumulative `${name}_bucket{le="<bound>"}` counters (including `le="+Inf"`), plus `${name}_sum` and `${name}_count`. `observe(value)` increments every bucket whose bound is `>= value` (the `+Inf` bucket always matches), adds `value` to `_sum`, and increments `_count`. Buckets default to `DEFAULT_BUCKETS` (`[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]`). Children are exposed as `histogram.buckets`, `histogram.sum`, `histogram.count`.
+2. **Global fixture creation options**: `buckets` / `labels` passed to `useGlobalHistogram` apply only at first creation — later calls with the same name return the cached instance and ignore new options.
+3. **Mid-test collect on globals**: Manual `collect()` on a global metric is safe — drain semantics ensure the auto-flush at teardown only emits what is new.
+
+### What Breaks If Ignored
+
+- **Without the reporter**: every `collect()` call writes to stdout and nothing is parsed or pushed — dashboards stay empty with no error anywhere
+- **Without collect() on per-test fixtures**: the fixture tears down, the metric is garbage-collected, and the samples never leave the worker
+- **Without drain semantics awareness**: re-collecting the same metric "to be safe" emits nothing; conversely, never collecting means samples accumulate in memory until the worker exits
+- **Without bucket discipline**: default buckets tuned for seconds make millisecond-scale observations land almost entirely in the first bucket — the histogram becomes useless for latency analysis
+
+**Incorrect (metrics recorded but never shipped):**
+
+```typescript
+// playwright.config.ts — ❌ no Prometheus reporter configured
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  reporter: [["list"]],
+});
+```
+
+```typescript
+// tests/checkout.spec.ts
+import { test, expect } from "@playwright-labs/fixture-prometheus";
+
+test("checkout flow", async ({ page, useCounterMetric, useGaugeMetric }) => {
+  const apiCalls = useCounterMetric("checkout_api_calls", {
+    endpoint: "/api/orders",
+  });
+  const inFlight = useGaugeMetric("http_in_flight");
+
+  page.on("request", () => inFlight.inc());
+  page.on("requestfinished", () => inFlight.dec());
+
+  await page.goto("/checkout");
+  apiCalls.inc();
+  // ❌ Test ends here: collect() was never called, so the samples stay in the
+  // worker's memory. Even if they were collected, no reporter is configured
+  // to parse the stdout events — the data is lost either way.
+  await expect(page).toHaveURL("/confirmation");
+});
+```
+
+**Why this fails:**
+
+- Per-test fixtures do not auto-flush — without `collect()` the samples never leave the worker process
+- Without `@playwright-labs/reporter-prometheus-remote-write` in the config, stdout events are never parsed or pushed
+- The failure is silent: tests pass, no error is logged, and Grafana shows nothing
+
+**Correct (reporter configured, metrics explicitly collected):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+import { type PrometheusOptions } from "@playwright-labs/reporter-prometheus-remote-write";
+
+export default defineConfig({
+  reporter: [
+    ["list"],
+    [
+      "@playwright-labs/reporter-prometheus-remote-write",
+      {
+        serverUrl: "http://localhost:9090/api/v1/write",
+        prefix: "e2e_", // ✅ every metric lands as e2e_<name>
+      } satisfies PrometheusOptions,
+    ],
+  ],
+});
+```
+
+```typescript
+// tests/fixtures.ts — re-export so every spec uses the extended test
+export { test, expect } from "@playwright-labs/fixture-prometheus";
+```
+
+```typescript
+// tests/checkout.spec.ts
+import { test, expect } from "./fixtures";
+
+test("checkout flow", async ({ page, useCounterMetric, useGaugeMetric }) => {
+  const apiCalls = useCounterMetric("checkout_api_calls", {
+    endpoint: "/api/orders", // ✅ low-cardinality label
+  });
+  const inFlight = useGaugeMetric("http_in_flight");
+
+  page.on("request", () => inFlight.inc());
+  page.on("requestfinished", () => inFlight.dec());
+  page.on("requestfailed", () => inFlight.dec());
+
+  await page.goto("/checkout");
+  apiCalls.inc();
+
+  await expect(page).toHaveURL("/confirmation");
+
+  // ✅ Explicit flush — per-test fixtures are not collected automatically
+  apiCalls.labels({ status: "success" }).collect();
+  inFlight.collect();
+});
+
+// ✅ Scope-bound collection with the `using` keyword (TypeScript 5.2+)
+test("hero banner renders", async ({ page, useCounterMetric }) => {
+  {
+    using renders = useCounterMetric("hero_renders");
+    await page.goto("/");
+    await expect(page.getByTestId("hero")).toBeVisible();
+    renders.inc();
+  } // ✅ collect() + reset() called automatically on block exit
+});
+```
+
+**Why this works:**
+
+- The reporter's `onStdOut` hook intercepts the JSON events from `collect()` and remote-writes them to Prometheus
+- Explicit `collect()` (or `using`) guarantees per-test metrics are flushed before the fixture tears down
+- The `prefix` option namespaces all metrics, and low-cardinality labels keep queries fast
+
+## Common Mistakes
+
+### Mistake 1: Expecting per-test fixtures to auto-flush
+
+```typescript
+test("tracks nothing", async ({ page, useCounterMetric }) => {
+  const clicks = useCounterMetric("cta_clicks");
+  await page.getByTestId("cta").click();
+  clicks.inc();
+  // ❌ no collect() — the sample dies with the test
+});
+```
+
+**Why this is wrong**: Only `useGlobalCounter` / `useGlobalHistogram` auto-flush at teardown. `useCounterMetric` / `useGaugeMetric` require an explicit `collect()`.
+
+**How to fix**:
+
+```typescript
+test("tracks clicks", async ({ page, useCounterMetric }) => {
+  const clicks = useCounterMetric("cta_clicks", { button: "hero-cta" });
+  await page.getByTestId("cta").click();
+  clicks.inc();
+  clicks.collect(); // ✅ flush before teardown
+});
+```
+
+### Mistake 2: Installing the fixtures but not the reporter
+
+```typescript
+// playwright.config.ts
+export default defineConfig({
+  reporter: [["html"]], // ❌ metrics are written to stdout and never parsed
+});
+```
+
+**Why this is wrong**: The fixture system has no network path of its own. `collect()` serializes timeseries as newline-delimited JSON on the worker's stdout; only the reporter's `onStdOut` hook turns them into remote-write requests. Without it, `serverUrl` is never read and nothing is shipped.
+
+**How to fix**:
+
+```typescript
+export default defineConfig({
+  reporter: [
+    ["html"],
+    [
+      "@playwright-labs/reporter-prometheus-remote-write",
+      { serverUrl: "http://localhost:9090/api/v1/write" },
+    ],
+  ],
+});
+```
+
+### Mistake 3: High-cardinality labels and invalid buckets
+
+```typescript
+test("label explosion", async ({ page, useCounterMetric }) => {
+  // ❌ unique value per test run — one new label set per execution
+  const orders = useCounterMetric("orders_created", {
+    orderId: crypto.randomUUID(),
+  });
+  await page.goto("/orders/new");
+  orders.inc();
+  orders.collect();
+});
+
+test("bad buckets", async ({ useGlobalHistogram }) => {
+  // ❌ not strictly ascending — constructor throws
+  const t = useGlobalHistogram("page_load_seconds", { buckets: [1, 0.5, 5] });
+  t.observe(0.3);
+});
+```
+
+**Why this is wrong**: Every distinct label set creates a new timeseries in Prometheus — unique IDs per run exhaust label space and make aggregation impossible. And `Histogram` validates bucket bounds at construction: empty arrays, non-finite values, or non-ascending order all throw.
+
+**How to fix**:
+
+```typescript
+test("bounded labels", async ({ page, useCounterMetric }) => {
+  // ✅ labels from a small, bounded set
+  const orders = useCounterMetric("orders_created", { route: "/orders/new" });
+  await page.goto("/orders/new");
+  orders.inc();
+  orders.collect();
+});
+
+test("valid buckets", async ({ useGlobalHistogram }) => {
+  // ✅ strictly ascending bounds matched to your SLOs
+  const t = useGlobalHistogram("page_load_seconds", {
+    buckets: [0.1, 0.5, 1, 2.5, 5],
+    labels: { route: "/dashboard" },
+  });
+  t.observe(0.3);
+});
+```
+
+## Advanced Patterns
+
+### Standalone metrics in a worker-scoped fixture
+
+Use `@playwright-labs/prometheus-core` primitives directly when metrics must outlive a single test but you want full control over flushing:
+
+```typescript
+// fixtures/worker-metrics.ts
+import { test as base } from "@playwright/test";
+import { Counter, Histogram } from "@playwright-labs/prometheus-core";
+
+export const test = base.extend<
+  {},
+  { workerMetrics: { apiCalls: Counter; loadTime: Histogram } }
+>({
+  workerMetrics: [
+    async ({}, use) => {
+      const apiCalls = new Counter({ name: "api_calls", job: "e2e" });
+      const loadTime = new Histogram({
+        name: "page_load_seconds",
+        buckets: [0.1, 0.5, 1, 2.5, 5],
+      });
+      await use({ apiCalls, loadTime });
+      // ✅ Flush once per worker — drain semantics ship exactly the new samples
+      apiCalls.collect();
+      loadTime.collect();
+    },
+    { scope: "worker" },
+  ],
+});
+```
+
+```typescript
+// tests/dashboard.spec.ts
+import { test } from "../fixtures/worker-metrics";
+
+test("dashboard loads", async ({ page, workerMetrics }) => {
+  const start = Date.now();
+  await page.goto("/dashboard");
+  workerMetrics.loadTime.observe((Date.now() - start) / 1000);
+  workerMetrics.apiCalls.inc();
+});
+```
+
+**When to use this pattern**: You already maintain a custom fixture file and want suite-level aggregation without the `useGlobal*` cache semantics — e.g. different labels per project, or flushing in `afterAll` instead of per-test teardown.
+
+### Suite-wide latency distribution with useGlobalHistogram
+
+```typescript
+import { test } from "./fixtures";
+
+test("home page", async ({ page, useGlobalHistogram }) => {
+  const loadTime = useGlobalHistogram("page_load_seconds", {
+    buckets: [0.1, 0.5, 1, 2.5, 5], // ✅ applies at first creation only
+  });
+  const start = Date.now();
+  await page.goto("/");
+  loadTime.observe((Date.now() - start) / 1000);
+  // ✅ no collect() needed — auto-flushed at this test's teardown
+});
+
+test("users page", async ({ page, useGlobalHistogram }) => {
+  const loadTime = useGlobalHistogram("page_load_seconds"); // ✅ same instance
+  const start = Date.now();
+  await page.goto("/users");
+  loadTime.observe((Date.now() - start) / 1000);
+});
+```
+
+The flush emits the full composition: cumulative `pw_page_load_seconds_bucket{le="0.1"}` … `{le="+Inf"}`, plus `pw_page_load_seconds_sum` and `pw_page_load_seconds_count`. Query it with standard PromQL:
+
+```promql
+# p95 page load across the suite
+histogram_quantile(0.95,
+  sum by (le) (rate(pw_page_load_seconds_bucket[1h]))
+)
+
+# average observed load time
+sum(pw_page_load_seconds_sum) / sum(pw_page_load_seconds_count)
+```
+
+## Integration with Other Best Practices
+
+- **fixture-merge-tests-expects**: Merge `test`/`expect` from `@playwright-labs/fixture-prometheus` with your other extensions via `mergeTests` / `mergeExpects` so every spec file imports from one fixture module
+- **parallel-test-isolation**: Global metrics are per-worker — with N workers you get N series distinguished only by their samples; aggregate in PromQL (`sum by (name)`) rather than expecting a single suite-wide value
+- **advanced-otel-reporter**: The Prometheus reporter and `reporter-otel` can run side by side in the `reporter` array — use Prometheus for metric dashboards and alerting, OTel traces for per-test debugging
+- **Scale considerations**: At 100+ tests, prefer `useGlobalCounter` / `useGlobalHistogram` (one auto-flush per test, drained deltas) over per-test `collect()` storms, and keep every label set bounded
+
+Reference: [@playwright-labs/fixture-prometheus](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-prometheus)
+
+---
+
+### 6.8. Manage Environment Variables with Type-Safe Validated Configuration
 
 **Tags:** environment-variables, configuration, type-safe, validation, fixture-env, ajv-ts, zod  
 **Impact:** MEDIUM (prevents test failures caused by missing or misconfigured environment variables)
@@ -2853,7 +3955,1005 @@ Reference: [@playwright-labs/fixture-env](https://github.com/vitalics/playwright
 
 ---
 
-### 6.6. Use Custom Fixtures for Reusable Test Setup and Teardown
+### 6.9. Reuse Global Metrics Across Tests with useGlobalCounter and useGlobalHistogram
+
+**Tags:** global metrics, counter, histogram, fixtures, otel, prometheus, accumulation, worker  
+**Impact:** MEDIUM (aggregates run-wide counters and latency distributions across tests without manual bookkeeping)
+
+**Impact: MEDIUM (aggregates run-wide counters and latency distributions across tests without manual bookkeeping)**
+
+Per-test fixtures like `useCounter` / `useHistogram` (fixture-otel) or `useCounterMetric` / `useGaugeMetric` (fixture-prometheus) create a fresh metric for every test — values die with the test. The global fixtures `useGlobalCounter` and `useGlobalHistogram` return a **shared instance** cached in a module-level registry keyed by `${kind}:${name}`: every test in the same worker that asks for the same name receives the **same object**, and recorded values accumulate across the whole run. Use them for cross-test aggregates — total URL calls, run-wide latency distributions, retry counts across the suite — instead of re-implementing accumulation with module-level variables.
+
+## When to Use
+
+- **Use useGlobalCounter when**: Counting events across the whole run — page/URL calls, API requests, retries triggered by any test
+- **Use useGlobalHistogram when**: Building a latency or size distribution over many tests — every `page.goto` duration in the suite landing in one histogram
+- **Use per-test fixtures instead when**: A value must be isolated to one test — call counts asserted per test, per-test latency, anything you would not want another test's data to pollute
+- **Consider alternatives when**: You need run-wide totals across *all* workers — global metrics are per-worker, so query the backend (Prometheus/Grafana) and sum by metric name instead of reading one counter in-process
+- **Identical API in both stacks**: `@playwright-labs/fixture-otel` (with `@playwright-labs/reporter-otel`) and `@playwright-labs/fixture-prometheus` (with `@playwright-labs/reporter-prometheus-remote-write`) expose the same `useGlobalCounter` / `useGlobalHistogram` fixtures with the same semantics
+
+## Guidelines
+
+### Do
+
+- Request the same global metric by name from as many tests as need it — the registry guarantees they share one instance per worker
+- Pass `options` (OTel stack) or `labels` / `buckets` (Prometheus stack) at the first call site and treat them as the canonical configuration for that metric name
+- Record with low-cardinality attributes — `url`, `route`, `endpoint` — never per-test unique IDs
+- Rely on the automatic flush: every test that used a global fixture triggers `collect()` on all registered global metrics at teardown
+- Query the backend for run-wide totals — the reporter deduplicates instruments by metric name, so data points from all workers land in a single instrument
+
+### Don't
+
+- Don't request the same name with the other kind — `useGlobalHistogram("x")` after `useGlobalCounter("x")` throws `Global metric "x" is already registered as a counter`
+- Don't pass options on later calls expecting them to merge or override — options apply only at first creation and are silently ignored afterwards
+- Don't call `collect()` to "reset" a global metric between tests — `collect()` drains and emits, it does not zero the value; use a per-test fixture when you need isolation
+- Don't expect one counter to span the whole run when `workers > 1` — each worker is a separate process with its own registry, so N workers produce N independent instances
+- Don't use global metrics for assertions about a single test's behavior — accumulation makes pass/fail depend on test execution order within the worker
+
+### Tool Usage Patterns
+
+- **Install (OTel)**: `npm install @playwright-labs/fixture-otel @playwright-labs/reporter-otel`
+- **Install (Prometheus)**: `npm install @playwright-labs/fixture-prometheus @playwright-labs/reporter-prometheus-remote-write`
+- **OTel fixtures**: `useGlobalCounter(name, options?)` → `Counter.add(n, attributes?)`; `useGlobalHistogram(name, options?)` → `Histogram.record(value, attributes?)`
+- **Prometheus fixtures**: `useGlobalCounter(name, labels?)` → `Counter.inc()` / `Counter.inc(n)`; `useGlobalHistogram(name, { buckets?, labels? })` → `Histogram.observe(value)`
+- **Registry key**: `${kind}:${name}` — kind and name together identify the shared instance
+- **Matchers (OTel)**: `toHaveOtelCallCount(n)` works on global counters and sees the accumulated count across tests in the worker
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- **Per-worker scope**: Playwright runs each worker in its own process. "Global" means global to one worker process — with 4 workers, `url_calls` exists as 4 independent counters, each accumulating only the tests its worker executed
+- **Options are frozen at creation**: the first test to request a name decides its `unit`, `labels`, and `buckets`; a later test passing different options gets the original instance with no warning
+- **Kind collision is fatal**: requesting an already-registered name with the other kind throws immediately, failing that test
+
+### Edge Cases
+
+1. **Test with no new recordings**: Flush drains, so a global metric untouched since the last flush is a no-op at teardown — no empty data points, no double emission. Manual mid-test `collect()` calls remain safe for the same reason.
+2. **Same name, two spec files**: Both files get the same instance *within one worker*; if Playwright schedules them on different workers, each worker accumulates its own value. The backend still aggregates by metric name.
+3. **First creation inside a shared setup helper**: If a `beforeEach` or custom fixture creates the metric with options, those options win for the whole worker — put canonical options in the earliest shared call site, not in individual tests.
+
+### What Breaks If Ignored
+
+- **Recreating a per-test metric per test for a run-wide number**: every test emits its own isolated series — totals must be reconstructed by hand, and per-test names/labels often diverge silently
+- **Module-level `let total = 0` accumulation**: works until sharding or retries change scheduling, survives nothing outside the process, and never reaches the metrics backend
+- **Asserting exact counts on a global metric**: `expect(urlCalls).toHaveOtelCallCount(1)` in the second test fails because the first test already recorded — assertions on globals must expect accumulated values
+
+**Incorrect (per-test fixture used for a run-wide aggregate):**
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-otel";
+
+test("home page", async ({ useCounter, page }) => {
+  // ❌ Fresh counter per test — the suite-wide total is lost
+  const urlCalls = useCounter("url_calls", { unit: "requests" });
+
+  await page.goto("/home");
+  urlCalls.add(1, { url: "/home" });
+
+  expect(urlCalls).toHaveOtelCallCount(1);
+});
+
+test("dashboard", async ({ useCounter, page }) => {
+  // ❌ Another isolated instance — starts from zero again
+  const urlCalls = useCounter("url_calls", { unit: "requests" });
+
+  await page.goto("/dashboard");
+  urlCalls.add(1, { url: "/dashboard" });
+
+  // There is no way to know how many URL calls the run made in total.
+  expect(urlCalls).toHaveOtelCallCount(1);
+});
+```
+
+**Why this fails:**
+- Each test creates and flushes its own counter — no cross-test total exists anywhere
+- The two `url_calls` series are independent; the backend sees two isolated points, not an accumulating signal
+- Any "how many pages did the whole suite hit?" question requires manual post-processing of every per-test emission
+
+**Correct (global counter accumulating across tests):**
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-otel";
+
+test("home page", async ({ useGlobalCounter, page }) => {
+  // ✅ First creation — options apply here and only here
+  const urlCalls = useGlobalCounter("url_calls", { unit: "requests" });
+
+  await page.goto("/home");
+  urlCalls.add(1, { url: "/home" });
+}); // flushed automatically at teardown — no manual collect() needed
+
+test("dashboard", async ({ useGlobalCounter, page }) => {
+  // ✅ Same instance as the previous test — value carries over
+  const urlCalls = useGlobalCounter("url_calls");
+
+  await page.goto("/dashboard");
+  urlCalls.add(1, { url: "/dashboard" });
+
+  expect(urlCalls).toHaveOtelCallCount(2); // accumulated across both tests
+});
+```
+
+**Why this works:**
+- The registry returns the same object for `"counter:url_calls"` to every test in the worker — additions accumulate
+- Teardown flush emits the running total after each test that used a global fixture, with zero bookkeeping in test code
+- The reporter deduplicates instruments by metric name, so data from all workers lands in one `url_calls` instrument for backend-side run totals
+
+The same pattern in the Prometheus stack — note the different method names:
+
+```typescript
+import { test } from "@playwright-labs/fixture-prometheus";
+
+test("home page", async ({ useGlobalCounter, page }) => {
+  const urlCalls = useGlobalCounter("url_calls");
+  await page.goto("/");
+  urlCalls.inc();
+});
+
+test("users page", async ({ useGlobalCounter, page }) => {
+  const urlCalls = useGlobalCounter("url_calls"); // same instance
+  await page.goto("/users");
+  urlCalls.inc(); // now counts 2 page visits across both tests
+});
+```
+
+## Common Mistakes
+
+### Mistake 1: Requesting the same name with the other kind
+
+```typescript
+test("a", async ({ useGlobalCounter, page }) => {
+  useGlobalCounter("page_load_ms").add(1);
+});
+
+test("b", async ({ useGlobalHistogram, page }) => {
+  // ❌ Throws: Global metric "page_load_ms" is already registered as a counter
+  const loadTime = useGlobalHistogram("page_load_ms", { unit: "ms" });
+});
+```
+
+**Why this is wrong**: The registry keys instances by `${kind}:${name}` but enforces one kind per name. A counter and a histogram cannot share a name in the same worker.
+
+**How to fix**:
+
+```typescript
+test("b", async ({ useGlobalHistogram, page }) => {
+  // ✅ Distinct name per kind — or reuse the existing kind for that name
+  const loadTime = useGlobalHistogram("page_load_duration_ms", { unit: "ms" });
+  const start = Date.now();
+  await page.goto("/dashboard");
+  loadTime.record(Date.now() - start, { route: "/dashboard" });
+});
+```
+
+### Mistake 2: Expecting later options to apply
+
+```typescript
+test("a", async ({ useGlobalCounter, page }) => {
+  // First creation — no unit configured
+  useGlobalCounter("url_calls").add(1);
+});
+
+test("b", async ({ useGlobalCounter, page }) => {
+  // ❌ { unit: "requests" } is silently ignored — the metric already exists
+  const urlCalls = useGlobalCounter("url_calls", { unit: "requests" });
+});
+```
+
+**Why this is wrong**: Options apply only at first creation and are ignored on subsequent calls for the same name. Test "b" reads as if it configures the metric, but the configuration depends on which test happens to run first in the worker.
+
+**How to fix**:
+
+```typescript
+// fixtures/global-metrics.ts — single canonical creation point
+import { test as base } from "@playwright-labs/fixture-otel";
+
+export const test = base.extend<{ urlCalls: void }>({
+  urlCalls: [
+    async ({ useGlobalCounter }, use) => {
+      // ✅ Canonical options, created before any test records
+      useGlobalCounter("url_calls", { unit: "requests" });
+      await use();
+    },
+    { auto: true },
+  ],
+});
+```
+
+```typescript
+test("dashboard", async ({ useGlobalCounter, page }) => {
+  const urlCalls = useGlobalCounter("url_calls"); // options already settled
+  await page.goto("/dashboard");
+  urlCalls.add(1, { url: "/dashboard" });
+});
+```
+
+The Prometheus equivalent — later `buckets` / `labels` are likewise ignored:
+
+```typescript
+test("a", async ({ useGlobalHistogram, page }) => {
+  // ✅ Buckets decided at first creation; later calls cannot change them
+  const loadTime = useGlobalHistogram("page_load_seconds", {
+    buckets: [0.1, 0.5, 1, 2.5, 5],
+  });
+  const start = Date.now();
+  await page.goto("/dashboard");
+  loadTime.observe((Date.now() - start) / 1000);
+});
+```
+
+### Mistake 3: Asserting per-test values on a global metric
+
+```typescript
+test("checkout", async ({ useGlobalCounter, page }) => {
+  const apiCalls = useGlobalCounter("api_calls");
+  await page.goto("/checkout");
+  apiCalls.add(1, { endpoint: "/api/orders" });
+
+  // ❌ Fails whenever an earlier test in this worker already recorded to api_calls
+  expect(apiCalls).toHaveOtelCallCount(1);
+});
+```
+
+**Why this is wrong**: Global metrics accumulate. An exact-count assertion makes the test's outcome depend on which tests ran before it in the same worker — order-dependent, and breaks when tests are added, removed, or resharded.
+
+**How to fix**:
+
+```typescript
+test("checkout", async ({ useCounter, page }) => {
+  // ✅ Per-test fixture for per-test assertions — isolated value
+  const apiCalls = useCounter("api_calls", { unit: "calls" });
+  await page.goto("/checkout");
+  apiCalls.add(1, { endpoint: "/api/orders" });
+
+  expect(apiCalls).toHaveOtelCallCount(1); // exactly this test's activity
+});
+```
+
+## Advanced Patterns
+
+Combine a global counter (how often) with a global histogram (how slow) to get a suite-level performance profile from ordinary navigation code:
+
+```typescript
+import { test, type Counter, type Histogram } from "@playwright-labs/fixture-otel";
+import type { Page } from "@playwright/test";
+
+async function visit(
+  page: Page,
+  url: string,
+  urlCalls: Counter,
+  loadTime: Histogram,
+) {
+  const start = Date.now();
+  await page.goto(url);
+  loadTime.record(Date.now() - start, { route: url });
+  urlCalls.add(1, { url });
+}
+
+test("suite profile — home", async ({ page, useGlobalCounter, useGlobalHistogram }) => {
+  const urlCalls = useGlobalCounter("url_calls", { unit: "requests" });
+  const loadTime = useGlobalHistogram("page_load_ms", { unit: "ms" });
+
+  await visit(page, "/home", urlCalls, loadTime);
+});
+
+test("suite profile — dashboard", async ({ page, useGlobalCounter, useGlobalHistogram }) => {
+  const urlCalls = useGlobalCounter("url_calls");
+  const loadTime = useGlobalHistogram("page_load_ms");
+
+  await visit(page, "/dashboard", urlCalls, loadTime);
+});
+```
+
+Once data is in Prometheus (either stack reaches it — via the OTel Collector for fixture-otel, via remote-write for fixture-prometheus), run-wide questions become queries:
+
+```promql
+# Total URL calls across the whole run (all workers summed by metric name)
+sum(url_calls_total)
+
+# p95 page load across every test that navigated
+histogram_quantile(0.95,
+  sum by (le) (rate(page_load_ms_bucket[1h]))
+)
+```
+
+**When to use this pattern**: regression detection at suite level — "did the average page get slower this release?" — where per-test assertions are too noisy and backend trends give the answer for free.
+
+## Integration with Other Best Practices
+
+- **Instrument Tests with Custom OTel Metrics, Spans, and Distributed Trace Propagation**: per-test `useCounter` / `useHistogram` answer "what happened inside this test"; global fixtures answer "what happened across the run". Use both — isolated values for assertions, global values for trends.
+- **Export Test Traces and Metrics to OpenTelemetry Backends with reporter-otel**: global metrics require the reporter active in the same process — the stdout bridge silently discards data without it. Add `resourceAttributes` so accumulated series are filterable by branch and environment.
+- **Merge Fixtures and Expects**: put canonical global-metric creation (with options) into a shared fixtures module so every spec file imports the same settled configuration.
+- **Parallel Test Sharding**: sharding splits workers across machines — global metrics stay per-worker, so always read run-wide totals from the backend (`sum` by metric name), never from in-process state.
+
+Reference: [@playwright-labs/fixture-otel](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-otel) and [@playwright-labs/fixture-prometheus](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-prometheus)
+
+---
+
+### 6.10. Simulate Human-Like Input with ghost-cursor
+
+**Tags:** ghost-cursor, mouse, anti-bot, human-like, input  
+**Impact:** LOW (helps anti-bot-sensitive flows pass mouse-movement heuristics, but costs speed and reliability on ordinary tests)
+
+**Impact: LOW (helps anti-bot-sensitive flows pass mouse-movement heuristics, but costs speed and reliability on ordinary tests)**
+
+Playwright's native `locator.click()` teleports the mouse to the target and clicks instantly. That is exactly what you want for 99% of tests — but some pages score "humanness" by observing pointer trajectories: login forms behind bot protection, CAPTCHA-adjacent flows, fraud-scored checkouts. The `@playwright-labs/ghost-cursor` package generates realistic Bézier-curve mouse paths with overshoot, jitter, and Fitts's-law timing on top of the native `page.mouse` API, and `@playwright-labs/fixture-ghost-cursor` wires it into `@playwright/test` via `test.extend`. Use it surgically on the flows that need it — never as a blanket replacement for native clicks.
+
+## When to Use
+
+- **Use ghost-cursor when**: A specific flow is gated by anti-bot heuristics that track mouse movement (e.g., a login or signup form that rejects instantaneous clicks)
+- **Use the `ghostCursor` fixture when**: You need a ready-to-use cursor with default options in a test
+- **Use the `useGhostCursor` factory when**: You need custom options — `visible` overlay for debugging, `performRandomMoves` for idle movement, or `defaultOptions` like `hesitate` and `waitForClick`
+- **Consider alternatives when**: The target is your own application with no bot detection — native `locator.click()` is faster, auto-waits for actionability, and is far less flaky
+- **Required for**: Tests against third-party or production-like environments where you cannot disable bot protection and the flow fails with plain Playwright clicks
+
+## Guidelines
+
+### Do
+
+- Restrict ghost-cursor to the few tests that actually hit anti-bot heuristics — tag or group them so the cost is visible
+- Prefer the `ghostCursor` / `useGhostCursor` fixtures from `@playwright-labs/fixture-ghost-cursor` over calling `createCursor(page)` manually — the fixture keeps cursor creation consistent and mergeable via `mergeTests`
+- Keep using web-first assertions (`expect(page).toHaveURL(...)`, `toBeVisible()`) after every cursor action — ghost-cursor changes *how* you click, not *how* you assert
+- Tune realism through `defaultOptions` when a flow needs it: `click: { hesitate: 100, waitForClick: 50 }` adds human-like pauses around the press
+- Use `useGhostCursor({ visible: true })` or `installMouseHelper()` locally to watch the trajectory while developing the test
+- Resolve role-based locators to handles with `locator.elementHandle()` when you want ghost-cursor to click a locator you already have — cursor methods accept a CSS/XPath selector or an `ElementHandle`
+
+### Don't
+
+- Don't apply ghost-cursor to every test in the suite — Bézier path generation plus realistic delays make each click noticeably slower than `locator.click()`, and the suite pays for it with zero benefit
+- Don't expect ghost-cursor to replace web-first assertions or auto-waiting — it is an input simulation tool, not a waiting strategy
+- Don't expect cursor actions to auto-wait for actionability like `locator.click()` does — `page.mouse` dispatches raw events; use the `waitForSelector` option or wait for the element explicitly first
+- Don't enable `performRandomMoves: true` in CI unless a heuristic genuinely requires idle movement — background motion adds runtime and non-determinism to every test that uses the cursor
+- Don't fake typing with the mouse — ghost-cursor has no keyboard API; click the field with the cursor, then use `page.fill()` or `page.keyboard` as usual
+- Don't treat ghost-cursor as a CAPTCHA solver — it only makes mouse movement look human; it does not defeat challenges, fingerprinting, or rate limiting
+
+### Tool Usage Patterns
+
+- **Install**: `npm install @playwright-labs/ghost-cursor @playwright-labs/fixture-ghost-cursor`
+- **Standalone**: `createCursor(page, options?)` from `@playwright-labs/ghost-cursor` — for scripts without the test runner
+- **Fixtures**: `ghostCursor` (default options) and `useGhostCursor(options?)` (factory) from `@playwright-labs/fixture-ghost-cursor`
+- **Movement**: `move(selector)`, `moveTo({ x, y })`, `moveBy({ x, y })`, `getLocation()`
+- **Clicking**: `click(selector?, options?)`, `mouseDown()`, `mouseUp()` with `ClickOptions` — `hesitate`, `waitForClick`, `button`, `clickCount`
+- **Scrolling**: `scroll({ y })`, `scrollTo('bottom')`, `scrollIntoView(selector)` with `ScrollOptions` — `scrollSpeed`, `scrollDelay`
+- **Realism tuning** (`MoveOptions`): `overshootThreshold`, `moveSpeed`, `moveDelay`, `randomizeMoveDelay`, `paddingPercentage`, `useTimestamps`, `maxTries`, `waitForSelector`
+- **Debug**: `visible: true` cursor option, or `installMouseHelper()` / `removeMouseHelper()` on an existing cursor
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Cursor actions go through `page.mouse`, bypassing Playwright's actionability checks (visible, stable, enabled, receives events). A native `locator.click()` that waits and retries is strictly more reliable against ordinary UI.
+- Selectors are CSS/XPath strings or `ElementHandle`s — there is no `Locator` overload. Convert with `await locator.elementHandle()` when starting from a role locator.
+- Human-like timing is deliberate latency: `hesitate`, `waitForClick`, `moveDelay`, and randomized movement all add wall-clock time per action. Across hundreds of tests this compounds into minutes of CI time.
+- Ghost-cursor simulates the mouse only. Keyboard input, file uploads, and drag-and-drop still need the native `page.keyboard`, `setInputFiles()`, or manual `mouseDown`/`move`/`mouseUp` sequences.
+
+### Edge Cases
+
+1. **Element moves during the approach**: The path is computed up front; if the target shifts (lazy layout, animation), the click can land off-target. `MoveOptions.maxTries` (default `10`) retries when element intersection fails — wait for layout stability before clicking.
+2. **Long-distance moves**: Overshoot is applied only above `overshootThreshold` (default `500` px). If a heuristic expects overshoot on shorter moves, lower the threshold via `defaultOptions.move`.
+3. **Detached elements**: If the selector resolves but the element detaches before the cursor arrives, the click hits stale coordinates. Pass `waitForSelector` in options or assert visibility first.
+4. **Headless vs. headed**: Trajectories work in both modes, but `visible: true` and `installMouseHelper()` are only useful when you can see the browser — strip them from CI runs.
+
+### What Breaks If Ignored
+
+- **Applied everywhere**: Suite runtime inflates measurably, and tests get flakier because raw `page.mouse` events skip actionability checks — you traded the most reliable click in Playwright for a slower one with no anti-bot to impress
+- **Treated as a waiting strategy**: Clicks fire against elements that are not ready yet — intermittent `misclick` failures that no amount of `hesitate` will fix
+- **Expected to defeat bot detection alone**: Mouse trajectories are one signal among many (fingerprints, TLS, timing, reputation) — the flow still gets blocked and the test fails anyway
+
+**Incorrect (ghost-cursor applied indiscriminately, assertions replaced by hope):**
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-ghost-cursor";
+
+test("add item to cart", async ({ page, ghostCursor }) => {
+  await page.goto("/products");
+
+  // ❌ Own application, no bot protection — native click is faster and auto-waits
+  await ghostCursor.click("text=Add to cart");
+
+  // ❌ Raw mouse click with no actionability check, then a hard-coded wait
+  //    instead of a web-first assertion — flaky and slow at the same time
+  await ghostCursor.click("#checkout");
+  await page.waitForTimeout(3000);
+
+  // ❌ Ghost-cursor everywhere: every test in the suite pays the trajectory
+  //    tax for zero anti-bot benefit
+  expect(page.url()).toContain("/confirmation"); // ❌ non-retrying assertion
+});
+```
+
+**Why this fails:**
+- Every cursor click generates and plays a Bézier path with realistic delays — pure overhead where no heuristic is watching
+- `page.mouse` events do not wait for the element to be visible, stable, or enabled, so the click races the UI
+- `waitForTimeout` + a non-retrying `page.url()` assertion reintroduces exactly the flakiness web-first assertions exist to prevent
+
+**Correct (ghost-cursor scoped to the anti-bot-sensitive flow, web-first assertions everywhere):**
+
+```typescript
+// tests/fixtures.ts
+import { mergeTests, test as base } from "@playwright/test";
+import { test as ghostTest } from "@playwright-labs/fixture-ghost-cursor";
+
+// ✅ Merge once — every spec can opt into ghostCursor per test
+export const test = mergeTests(base, ghostTest);
+export { expect } from "@playwright/test";
+```
+
+```typescript
+// tests/login.spec.ts
+import { test, expect } from "./fixtures";
+
+test("login behind bot protection", async ({ page, ghostCursor }) => {
+  await page.goto("https://app.example.com/login");
+
+  // ✅ Human-like approach + click on the protected form only
+  await ghostCursor.click("#username");
+  await page.fill("#username", "user@example.com"); // keyboard stays native
+
+  await ghostCursor.click("#password");
+  await page.fill("#password", "s3cret");
+
+  // ✅ hesitate/waitForClick add realistic pauses around the press
+  await ghostCursor.click("#submit", { hesitate: 120, waitForClick: 60 });
+
+  // ✅ Web-first assertion — ghost-cursor changes the click, never the check
+  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(page.getByRole("heading", { name: "Welcome" })).toBeVisible();
+});
+
+test("ordinary settings page — no ghost-cursor", async ({ page }) => {
+  await page.goto("/settings");
+
+  // ✅ No anti-bot here: native locator click auto-waits and is faster
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Settings saved")).toBeVisible();
+});
+```
+
+**Why this works:**
+- The trajectory cost is paid only by the test that faces the anti-bot heuristic; the rest of the suite keeps native speed and auto-waiting
+- `page.fill()` handles typing — ghost-cursor owns the mouse, Playwright owns the keyboard
+- Web-first assertions retry until the condition holds, so the test stays deterministic regardless of how long the human-like click took
+
+## Common Mistakes
+
+### Mistake 1: Using ghost-cursor as the default click for the whole suite
+
+```typescript
+// tests/fixtures.ts
+import { test as ghostTest } from "@playwright-labs/fixture-ghost-cursor";
+
+// ❌ Re-exporting the ghost test as THE test — every spec now clicks
+//    with Bézier paths, even plain CRUD screens
+export const test = ghostTest;
+```
+
+**Why this is wrong**: Each `ghostCursor.click()` generates a path, replays it with inter-frame delays, and skips actionability checks. Multiplied across a suite, this is slower and flakier than the native click it replaced, with no anti-bot audience.
+
+**How to fix**:
+
+```typescript
+// tests/fixtures.ts
+import { mergeTests, test as base } from "@playwright/test";
+import { test as ghostTest } from "@playwright-labs/fixture-ghost-cursor";
+
+// ✅ Base test stays the default; ghostCursor is available on demand
+export const test = mergeTests(base, ghostTest);
+
+// tests that need it destructure { ghostCursor }; everyone else
+// keeps using locator.click()
+```
+
+### Mistake 2: Expecting ghost-cursor to wait for the element
+
+```typescript
+test("checkout", async ({ page, ghostCursor }) => {
+  await page.goto("/cart");
+  // ❌ Button is rendered by a slow API call — the raw mouse click fires
+  //    at whatever is under the cursor right now
+  await ghostCursor.click("#place-order");
+});
+```
+
+**Why this is wrong**: `page.mouse` dispatches events immediately. Without Playwright's actionability checks, the click races rendering and lands on nothing — or worse, on the wrong element.
+
+**How to fix**:
+
+```typescript
+test("checkout", async ({ page, ghostCursor }) => {
+  await page.goto("/cart");
+
+  // ✅ Wait explicitly first — web-first — then let the cursor do its work
+  const placeOrder = page.getByRole("button", { name: "Place order" });
+  await expect(placeOrder).toBeVisible();
+  await expect(placeOrder).toBeEnabled();
+
+  // ✅ Or pass waitForSelector so the cursor waits before moving
+  await ghostCursor.click("#place-order", { waitForSelector: 5000 });
+});
+```
+
+### Mistake 3: Trying to type or solve challenges with the cursor
+
+```typescript
+test("signup", async ({ page, ghostCursor }) => {
+  // ❌ ghost-cursor has no keyboard API — this clicks the field and stops
+  await ghostCursor.click("#email");
+  // ...now what? there is no cursor.type()
+});
+```
+
+**Why this is wrong**: The package simulates mouse movement, clicks, and scrolling only. Keyboard input is out of scope, and no amount of realistic mouse motion passes an actual CAPTCHA challenge.
+
+**How to fix**:
+
+```typescript
+test("signup", async ({ page, ghostCursor }) => {
+  // ✅ Cursor handles the human-like approach; native APIs handle the rest
+  await ghostCursor.click("#email");
+  await page.fill("#email", "new@example.com");
+  await page.keyboard.press("Tab");
+  await page.fill("#password", "s3cret");
+});
+```
+
+### Mistake 4: Leaving debug aids on in CI
+
+```typescript
+test("protected flow", async ({ page, useGhostCursor }) => {
+  // ❌ visible overlay + random idle moves in CI: slower, non-deterministic,
+  //    and nobody is watching the browser
+  const cursor = useGhostCursor({ visible: true, performRandomMoves: true });
+  await cursor.click("#submit");
+});
+```
+
+**Why this is wrong**: `visible` injects a debug overlay you cannot see in headless CI, and `performRandomMoves` keeps the mouse wandering between actions — extra runtime and entropy in an environment that needs determinism.
+
+**How to fix**:
+
+```typescript
+test("protected flow", async ({ page, useGhostCursor }) => {
+  // ✅ Debug locally with the overlay; CI gets the default, deterministic cursor
+  const cursor = useGhostCursor({
+    visible: !!process.env.DEBUG_CURSOR,
+  });
+  await cursor.click("#submit");
+});
+```
+
+## Advanced Patterns
+
+### Custom realism profiles with defaultOptions
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-ghost-cursor";
+
+test("fraud-scored checkout", async ({ page, useGhostCursor }) => {
+  // ✅ One profile applied to every cursor call in this test
+  const cursor = useGhostCursor({
+    start: { x: 100, y: 100 },
+    defaultOptions: {
+      move: { overshootThreshold: 300, moveDelay: 50 },
+      click: { hesitate: 100, waitForClick: 50 },
+    },
+  });
+
+  await page.goto("/checkout");
+  await cursor.scrollIntoView("#payment-form");
+  await cursor.click("#card-number");
+  await page.fill("#card-number", "4242424242424242");
+  await cursor.click("#pay", { hesitate: 150 });
+
+  await expect(page).toHaveURL(/\/order-confirmed/);
+});
+```
+
+**When to use this pattern**: A specific flow is scored on interaction cadence and you need consistent hesitation/overshoot tuning across several cursor actions — set it once in `defaultOptions` instead of repeating options per call.
+
+### Combining role locators with cursor movement
+
+```typescript
+import { test, expect } from "./fixtures";
+
+test("protected form with role locators", async ({ page, ghostCursor }) => {
+  await page.goto("/signup");
+
+  const submit = page.getByRole("button", { name: "Create account" });
+  // ✅ Web-first waiting on the locator, human-like click via its handle
+  await expect(submit).toBeVisible();
+  await ghostCursor.click(await submit.elementHandle());
+
+  await expect(page).toHaveURL(/\/welcome/);
+});
+```
+
+**When to use this pattern**: Your suite is standardized on role-based locators (see locator-role-based) but one flow needs human-like input — resolve the locator to an `ElementHandle` and keep both worlds.
+
+### Inspecting trajectories with the math utilities
+
+```typescript
+import { path, overshoot, type Vector } from "@playwright-labs/ghost-cursor";
+
+// ✅ Generate and assert on the raw trajectory in a unit test of your own
+//    tooling — no browser required
+const start: Vector = { x: 0, y: 0 };
+const end: Vector = { x: 600, y: 400 };
+const points = path(start, end);
+
+console.assert(points[0].x === 0 && points.at(-1)!.x === 600);
+```
+
+**When to use this pattern**: Debugging or documenting what the cursor actually does — `path(start, end)`, `bezierCurve`, and `overshoot` are exported for exactly this kind of offline inspection.
+
+## Integration with Other Best Practices
+
+- **assertion-web-first**: Non-negotiable alongside ghost-cursor. The cursor changes how input is delivered; assertions must still auto-retry (`toHaveURL`, `toBeVisible`) or the added latency turns into race conditions.
+- **stable-auto-waiting**: Ghost-cursor bypasses Playwright's built-in auto-waiting for clicks. Compensate with explicit web-first waits on the target before every cursor action, or use the `waitForSelector` option.
+- **locator-role-based**: Cursor methods take CSS/XPath selectors or `ElementHandle`s. Keep authoring role-based locators and convert with `elementHandle()` at the boundary instead of falling back to brittle CSS everywhere.
+- **parallel-test-isolation**: Each `ghostCursor` fixture instance is bound to the test's own `page`, so parallel workers never share cursor state — but remember each worker pays the speed cost independently.
+- **Scale considerations**: At 100+ tests, even a few seconds of trajectory time per protected flow is fine; applied suite-wide it adds many minutes. Keep ghost-cursor usage countable on one hand per project.
+
+Reference: [@playwright-labs/ghost-cursor](https://github.com/vitalics/playwright-labs/tree/main/packages/ghost-cursor) and [@playwright-labs/fixture-ghost-cursor](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-ghost-cursor)
+
+---
+
+### 6.11. Test Against Real Services with fixture-testcontainers
+
+**Tags:** testcontainers, docker, integration, database, fixtures  
+**Impact:** MEDIUM (catches SQL, migration, and connection bugs that mocks hide, with automatic container cleanup after every test)
+
+**Impact: MEDIUM (catches SQL, migration, and connection bugs that mocks hide, with automatic container cleanup after every test)**
+
+Mocks drift from reality: a stubbed database accepts any query, a fake cache ignores TTL semantics, and neither will ever tell you that your migration is broken or your connection string is wrong. The `@playwright-labs/fixture-testcontainers` package wraps [Testcontainers](https://testcontainers.com/) in Playwright fixtures — `useContainer` starts a real Docker container (PostgreSQL, MySQL, Redis, or any image) per test and **stops it automatically, even if the test fails**. `useContainerFromDockerFile` builds and starts a custom image from a local Dockerfile. The package's `expect` adds 13 custom matchers for asserting container state — health, ports, logs, labels, networks — without writing polling loops.
+
+## When to Use
+
+- **Use useContainer when**: Integration tests need a real database, cache, or broker — validating SQL queries, running migrations, testing cache invalidation against actual Redis
+- **Use useContainerFromDockerFile when**: The service under test has its own Dockerfile and you want to test the exact image you deploy
+- **Use the custom matchers when**: Asserting container readiness and state (`toBeContainerHealthy`, `toBeContainerPort`) instead of guessing with sleeps
+- **Consider alternatives when**: Pure unit tests with no I/O, or CI agents without a Docker daemon — mock at the API boundary there instead
+- **Required for**: Tests that would otherwise mock the persistence layer — schema changes, query rewrites, and connection handling are exactly what mocks cannot verify
+
+## Guidelines
+
+### Do
+
+- Import `test` and `expect` from `@playwright-labs/fixture-testcontainers` instead of `@playwright/test` — the fixtures and matchers are pre-wired
+- Always set an explicit `waitStrategy` (`Wait.forLogMessage`, `Wait.forHttp`, `Wait.forHealthCheck`) so the fixture resolves only when the service is actually ready
+- Pair `healthCheck` with `Wait.forHealthCheck()` for databases, then assert `toBeContainerHealthy()` — a listening port is not proof of an initialized database
+- Read the real endpoint via `container.getHost()` and `container.getMappedPort(5432)` — Docker assigns a free host port, which keeps parallel workers collision-free
+- Wrap containers in typed fixtures with `base.extend` (e.g., a `redisUrl` fixture) so tests declare intent instead of repeating container setup
+- Assert container configuration with the package matchers — ports, labels, name, network, user, log output — rather than re-inspecting via CLI
+
+### Don't
+
+- Don't mock the database in integration tests — a mock that always returns rows proves nothing about your SQL, schema, or migration scripts
+- Don't start containers with a bare `new GenericContainer(...).start()` in a test body and no cleanup — the container keeps running after the test ends
+- Don't pin host ports (`{ container: 5432, host: 5432 }`) — two parallel workers cannot bind the same host port; let Docker map ephemeral ports
+- Don't call the async matchers without `await` (`toBeContainerHealthy()`, `toMatchContainerLogMessage(...)`) — an un-awaited assertion promise lets a failing check pass silently
+- Don't assume `useContainer` resolution means "ready for queries" without a `waitStrategy` — the default wait sees the port open before PostgreSQL finishes initializing
+- Don't run container tests where no Docker daemon is available — there is no automatic fallback; gate them by project or environment instead
+
+### Tool Usage Patterns
+
+- **Install**: `npm install -D @playwright-labs/fixture-testcontainers testcontainers`
+- **Fixtures**: `useContainer(imageOrContainer, opts?)`, `useContainerFromDockerFile(context, dockerfilePath?, opts?)` — both return `Promise<StartedTestContainer>`
+- **Options**: every `ContainerOpts` key maps 1:1 to a `GenericContainer.with*` method — `ports` → `withExposedPorts`, `environment` → `withEnvironment`, `healthCheck` → `withHealthCheck`, `waitStrategy` → `withWaitStrategy`, `startupTimeout` → `withStartupTimeout`, plus `command`, `name`, `labels`, `network`, `networkAliases`, `bindMounts`, `tmpFs`, `copyFiles`, `reuse`, `pullPolicy`, and more
+- **Wait strategies**: `Wait.forLogMessage(...)`, `Wait.forHttp(path, port)`, `Wait.forHealthCheck()` — imported from `testcontainers`
+- **Requirements**: `@playwright/test` >= 1.57.0, `testcontainers` >= 10.0.0, Docker running locally
+- **The 13 custom matchers** (import `expect` from the package):
+
+| Matcher | Async | Asserts |
+| ------- | ----- | ------- |
+| `toBeContainerRunning()` | yes | Container state is `running` |
+| `toBeContainerStarted()` | yes | Container status is `running` |
+| `toBeContainerStopped()` | yes | Container status is `exited` |
+| `toBeContainerHealthy()` | yes | Docker HEALTHCHECK status is `healthy` |
+| `toMatchContainerLogMessage(string \| RegExp, collator?)` | yes | Logs contain substring / match regex |
+| `toHaveContainerUser(user?, collator?)` | yes | Container runs as the given user |
+| `toMatchContainerUser(string \| RegExp, collator?)` | yes | Container user matches pattern |
+| `toHaveContainerLabel(key, value?, collator?)` | no | Label present (optional exact value) |
+| `toBeContainerPort(port)` | no | Port is mapped to a host port |
+| `toMatchContainerPortInRange(port, range?)` | no | Mapped host port within `{ min, max }` bounds |
+| `toHaveContainerName(string, collator?)` | no | Exact container name |
+| `toMatchContainerName(string \| RegExp, collator?)` | no | Container name matches pattern |
+| `toHaveContainerNetwork(networkName, collator?)` | no | Connected to the given network |
+
+All matchers support `.not`; string matchers accept an optional `Intl.Collator` for locale-aware matching (ignored when a `RegExp` is passed — use regex flags instead).
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Requires a running Docker daemon on the machine executing the tests — developers and CI agents without Docker cannot run these tests at all
+- Container startup adds seconds per test, and the first run pulls images from the registry — pre-pull images in CI or control pulling via `pullPolicy`
+- All containers started in one test are stopped in parallel after it — teardown time grows with container count per test
+- `await using` cleanup syntax requires TypeScript ≥ 5.2 and `"lib": ["ES2022", "esnext.disposable"]` in `tsconfig.json`
+
+### Edge Cases
+
+1. **Port open, database not initialized**: The default wait strategy resolves when the port listens, but PostgreSQL logs `ready to accept connections` only after init — early queries fail intermittently. Use `Wait.forLogMessage("ready to accept connections")` or a `healthCheck` + `Wait.forHealthCheck()`.
+2. **Parallel workers and fixed host ports**: Two workers binding host port 5432 collide on startup. Pass `ports: 5432` (container port only) and resolve the endpoint with `getMappedPort(5432)`.
+3. **Containers outside a test body**: `useContainer` is test-scoped. In a custom fixture, `test.beforeAll`, or a global setup script use `await using` — `StartedTestContainer` implements `Symbol.asyncDispose`, so the container stops when the scope exits, with no `try/finally`.
+4. **Non-English logs and names**: String matchers accept an `Intl.Collator` (e.g., `new Intl.Collator("fr", { sensitivity: "base" })`) for locale- and case-insensitive matching.
+
+### What Breaks If Ignored
+
+- **Without a wait strategy or healthcheck**: Tests race container startup — flaky `ECONNREFUSED` and "database system is starting up" errors that pass on retry and erode trust in the suite
+- **Without fixture cleanup**: Leaked containers accumulate on developer machines and CI agents — stale `postgres`/`redis` containers exhaust ports and disk until `docker system prune`
+- **Without real services**: Mocks drift from real SQL and cache semantics — the suite stays green while production breaks on the first real query
+
+**Incorrect (mocked database — green tests, unverified SQL):**
+
+```typescript
+import { test, expect } from "@playwright/test";
+
+// ❌ A hand-rolled stub that accepts any query and always returns rows
+const db = {
+  query: async (_sql: string) => [{ id: 1, email: "user@example.com" }],
+};
+
+test("user email shown on profile", async ({ page }) => {
+  const rows = await db.query("SELEC * FORM users"); // ❌ typo'd SQL passes too
+  await page.goto(`/profile/${rows[0].id}`);
+  await expect(page.getByTestId("email")).toHaveText("user@example.com");
+  // ❌ Nothing here touches PostgreSQL — schema, migrations, and queries unverified
+});
+```
+
+**Why this fails:**
+- The stub cannot reject invalid SQL, missing columns, or a failed migration — the test passes no matter how broken the data layer is
+- Mock return shapes drift from the real schema over time; tests keep passing against a shape production no longer returns
+- Connection handling, authentication, and startup ordering are never exercised
+
+**Correct (real PostgreSQL container, readiness wait, auto-cleanup):**
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-testcontainers";
+import { Wait } from "testcontainers";
+
+test("user email shown on profile", async ({ useContainer, page }) => {
+  const postgres = await useContainer("postgres:16", {
+    ports: 5432, // ✅ container port only — Docker maps a free host port
+    environment: {
+      POSTGRES_USER: "test",
+      POSTGRES_PASSWORD: "secret",
+      POSTGRES_DB: "shop",
+    },
+    // ✅ Docker-level healthcheck: pg_isready every 1s, up to 5 retries
+    healthCheck: {
+      test: ["CMD-SHELL", "pg_isready -U test"],
+      interval: 1_000,
+      retries: 5,
+    },
+    waitStrategy: Wait.forHealthCheck(), // ✅ resolves only when healthy
+    startupTimeout: 30_000,
+  });
+
+  // ✅ Assert infrastructure state with the package matchers
+  await expect(postgres).toBeContainerRunning();
+  await expect(postgres).toBeContainerHealthy();
+  expect(postgres).toBeContainerPort(5432);
+
+  const url = `postgres://test:secret@${postgres.getHost()}:${postgres.getMappedPort(5432)}/shop`;
+  await runMigrations(url); // ✅ real migrations against a real database
+  await seedUser(url, { id: 1, email: "user@example.com" });
+
+  await page.goto("/profile/1");
+  await expect(page.getByTestId("email")).toHaveText("user@example.com");
+  // ✅ container stops automatically here — even if an assertion above threw
+});
+```
+
+**Why this works:**
+- The test fails if the SQL, schema, or migration is wrong — exactly the bugs mocks hide
+- `waitStrategy: Wait.forHealthCheck()` guarantees the fixture resolves after PostgreSQL is ready, eliminating startup races
+- Ephemeral port mapping via `getMappedPort` keeps parallel workers collision-free, and fixture teardown stops the container on every outcome
+
+## Common Mistakes
+
+### Mistake 1: No Readiness Wait — Test Races Container Startup
+
+```typescript
+import { test } from "@playwright-labs/fixture-testcontainers";
+
+test("races startup", async ({ useContainer }) => {
+  const postgres = await useContainer("postgres:16", {
+    ports: 5432,
+    environment: { POSTGRES_PASSWORD: "secret" },
+  });
+  // ❌ default wait sees a listening port, but PostgreSQL is still initializing
+  await seedDatabase(postgres.getMappedPort(5432)); // flaky ECONNREFUSED
+});
+```
+
+**Why this is wrong**: A listening port only proves the process bound a socket, not that the database finished initializing and accepts authenticated connections. The test passes or fails depending on machine speed — classic timing flakiness.
+
+**How to fix**:
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-testcontainers";
+import { Wait } from "testcontainers";
+
+test("waits for readiness", async ({ useContainer }) => {
+  const postgres = await useContainer("postgres:16", {
+    ports: 5432,
+    environment: { POSTGRES_PASSWORD: "secret" },
+    // ✅ explicit readiness contract
+    waitStrategy: Wait.forLogMessage("ready to accept connections"),
+    startupTimeout: 30_000,
+  });
+  await expect(postgres).toMatchContainerLogMessage("ready to accept connections");
+  await seedDatabase(postgres.getMappedPort(5432)); // deterministic
+});
+```
+
+### Mistake 2: Leaking Containers with Manual start()
+
+```typescript
+import { test } from "@playwright/test";
+import { GenericContainer } from "testcontainers";
+
+test("manual container", async () => {
+  const container = await new GenericContainer("redis:8")
+    .withExposedPorts(6379)
+    .start();
+  const port = container.getMappedPort(6379);
+  // ❌ test ends, container keeps running — 100 tests leave 100 stale containers
+});
+```
+
+**Why this is wrong**: Nothing stops the container. Leaked containers pile up on laptops and CI agents, holding ports and disk until someone runs `docker system prune` — and subsequent runs start failing on environment state rather than code.
+
+**How to fix**: use the fixture (automatic stop, even on failure), or `await using` when no fixture is available:
+
+```typescript
+import { test } from "@playwright-labs/fixture-testcontainers";
+
+test("fixture cleanup", async ({ useContainer }) => {
+  const redis = await useContainer("redis:8", { ports: 6379 });
+  // ✅ stopped automatically after the test, pass or fail
+});
+```
+
+```typescript
+import { test } from "@playwright/test";
+import { GenericContainer } from "testcontainers";
+
+test("explicit scope cleanup", async () => {
+  await using redis = await new GenericContainer("redis:8")
+    .withExposedPorts(6379)
+    .start();
+  // ✅ Symbol.asyncDispose stops the container when the scope exits — no try/finally
+});
+```
+
+### Mistake 3: Pinning Host Ports
+
+```typescript
+test("fixed host port", async ({ useContainer }) => {
+  const postgres = await useContainer("postgres:16", {
+    // ❌ every worker tries to bind host port 5432 — second worker fails to start
+    ports: [{ container: 5432, host: 5432 }],
+    environment: { POSTGRES_PASSWORD: "secret" },
+  });
+});
+```
+
+**Why this is wrong**: Fixed host ports serialize what should be parallel and break the moment two tests (or two CI jobs on one agent) use the same database image.
+
+**How to fix**: expose the container port only and resolve the assigned host port:
+
+```typescript
+test("ephemeral host port", async ({ useContainer }) => {
+  const postgres = await useContainer("postgres:16", {
+    ports: 5432, // ✅ Docker assigns a free host port
+    environment: { POSTGRES_PASSWORD: "secret" },
+  });
+  expect(postgres).toMatchContainerPortInRange(5432, { min: 1024, max: 65535 });
+  const url = `postgres://postgres:secret@${postgres.getHost()}:${postgres.getMappedPort(5432)}`;
+});
+```
+
+### Mistake 4: Forgetting await on Async Matchers
+
+```typescript
+test("un-awaited assertion", async ({ useContainer }) => {
+  const container = await useContainer("postgres:16", {
+    ports: 5432,
+    environment: { POSTGRES_PASSWORD: "secret" },
+  });
+  // ❌ returns a Promise — the test can pass before the assertion resolves
+  expect(container).toBeContainerHealthy();
+});
+```
+
+**Why this is wrong**: The health assertion becomes an unhandled floating promise; a failing check may surface after the test already reported success — or crash the worker as an unhandled rejection.
+
+**How to fix**:
+
+```typescript
+test("awaited assertion", async ({ useContainer }) => {
+  const container = await useContainer("postgres:16", {
+    ports: 5432,
+    environment: { POSTGRES_PASSWORD: "secret" },
+  });
+  await expect(container).toBeContainerHealthy(); // ✅ assertion gates the test
+  expect(container).toBeContainerPort(5432); // port matchers are sync — no await
+});
+```
+
+## Advanced Patterns
+
+Compose containers into typed fixtures so tests declare dependencies, not setup code:
+
+```typescript
+// fixtures/index.ts — a redisUrl fixture any test can request
+import { test as base, expect } from "@playwright-labs/fixture-testcontainers";
+
+export const test = base.extend<{ redisUrl: string }>({
+  redisUrl: async ({ useContainer }, use) => {
+    const container = await useContainer("redis:8", { ports: 6379 });
+    await use(
+      `redis://${container.getHost()}:${container.getMappedPort(6379)}`,
+    );
+    // ✅ container stops when the fixture tears down
+  },
+});
+export { expect };
+```
+
+Build and run a custom image with `useContainerFromDockerFile`, waiting on an HTTP health endpoint:
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-testcontainers";
+import { Wait } from "testcontainers";
+
+test("app image from Dockerfile", async ({ useContainerFromDockerFile }) => {
+  const app = await useContainerFromDockerFile("./docker", "Dockerfile.test", {
+    ports: 8080,
+    waitStrategy: Wait.forHttp("/health", 8080), // ✅ poll until HTTP 200
+  });
+
+  await expect(app).toBeContainerRunning();
+  expect(app).toMatchContainerPortInRange(8080, { min: 1024 }); // no upper bound
+});
+```
+
+Start a full stack in one test — all containers stop in parallel afterwards:
+
+```typescript
+test("cache + database stack", async ({ useContainer }) => {
+  const redis = await useContainer("redis:8", { ports: 6379 });
+  const postgres = await useContainer("postgres:16", {
+    ports: 5432,
+    environment: { POSTGRES_PASSWORD: "secret" },
+    waitStrategy: Wait.forLogMessage("ready to accept connections"),
+  });
+
+  await expect(redis).toMatchContainerLogMessage("Ready to accept connections");
+  await expect(postgres).toBeContainerRunning();
+  // ✅ both containers are stopped in parallel after the test
+});
+```
+
+**When to use this pattern**: Typed container fixtures pay off once more than a couple of tests share the same service; Dockerfile builds belong in tests that validate the deployable artifact itself; multi-container stacks are for true end-to-end flows — keep per-test container count low, since startup time is additive.
+
+## Integration with Other Best Practices
+
+- **Compose Fixtures with mergeTests and mergeExpects**: Merge `test` and `expect` from `fixture-testcontainers` with other `@playwright-labs/*` fixture packages so one suite combines containers, custom matchers, and other fixtures without import conflicts
+- **Ensure Test Isolation for Parallel Execution**: Ephemeral port mapping makes per-test containers parallel-safe by construction — combine with test-scoped data (unique databases/schemas per test) so parallel workers never share mutable state
+- **Use Auto-Waiting Instead of Manual Waits**: `waitStrategy` is the container-side equivalent of web-first assertions — declare readiness conditions (`Wait.forLogMessage`, `Wait.forHealthCheck`) instead of `setTimeout` sleeps
+- **Export Test Traces and Metrics to OpenTelemetry Backends with reporter-otel**: Real containers make tests slower by design — track duration p95 trends to keep the integration suite's cost visible and catch image-pull regressions in CI
+- **Scale considerations**: At 100+ container-backed tests, image pulls and startup dominate runtime — pre-pull images on CI agents, control pulling via `pullPolicy`, and reserve real containers for tests whose assertions actually need them
+
+Reference: [@playwright-labs/fixture-testcontainers](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-testcontainers)
+
+---
+
+### 6.12. Use Custom Fixtures for Reusable Test Setup and Teardown
 
 **Tags:** fixtures, reusability, custom-fixtures, merge, test-organization  
 **Impact:** MEDIUM (Reduces code duplication by 60-80% and improves test maintainability)
@@ -3674,7 +5774,7 @@ Reference: [Playwright Custom Fixtures](https://playwright.dev/docs/test-fixture
 
 ---
 
-### 6.7. Use test.describe for Logical Test Grouping
+### 6.13. Use test.describe for Logical Test Grouping
 
 **Tags:** organization, fixtures, describe, maintainability  
 **Impact:** MEDIUM (Improves test organization and makes test reports more readable)
@@ -4071,12 +6171,13 @@ Reference: [Playwright Test Steps](https://playwright.dev/docs/api/class-test#te
 
 **Impact: MEDIUM (transforms raw test results into queryable time-series metrics and distributed traces for CI observability)**
 
-Playwright's built-in reporter surfaces results as HTML or JSON snapshots. The `@playwright-labs/reporter-otel` package sends every test run as OpenTelemetry traces and metrics to any OTLP-compatible backend — Jaeger, Grafana Tempo, Prometheus, Datadog, Grafana Cloud. Every test becomes a span with step-level children, and built-in metrics track pass rate, duration p95, retries, and process memory without any extra code.
+Playwright's built-in reporter surfaces results as HTML or JSON snapshots. The `@playwright-labs/reporter-otel` package sends every test run as OpenTelemetry traces and metrics to any OTLP-compatible backend — Jaeger, Grafana Tempo, Prometheus, Datadog, Grafana Cloud. Every test becomes a span with step-level children, and built-in metrics track pass rate, duration p95, retries, step counts and durations by category, annotation counts, run wall-clock time, and process memory without any extra code.
 
 ## When to Use
 
 - **Use reporter-otel when**: You want long-term test health trends, flakiness dashboards, or Playwright traces in the same system as your service traces
 - **Add fixture-otel when**: Individual tests need custom business counters, latency histograms, or need to propagate a `traceparent` into the system under test
+- **Use the built-in step and run metrics when**: You need to know where suite time goes — `pw_test_step_count` / `pw_test_step_duration` are recorded for every step (nested included) with a `test.step.category` attribute, `pw_test_annotation_count` tracks tagging by `annotation.type`, and `pw_run_duration` captures wall-clock run time — all with zero code changes
 - **Required for**: Teams running CI at scale who need to answer "which tests are getting slower?" or "what's our pass rate over the last 7 days?"
 
 ## Guidelines
@@ -4088,6 +6189,9 @@ Playwright's built-in reporter surfaces results as HTML or JSON snapshots. The `
 - Use the `prefix` option to namespace your metrics when sharing a collector with other services
 - Set up the full stack (OTel Collector → Jaeger + Prometheus + Grafana) for local development using the provided Docker Compose example
 - Query pass rate and duration p95 in Grafana/Prometheus to detect degradation before it becomes a crisis
+- Group `pw_test_step_duration` by `test.step.category` (`pw:api`, `expect`, `hook`, `test.step`) to see whether actions, assertions, or hooks dominate suite time before optimizing anything
+- Alert on `pw_run_duration` for CI job duration — it is wall-clock per run, so it stays honest under parallel workers where summing per-test durations misleads
+- Slice `pw_test_annotation_count` by `annotation.type` to audit tagging discipline across suites (`issue`, `feature`, or custom types)
 
 ### Don't
 
@@ -4095,6 +6199,7 @@ Playwright's built-in reporter surfaces results as HTML or JSON snapshots. The `
 - Don't set `exportIntervalMillis` too low (< 10s) in large parallel runs — it creates unnecessary load on the collector
 - Don't skip `satisfies OtelReporterOptions` on the config object — TypeScript type checking prevents misconfigured endpoints from silently dropping data
 - Don't use HTTPS without valid certificates unless you set the appropriate Node TLS env vars
+- Don't rebuild step, annotation, or run-duration metrics with `fixture-otel` counters — the reporter records them automatically; reserve custom fixtures for business metrics the reporter cannot see
 
 ### Tool Usage Patterns
 
@@ -4102,6 +6207,8 @@ Playwright's built-in reporter surfaces results as HTML or JSON snapshots. The `
 - **Default endpoint**: `localhost:4318` (OTLP/HTTP) — standard OTel Collector port
 - **Backends tested**: Jaeger, Grafana Tempo, Grafana Cloud, Prometheus (via Collector), Datadog OTLP intake
 - **Config key options**: `host`, `port`, `protocol`, `headers`, `auth`, `prefix`, `resourceAttributes`, `env`, `exportIntervalMillis`
+- **Auto-instrumented metrics (no code required)**: `pw_test_step_count` / `pw_test_step_duration` (attrs `test.step.category`, `test.suite`, `test.project`, `browser.*`), `pw_test_annotation_count` (attrs `annotation.type`, `test.suite`), `pw_run_duration` (run wall-clock, ms histogram recorded at `onEnd`)
+- **Runtime resource attributes**: `process.runtime.name` is auto-detected as `nodejs`, `bun`, or `deno` (via `process.versions`); `process.runtime.version` plus full component versions land as `process.runtime.versions.*` (`…versions.node`, `…versions.v8`, `…versions.openssl`, `…versions.bun` under Bun, `…versions.deno` under Deno) — split dashboards by runtime when CI runners are heterogeneous
 
 ## Edge Cases and Constraints
 
@@ -4116,6 +6223,7 @@ Playwright's built-in reporter surfaces results as HTML or JSON snapshots. The `
 1. **Grafana Cloud auth**: Use `auth.username` = instance ID, `auth.password` = API key. Protocol must be `https` and port `443`.
 2. **Missing spans in Jaeger**: If spans appear in Prometheus metrics but not Jaeger, the collector is routing traces and metrics to different exporters — check collector pipeline config.
 3. **High-cardinality attributes**: Adding unique IDs (user IDs, order IDs) to `resourceAttributes` can exhaust Prometheus label space. Use span attributes via `pw_otel.*` annotations for per-test data instead.
+4. **Mixed runtimes in CI**: If some runners execute Playwright under Bun or Deno, `process.runtime.name` and `process.runtime.versions.*` (visible in Prometheus `target_info`) tell them apart — filter by runtime before comparing duration trends, because runtimes are not performance-equivalent.
 
 ### What Breaks If Ignored
 
@@ -4237,6 +6345,25 @@ sum by (test_project) (e2e_test_duration_milliseconds_sum)
 
 # Total retries (flakiness signal)
 sum(e2e_test_retries_total)
+
+# Where suite time goes — total step seconds by category
+sum by (test_step_category) (e2e_test_step_duration_milliseconds_sum) / 1000
+
+# 95th percentile step duration by category (find slow hooks or expects)
+histogram_quantile(0.95,
+  sum by (le, test_step_category) (rate(e2e_test_step_duration_milliseconds_bucket[1h]))
+)
+
+# Step counts by category
+sum by (test_step_category) (e2e_test_step_count_total)
+
+# Annotation usage by type (tagging discipline across suites)
+sum by (annotation_type) (e2e_test_annotation_count_total)
+
+# Wall-clock run duration (CI job time trend)
+histogram_quantile(0.95,
+  sum by (le) (rate(e2e_run_duration_milliseconds_bucket[1d]))
+)
 
 # Tests by browser
 sum by (browser_name) (e2e_tests_total)
@@ -4515,7 +6642,708 @@ Reference: [@playwright-labs/decorators](https://github.com/vitalics/playwright-
 
 ---
 
-### 8.3. Send Test Results to Slack with Rich Block Kit Messages via reporter-slack
+### 8.3. Push Test Metrics to Prometheus in Real Time with reporter-prometheus-remote-write
+
+**Tags:** prometheus, metrics, reporter, remote-write, grafana, monitoring, observability, ci  
+**Impact:** MEDIUM (turns ephemeral CI results into live, queryable Prometheus series for dashboards and alerting)
+
+**Impact: MEDIUM (turns ephemeral CI results into live, queryable Prometheus series for dashboards and alerting)**
+
+Playwright's HTML report is a static snapshot: it lives inside one CI build, gets archived as an artifact, and cannot answer "is this suite getting slower over the last 30 days?" The `@playwright-labs/reporter-prometheus-remote-write` package pushes every test result into Prometheus as it happens — `onTestEnd` and `onTestStepEnd` series arrive during the run, run-level aggregates flush at exit, and Node.js process stats ride along. Grafana turns that into pass-rate trends, duration heatmaps, and failure-spike alerts next to your application metrics.
+
+## When to Use
+
+- **Use this reporter when**: Your observability stack is already Prometheus + Grafana and you want test health (pass rate, duration, retries, timeouts) queryable with PromQL and alertable via Alertmanager
+- **Use this reporter when**: You want metrics *during* the run — per-test and per-step series land in Prometheus as each test finishes, not after the HTML report is uploaded
+- **Consider reporter-otel when**: You need distributed traces, or you ship telemetry to multiple backends through an OTel Collector instead of pushing straight to Prometheus
+- **Consider the HTML report when**: You only need to debug a single failed run locally — a time-series database adds no value there
+- **Required for**: Teams tracking flakiness and duration trends across branches, shards, and releases over weeks or months
+
+## Guidelines
+
+### Do
+
+- Set `serverUrl` to the full remote-write endpoint — `http://localhost:9090/api/v1/write`, not just `http://localhost:9090`
+- Start Prometheus 3.x with `--web.enable-remote-write-receiver` (on 2.x use `--enable-feature=remote-write-receiver`) — the push endpoint is off by default
+- Keep `["list"]` in the reporter array — this reporter sets `printsToStdio()` to `false`, so without `list` you get no console output
+- Use the `prefix` option (default `pw_`) to namespace metrics when several test suites share one Prometheus
+- Add static dimensions via `labels` (e.g. `{ ci: "true", branch: "main" }`) — they are applied to every series the reporter pushes
+- Pass an explicit allowlist via `env` (e.g. `{ GIT_BRANCH: process.env.GIT_BRANCH }`) so build metadata becomes the `pw_env` series
+- Type the options object with `satisfies PrometheusOptions` — TypeScript catches a missing `serverUrl` at compile time instead of at run start
+
+### Don't
+
+- Don't omit `serverUrl` — the reporter constructor throws a `TypeError` and the run never starts
+- Don't forget the receiver flag on Prometheus — without it the endpoint answers **404** and every push is lost
+- Don't pass `env: process.env` — it leaks tokens, passwords, and internal hostnames into a database your whole org can read
+- Don't put run-unique values (build IDs, timestamps, test IDs) into the `labels` option — every run becomes a new set of series and cardinality explodes; per-test identity is already on the built-in series via labels like `title`, `testId`, `location`
+- Don't create `Counter`/`Gauge` metrics without calling `.collect()` — nothing is sent until you do
+- Don't use a key literally named `name` inside `env` or `labels` — it collides with the metric-name field
+
+### Tool Usage Patterns
+
+- **Install**: `npm i @playwright-labs/reporter-prometheus-remote-write`
+- **Options** (`PrometheusOptions`): `serverUrl` (required, `string | URL`), `headers`, `auth.username` / `auth.password` (basic auth), `prefix` (default `pw_`), `labels`, `env` (default `{}` — deliberately empty for security)
+- **Endpoint**: the reporter POSTs snappy-compressed remote-write payloads to `<prometheus>/api/v1/write` — Prometheus needs no scrape job for Playwright; a self-scrape-only `prometheus.yml` is enough
+- **Custom metrics**: `Counter` and `Gauge` are re-exported from the reporter (source: `@playwright-labs/prometheus-core`); fixtures `useCounterMetric` / `useGaugeMetric` / `useGlobalCounter` / `useGlobalHistogram` live in the sibling `@playwright-labs/fixture-prometheus` package
+- **Ready-made stack**: `examples/grafana-stack` in the monorepo — `pnpm install && pnpm test:e2e` boots Prometheus + Grafana via Docker Compose, runs a metrics-generating project, then a `verify` project that queries the Prometheus HTTP API to assert the data arrived
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Run-level aggregates (`pw_tests_total_count`, `pw_tests_passed_count`, `pw_tests_failed_count`, `pw_tests_skipped_count`, `pw_tests_timed_out_count`, `pw_tests_total_duration`) are flushed **once at `onExit`** — they appear in Prometheus only after the whole run completes. Per-test and per-step series are the real-time part.
+- The remote-write receiver is **disabled by default** in Prometheus. There is no config-file toggle — it is a command-line flag.
+- Push model: Prometheus never scrapes Playwright. If Prometheus is unreachable, the metrics are simply not stored — the reporter does not buffer to disk.
+- `env` defaults to `{}` on purpose: the reporter's README states that sending **all** environment variables would make them visible to any Prometheus user.
+
+### Edge Cases
+
+1. **Prometheus version flag drift**: Prometheus 2.x used `--enable-feature=remote-write-receiver`; 3.x moved it to `--web.enable-remote-write-receiver`. Copying a 2.x compose file against a `prom/prometheus:v3.x` image silently restores the 404 behavior.
+2. **Empty series are skipped**: the reporter drains each metric and only sends unsent samples — a drained metric with no new samples produces an empty series that Prometheus rejects, and resending old samples triggers "out of order sample" rejections. Expect a metric to exist only after it recorded at least one sample.
+3. **Authenticated / multi-tenant endpoints**: for a remote Prometheus behind basic auth use `auth: { username, password }`; for gateway-style setups pass extra HTTP headers via `headers` (e.g. an org/tenant header).
+4. **Custom metrics cross worker boundaries as stdout events**: `.collect()` writes a newline-delimited JSON `{ name: "prometheus-remote-writer", payload }` line that the reporter parses in `onStdOut`. The reporter's own internal output is counted in `pw_stdout` with label `internal="true"` so you can filter it out of log-volume queries.
+
+### What Breaks If Ignored
+
+- **Without the receiver flag**: every POST to `/api/v1/write` gets a 404 and not a single series reaches Prometheus — dashboards stay empty even though the run "reported" fine
+- **Without `serverUrl`**: `TypeError` from the reporter constructor — Playwright exits before running any test
+- **HTML-only reporting**: results die with the CI artifact — no pass-rate trend, no duration p95 history, no alerting when `main` starts failing
+- **Without `labels`/`env` enrichment**: all runs from all branches land in identical series — you cannot compare `main` vs. a feature branch or staging vs. CI
+
+**Incorrect (static HTML snapshot only — nothing queryable over time):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  reporter: [
+    ["html"], // ❌ a per-build artifact — cannot trend pass rate or duration
+  ],
+});
+```
+
+**Why this fails:**
+
+- Every build produces an isolated report; there is no way to ask "which tests got slower this month?"
+- Failure spikes on `main` are discovered by someone opening the report, not by an alert
+- Duration, retry, and timeout data never reaches the same dashboards the team already watches
+
+**Correct (remote-write reporter with typed options and CI enrichment):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+import { type PrometheusOptions } from "@playwright-labs/reporter-prometheus-remote-write";
+
+export default defineConfig({
+  reporter: [
+    ["list"], // ✅ keep console output — the reporter itself prints nothing
+    [
+      "@playwright-labs/reporter-prometheus-remote-write",
+      {
+        // ✅ full remote-write path; Prometheus must run with
+        // --web.enable-remote-write-receiver (3.x) or
+        // --enable-feature=remote-write-receiver (2.x)
+        serverUrl: "http://localhost:9090/api/v1/write",
+        prefix: "pw_",
+        // ✅ static dimensions on every series — filterable in PromQL
+        labels: {
+          ci: String(Boolean(process.env.CI)),
+          branch: process.env.GIT_BRANCH ?? "local",
+        },
+        // ✅ explicit allowlist — becomes the pw_env series; never process.env
+        env: {
+          GIT_COMMIT: process.env.GIT_COMMIT,
+          BUILD_ID: process.env.BUILD_ID,
+        },
+      } satisfies PrometheusOptions,
+    ],
+  ],
+});
+```
+
+**Why this works:**
+
+- Per-test (`pw_test_duration`, `pw_test_retry_count`) and per-step (`pw_test_step_duration`) series arrive in Prometheus while the run is still executing
+- `labels` and the allowlisted `env` make every query sliceable by branch and build
+- `satisfies PrometheusOptions` turns misconfiguration into a compile error instead of a runtime `TypeError`
+
+## Common Mistakes
+
+### Mistake 1: Prometheus 3.x started without the remote-write receiver flag
+
+```yaml
+# docker-compose.yml — BROKEN against Prometheus 3.x
+services:
+  prometheus:
+    image: prom/prometheus:v3.3.0
+    ports:
+      - "9090:9090"
+    # ❌ no receiver flag — POST /api/v1/write answers 404
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+```
+
+**Why this is wrong**: The receiver is off by default. The reporter pushes every series to `/api/v1/write`, gets a 404 for each batch, and no metric is ever stored. On 2.x the flag was `--enable-feature=remote-write-receiver`; upgrading the image without updating the flag brings the 404 back.
+
+**How to fix**:
+
+```yaml
+# docker-compose.yml — Prometheus 3.x with the receiver enabled
+services:
+  prometheus:
+    image: prom/prometheus:v3.3.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    # ✅ CRITICAL: turns the remote-write endpoint on
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-remote-write-receiver"
+```
+
+### Mistake 2: Omitting `serverUrl`
+
+```typescript
+// ❌ throws TypeError before the first test runs
+reporter: [["@playwright-labs/reporter-prometheus-remote-write"]];
+```
+
+**Why this is wrong**: `serverUrl` is the only required option. The constructor validates it immediately and raises a `TypeError` telling you to set `serverUrl: 'http://localhost:9090/api/v1/write'` — the run never starts.
+
+**How to fix**:
+
+```typescript
+// ✅ always pass the full endpoint URL, typed for autocomplete
+import { type PrometheusOptions } from "@playwright-labs/reporter-prometheus-remote-write";
+
+reporter: [
+  [
+    "@playwright-labs/reporter-prometheus-remote-write",
+    {
+      serverUrl: "http://localhost:9090/api/v1/write",
+    } satisfies PrometheusOptions,
+  ],
+];
+```
+
+### Mistake 3: Sending the whole environment with `env: process.env`
+
+```typescript
+// ❌ leaks CI tokens, registry credentials, and internal hosts into Prometheus
+reporter: [
+  [
+    "@playwright-labs/reporter-prometheus-remote-write",
+    {
+      serverUrl: "http://localhost:9090/api/v1/write",
+      env: process.env, // every variable becomes a label on the pw_env series
+    },
+  ],
+];
+```
+
+**Why this is wrong**: The `env` object becomes label values on the constant-1 `pw_env` series. Prometheus is typically readable by the whole organization — `NPM_TOKEN`, `AWS_SECRET_ACCESS_KEY`, and database URLs would all be queryable. This is exactly why the option defaults to `{}`.
+
+**How to fix**:
+
+```typescript
+// ✅ allowlist only non-secret build metadata
+import os from "node:os";
+
+reporter: [
+  [
+    "@playwright-labs/reporter-prometheus-remote-write",
+    {
+      serverUrl: "http://localhost:9090/api/v1/write",
+      env: {
+        user: os.userInfo().username,
+        platform: os.platform(),
+        productVersion: process.env.MY_PRODUCT_VERSION, // e.g. 2.4.8
+      },
+    },
+  ],
+];
+```
+
+### Mistake 4: Custom metric never collected
+
+```typescript
+import { test } from "@playwright/test";
+import { Counter } from "@playwright-labs/reporter-prometheus-remote-write";
+
+const urlCalls = new Counter({ name: "url_calls" }, 0);
+
+test("counts URL calls", async ({ page }) => {
+  await page.goto("https://example.com");
+  urlCalls.inc();
+  // ❌ no .collect() — the sample stays in the worker and is never pushed
+});
+```
+
+**Why this is wrong**: Custom metrics travel from the worker to the reporter only when `.collect()` serializes the series to stdout. `inc()` alone mutates local state; `pw_url_calls` never appears in Prometheus.
+
+**How to fix**:
+
+```typescript
+// ✅ flush in an afterAll hook — or use the `using` keyword for scoped flush
+test.afterAll(() => {
+  urlCalls.collect(); // → pw_url_calls appears in Prometheus
+});
+```
+
+## Advanced Patterns
+
+### Built-in metrics reference (default `pw_` prefix)
+
+| Metric | Pushed at | What it shows |
+| --- | --- | --- |
+| `pw_tests_total_count`, `pw_tests_passed_count`, `pw_tests_failed_count`, `pw_tests_skipped_count`, `pw_tests_timed_out_count` | `onExit` | Run totals by outcome |
+| `pw_tests_total_duration` | `onExit` | Wall time of the whole run (ms) |
+| `pw_config`, `pw_project` | `onExit` (labeled at `onBegin`) | Constant-1 series carrying config labels (`workers`, `shard_current`, `shard_total`, …) and project labels (`projectName`, `timeout`, …) |
+| `pw_test`, `pw_test_duration`, `pw_test_retry_count` | `onTestEnd` | Per-test result, duration (ms), retries — labels include `title`, `suite`, `location`, `actualStatus`, `workerIndex` |
+| `pw_test_attachment_count`, `pw_test_attachment_size` | `onTestEnd` | Attachment count and size in bytes per test |
+| `pw_test_annotation_count` | `onTestEnd` | Annotations with `type` / `description` labels |
+| `pw_test_step_duration`, `pw_test_step`, `pw_test_step_error_count` | `onTestStepEnd` | Per-step duration and errors, including every `test.step` |
+| `pw_test_step_total_count`, `pw_test_step_total_duration`, `pw_test_step_total_error` | `onTestEnd` / `onExit` | Step aggregates across the run |
+| `pw_error_count`, `pw_test_errors` | `onError` | Errors with `message` / `snippet` labels |
+| `pw_stdout`, `pw_stderr` | `onStdOut` / `onStdErr` | Output volume; reporter-internal lines carry `internal="true"` |
+| `pw_node_memory_heap_used`, `pw_node_memory_rss`, `pw_node_memory_external`, `pw_node_cpu_user`, `pw_node_cpu_system`, `pw_node_os`, `pw_node_versions`, `pw_node_argv`, `pw_env` | updated on every hook, flushed at `onExit` | Node.js process stats of the Playwright main process — memory-leak and worker-load signal |
+
+### Useful PromQL once data flows
+
+```promql
+# Pass rate of the latest run (%)
+100 * pw_tests_passed_count / pw_tests_total_count
+
+# Slowest tests by duration (ms)
+topk(10, pw_test_duration)
+
+# Total duration per suite
+sum by (suite) (pw_test_duration)
+
+# Step errors accumulated over the last hour
+increase(pw_test_step_total_error[1h])
+
+# Playwright main-process heap (MB)
+pw_node_memory_heap_used / 1024 / 1024
+
+# Retry hotspots — tests that needed a retry at all
+pw_test_retry_count > 0
+```
+
+### Custom business metrics inside tests
+
+```typescript
+import { test } from "@playwright/test";
+import { Counter, Gauge } from "@playwright-labs/reporter-prometheus-remote-write";
+
+// Standalone counter shared by the whole spec file — lands as pw_e2e_page_visits
+const pageVisits = new Counter({ name: "e2e_page_visits" }, 0);
+
+test("tracks page visits and in-flight users", async ({ page }) => {
+  pageVisits.inc();
+
+  // ✅ `using` flushes via .collect() automatically on scope exit (TS 5.2+)
+  {
+    using activeUsers = new Gauge({ name: "e2e_active_users" });
+    activeUsers.set(10);
+    activeUsers.inc();
+    activeUsers.dec(2); // → pw_e2e_active_users 9
+  }
+
+  await page.goto("https://example.com");
+});
+
+test.afterAll(() => {
+  pageVisits.collect(); // standalone metrics still need an explicit flush
+});
+```
+
+**When to use this pattern**: business-level counters (API calls triggered, items rendered) that the built-in result metrics cannot express. For per-test metrics prefer the `useCounterMetric` / `useGaugeMetric` fixtures from `@playwright-labs/fixture-prometheus` — they scope creation and flush to the test lifecycle.
+
+### Local Prometheus + Grafana stack (docker-compose)
+
+```yaml
+# docker-compose.yml — minimal stack, mirrors examples/grafana-stack
+services:
+  prometheus:
+    image: prom/prometheus:v3.3.0
+    ports:
+      - "9090:9090" # Prometheus UI
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    # NOTE: --web.enable-remote-write-receiver is CRITICAL — it is what turns
+    # the push endpoint /api/v1/write on. Without it Prometheus answers 404.
+    # (Prometheus 2.x used --enable-feature=remote-write-receiver.)
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-remote-write-receiver"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    ports:
+      - "3000:3000" # Grafana UI — anonymous admin, no login
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      prometheus:
+        condition: service_healthy
+```
+
+```yaml
+# prometheus.yml — self-scrape only; all pw_* metrics arrive via remote write
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090
+```
+
+The complete runnable version lives in `examples/grafana-stack` (tests, datasource provisioning, a `generate` project that pushes metrics, a `verify` project that asserts they landed, and a `demo` project with intentional fail/timeout/retry scenarios). From that directory: `pnpm install && pnpm test:e2e`, then explore `pw_tests_total_count` at http://localhost:9090 or in Grafana's Explore view at http://localhost:3000; `pnpm infra:down` stops the stack.
+
+## Integration with Other Best Practices
+
+- **Export Test Traces and Metrics to OpenTelemetry Backends with reporter-otel** (`advanced-otel-reporter`): pick this remote-write reporter when Prometheus is the only destination and you want direct push with zero collector infrastructure; pick reporter-otel when you also need traces or multiple backends. Both accept `prefix` and an `env` allowlist, so dashboard conventions carry over.
+- **Debug Test Steps** (`debug-test-steps`): every `test.step` you add for readability also becomes a `pw_test_step_duration` series — step discipline pays off twice, in the trace viewer and in Grafana.
+- **Parallel Test Sharding** (`parallel-test-sharding`): the `pw_config` series carries `shard_current` / `shard_total` labels, so sharded CI jobs are distinguishable in Prometheus instead of blending into one run.
+- **`@playwright-labs/fixture-prometheus`**: use `useCounterMetric` / `useGaugeMetric` / `useGlobalCounter` / `useGlobalHistogram` fixtures instead of hand-managing `Counter` instances — global fixtures accumulate across tests in a worker and flush automatically at teardown.
+
+Reference: [@playwright-labs/reporter-prometheus-remote-write](https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-prometheus-remote-write)
+
+---
+
+### 8.4. Query Components with Framework-Aware Selectors (angular=, react=, vue=)
+
+**Tags:** selectors, angular, react, vue, component, locators  
+**Impact:** LOW-MEDIUM (decouples component tests from DOM structure — CSS refactors and wrapper changes stop breaking selectors)
+
+## Query Components with Framework-Aware Selectors (angular=, react=, vue=)
+
+**Impact: LOW-MEDIUM (decouples component tests from DOM structure — CSS refactors and wrapper changes stop breaking selectors)**
+
+CSS and XPath selectors that drill into a component's rendered markup couple your tests to implementation details: class names, wrapper divs, attribute placement. All of these change for reasons unrelated to the behavior under test. The `@playwright-labs/selectors-angular`, `@playwright-labs/selectors-react`, and `@playwright-labs/selectors-vue` packages register custom Playwright selector engines (`angular=`, `react=`, `vue=`) that query components by their public contract — tag/name, props/inputs, state — instead of their DOM output. Each package also ships a fixture (`$ng`, `$r`, `$v`) for typed runtime inspection of component internals and a set of framework-aware `expect` matchers.
+
+## When to Use
+
+- **Use framework-aware selectors when**: Tests target Angular, React, or Vue components and currently break on CSS renames, added wrapper elements, or `data-testid` churn
+- **Use the `$ng` / `$r` / `$v` fixtures when**: A test needs to read component internals at runtime — Angular inputs/outputs/signals, React props/state/context, Vue props/setup state/Options API data — without writing `page.evaluate` boilerplate
+- **Consider alternatives when**: The app is server-rendered without a client framework, the test runs against a production build (all three engines require development builds), or the target is plain static markup — use role-based locators there
+- **Required for**: Component-heavy suites where selectors should describe what the component *is*, not how it happens to render today
+
+## Guidelines
+
+### Do
+
+- Register the engine once per worker — or import the bundled `test` from the package and let the fixture auto-register it
+- Query by the component's public contract: tag name and `@Input()` in Angular, component name and props in React, component name and props in Vue
+- Use nested property paths (`[user.role="admin"]`) instead of flattening data into `data-*` attributes just to make it selectable
+- Import the extended `expect` from the package to get framework-aware matchers with descriptive failure messages
+- Narrow with `.first()` / `.last()` / `.nth(n)` exactly as with standard locators — the fixture wrappers mirror the Playwright API
+- Keep using standard Playwright locators (`getByRole`, `getByText`) for user-visible behavior; use framework selectors where the component boundary is the thing under test
+
+### Don't
+
+- Don't write XPath into component internals (`.//div[contains(@class,'btn')]`) — it breaks on every styling pass
+- Don't add `data-testid` or `data-*` attributes solely to expose state the framework already holds — query the component instead
+- Don't run these engines against production builds — Angular strips `window.ng`, bundlers strip React fiber metadata, Vue strips `_instance`/`subTree`; selectors return empty results
+- Don't assert a plain `@Output() EventEmitter` value with `toBeNgOutput` — it only reads `model()` signals; use `toHaveNgOutput` for existence
+- Don't reference hook state by variable name in React function components — names are not preserved at runtime; use the numeric hook index (`state.0`)
+
+### Tool Usage Patterns
+
+- **Install**: `npm install -D @playwright-labs/selectors-angular` / `selectors-react` / `selectors-vue` (requires `@playwright/test ^1.57.0`; Angular 9+, React 16+, Vue 3)
+- **Engines**: `AngularEngine`, `ReactEngine`, `VueEngine` — pass to `selectors.register('angular' | 'react' | 'vue', Engine)`
+- **Fixtures**: `import { test } from '@playwright-labs/selectors-*'` gives `$ng` / `$r` / `$v` and auto-registers the engine per worker
+- **Matchers (Angular)**: `toBeNgComponent()`, `toHaveNgInput(name)`, `toHaveNgOutput(name)`, `toBeNgInput(name, value)`, `toBeNgOutput(name, value)`, `toHaveNgSignal(name)`, `toBeNgSignal(name, value)`, `toBeNgRouterOutlet()`, `toBeNgIf(condition?)`, `toBeNgFor()`
+- **Matchers (React)**: `toBeReactComponent()`, `toHaveReactProp(name, value?)`, `toBeReactProp(name, value)`, `toHaveReactState(path, value?)`, `toBeReactState(path, value)`, `toHaveReactContext(name, value?)`, `toMatchReactSnapshot(html)`
+- **Matchers (Vue)**: `toBeVueComponent()`, `toHaveVueProp(name, value?)`, `toBeVueProp(name, value)`, `toHaveVueSetup(path, value?)`, `toBeVueSetup(path, value)`, `toHaveVueData(path, value?)`, `toBeVueData(path, value)`, `toMatchVueSnapshot(html)`
+
+## Selector Syntax by Framework
+
+All three engines share the CSS attribute-selector convention: `=` exact, `*=` contains, `^=` starts with, `$=` ends with, `|=` exact-or-hyphen-prefixed, `~=` word in list, `/regex/flags`, `i` flag for case-insensitive, bare `[prop]` for truthy, chained `[a][b]` blocks for logical AND.
+
+```typescript
+// Angular — component tag is the lowercase tag from @Component({ selector: 'app-button' })
+// Matches @Input() values and any public property; nested paths traverse the instance
+page.locator('angular=app-button[label="Submit"]');
+page.locator('angular=app-user-card[user.role="admin"]');
+page.locator('angular=app-button[type="danger"][disabled]');
+
+// React — component display name; sources: props (default), state, context
+page.locator('react=Button[props.label="Submit"]');
+page.locator('react=Button[label="Submit"]');          // same — props is the default source
+page.locator('react=Counter[state.0=5]');              // first useState hook
+page.locator('react=ThemedButton[context.theme="dark"]'); // class component context
+
+// Vue — component name; sources: props (default), setup (Composition API), data (Options API)
+page.locator('vue=Button[variant="danger"][disabled=true]');
+page.locator('vue=Counter[setup.count=0]');            // refs auto-unwrapped
+page.locator('vue=OptionsCounter[data.count=5]');
+```
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- **Development builds only.** Angular requires the `window.ng` DevTools API (present in `ng serve` / dev builds, or re-attach via `enableDebugTools` in `main.ts`). React requires fiber metadata (`__reactFiber$<hash>` / `_reactInternals`) that webpack/Vite strip under `NODE_ENV=production`. Vue requires `__vue_app__`, `app._instance`, and `subTree`, which production builds remove. Build your e2e target in development mode.
+- **Vue 3 only** for `selectors-vue` (tested on 3.4+); Vue 2 is not supported.
+- React `context()` and `toHaveReactContext` work only for **class components** (`static contextType` / `contextTypes`) — `useContext` values have no stable identifier in the fiber tree.
+- React function-component state is exposed as a numerically indexed object by hook declaration order; only `useState` and `useReducer` hooks are counted (effect, ref, memo, and context hooks are skipped).
+
+### Edge Cases
+
+1. **HOCs without own DOM nodes (React/Vue)**: a Higher-Order Component that renders only children maps to the first DOM element of its inner tree, so `$r(...).props()` may resolve the inner component's fiber. The `react=OuterHOC[props.x=1]` selector itself is unaffected — it matches against the HOC's own props.
+2. **`React.memo` / `forwardRef`**: matched by the wrapped component's display name (`React.memo(Button)` is `react=Button`); an explicit `displayName` on the wrapper takes precedence.
+3. **Angular model vs. emitter outputs**: `toBeNgOutput(name, value)` reads the current value of a `model()` signal only. On a plain `EventEmitter` output it fails with a descriptive error pointing to `toHaveNgOutput`.
+4. **Structural directives (Angular)**: `NgIf`/`NgForOf` live on the `<ng-template>` anchor, not on rendered content — target the template element with `toBeNgIf()` / `toBeNgFor()`, not the projected `li`.
+5. **Vue Composition API `inject()`**: values injected inside `<script setup>` are visible as setup state (`setup.themeName`); Options API `inject` is not separately exposed.
+6. **React 18 concurrent features**: the engine reads the committed fiber tree — it reflects painted state, not in-progress `useTransition`/`useDeferredValue` renders.
+
+### What Breaks If Ignored
+
+- **Against production builds**: every `angular=`/`react=`/`vue=` query returns zero elements — tests fail with opaque "locator resolved to 0 elements" timeouts instead of a clear configuration error
+- **With CSS-into-internals selectors**: a designer renaming `btn-primary` or a developer adding a wrapper `<div>` breaks tests that have nothing to do with the changed styling
+- **With `data-testid` inflation**: components accumulate test-only attributes that ship to users and drift out of sync with the real state they mirror
+
+**Incorrect (CSS/XPath through component internals + manual fiber digging):**
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test('submit button state', async ({ page }) => {
+  // ❌ Breaks when btn-primary is renamed, a wrapper is added, or the
+  //    <button> migrates into a child component
+  await page.locator('.user-form > div.actions button.btn-primary:not([disabled])').click();
+
+  // ❌ XPath into rendered markup — no connection to the component contract
+  await page.locator('//app-user-card//span[contains(@class,"role") and text()="admin"]').click();
+
+  // ❌ Manual fiber traversal: verbose, untyped, hash-suffixed key changes per build
+  const label = await page.evaluate((el) => {
+    const key = Object.keys(el).find((k) => k.startsWith('__reactFiber$'));
+    return (el as any)[key]?.return?.memoizedProps?.label;
+  }, await page.locator('button').elementHandle());
+
+  // ❌ State mirrored into the DOM purely so tests can see it
+  await expect(page.locator('[data-count="5"]')).toBeVisible();
+});
+```
+
+**Why this fails:**
+- Class names and nesting are implementation details — they change on styling refactors that do not touch behavior, producing red tests with zero signal
+- `page.evaluate` fiber digging is untyped and depends on React's internal key naming, which is not a public API guarantee
+- `data-count`-style attributes duplicate component state into the DOM; when the two drift apart the test asserts a lie
+
+**Correct (framework-aware engines + runtime inspection fixtures):**
+
+```typescript
+// Angular — import the bundled test to get $ng (engine auto-registers per worker)
+import { test } from '@playwright-labs/selectors-angular';
+import { expect } from '@playwright-labs/selectors-angular';
+
+test('submit button state', async ({ $ng }) => {
+  // ✅ Targets the component contract: tag + @Input — survives CSS refactors
+  const button = $ng('angular=app-button[label="Submit"][disabled=false]');
+  await button.click();
+
+  // ✅ Reads inputs and signals directly from the component instance
+  expect(await $ng('app-counter').first().signal<number>('count')).toBe(5);
+  await expect($ng('app-button').first()).toBeNgComponent();
+  await expect($ng('angular=app-button[label="Submit"]')).toBeNgInput('label', 'Submit');
+});
+```
+
+```typescript
+// React
+import { test } from '@playwright-labs/selectors-react';
+import { expect } from '@playwright-labs/selectors-react';
+
+test('counter increments', async ({ $r }) => {
+  // ✅ Queries the first useState hook value — no data-count attribute needed
+  const counter = $r('react=Counter[state.0=5]');
+  await counter.locator('button').last().click(); // ReactHtmlElement extends Locator
+
+  // ✅ Typed introspection replaces page.evaluate fiber digging
+  expect(await $r('react=Button').prop<string>('label')).toBe('Submit');
+  await expect(counter).toBeReactState('0', 6);
+  await expect($r('react=UserCard[props.user.role="admin"]')).toBeReactProp('user', {
+    name: 'Alice',
+    role: 'admin',
+  });
+});
+```
+
+```typescript
+// Vue
+import { test } from '@playwright-labs/selectors-vue';
+import { expect } from '@playwright-labs/selectors-vue';
+
+test('counter increments', async ({ $v }) => {
+  // ✅ Composition API setup state, refs auto-unwrapped
+  const counter = $v('vue=Counter[setup.count=0]');
+  await counter.locator('button').last().click();
+
+  await expect($v('vue=Counter').first()).toBeVueSetup('count', 1);
+  await expect($v('vue=Button').first()).toHaveVueProp('variant', 'danger');
+  // ✅ Options API data via the data. source
+  await expect($v('vue=OptionsCounter')).toHaveVueData('count', 0);
+});
+```
+
+**Why this works:**
+- The component name and its prop/input contract change together with the feature — a CSS refactor or a new wrapper element does not touch the selector
+- Fixtures return typed values (`input<T>`, `prop<T>`, `state<T>`, `setup<T>`) instead of `any` from `page.evaluate`
+- No test-only attributes are added to production markup
+- Matchers fail with messages listing available inputs/outputs/signals or props, so debugging starts from the component's actual shape
+
+## Common Mistakes
+
+### Mistake 1: Registering the engine in every spec file
+
+```typescript
+// ❌ Repeated in each spec — noise, and easy to forget in the newest file
+import { selectors } from '@playwright/test';
+import { ReactEngine } from '@playwright-labs/selectors-react';
+selectors.register('react', ReactEngine);
+```
+
+**Why this is wrong**: `selectors.register` must run once per worker before any browser context is created. Scattering it across specs is redundant and silently missing from any file that forgets it.
+
+**How to fix**:
+
+```typescript
+// ✅ Import the bundled test — the fixture auto-registers the engine per worker
+import { test } from '@playwright-labs/selectors-react';
+
+// ✅ Or register once in a shared setup file imported by playwright.config.ts
+// tests/setup.ts
+import { selectors } from '@playwright/test';
+import { ReactEngine } from '@playwright-labs/selectors-react';
+selectors.register('react', ReactEngine);
+```
+
+### Mistake 2: Running framework selectors against a production build
+
+```typescript
+// playwright.config.ts — ❌ webServer builds the app for production
+export default defineConfig({
+  webServer: {
+    command: 'npm run build && npm run start', // NODE_ENV=production strips fiber metadata
+    url: 'http://localhost:3000',
+  },
+});
+```
+
+**Why this is wrong**: all three engines read framework internals (`window.ng`, `__reactFiber$`, `__vue_app__`) that production builds strip. Every query returns empty and the failure looks like a missing element, not a misconfiguration.
+
+**How to fix**: serve a development build to the e2e suite (`ng serve --configuration=development`, `npm run dev`), or for Angular explicitly re-attach debug tools:
+
+```typescript
+// main.ts (Angular) — only if a production bundle must be tested
+import { enableDebugTools } from '@angular/platform-browser';
+
+bootstrapApplication(AppComponent).then((appRef) => {
+  if (environment.production) enableDebugTools(appRef.components[0]);
+});
+```
+
+### Mistake 3: Asserting function-component state by variable name (React)
+
+```typescript
+// ❌ 'count' is a source-level name — it does not exist at runtime
+await expect($r('react=Counter').first()).toBeReactState('count', 5);
+```
+
+**Why this is wrong**: React does not preserve hook variable names. Function-component state is indexed by hook declaration order.
+
+**How to fix**:
+
+```typescript
+// const [count] = useState(0);  → index "0"
+// const [name]  = useState(''); → index "1"
+await expect($r('react=Counter').first()).toBeReactState('0', 5);
+page.locator('react=Counter[state.0=5]');
+```
+
+## Advanced Patterns
+
+### Imperative state mutation + change detection (Angular)
+
+```typescript
+import { test } from '@playwright-labs/selectors-angular';
+import { expect } from '@playwright/test';
+
+test('reflects imperative mutation', async ({ $ng }) => {
+  const counter = $ng('app-counter').first();
+  // After mutating component state imperatively, re-run change detection
+  await counter.detectChanges();
+  await expect(counter).toContainText('0');
+
+  // Discover the component's actual shape before writing assertions
+  const inputs = await $ng('app-button').first().inputs();   // ['label', 'disabled', 'type']
+  const outputs = await $ng('app-button').first().outputs(); // ['clicked']
+  const signals = await counter.signals();                   // ['count']
+  expect(inputs).toContain('label');
+});
+```
+
+### Combining frameworks on one page
+
+The engines coexist — register each one (or merge the bundled tests) and mix freely with standard locators:
+
+```typescript
+import { mergeTests } from '@playwright/test';
+import { test as angularTest } from '@playwright-labs/selectors-angular';
+import { test as reactTest } from '@playwright-labs/selectors-react';
+
+export const test = mergeTests(angularTest, reactTest);
+
+test('hybrid micro-frontend page', async ({ page, $ng, $r }) => {
+  await $r('react=SearchBar[props.placeholder="Search"]').fill('shoes');
+  await expect(page.getByRole('list')).toBeVisible(); // ✅ standard locator for behavior
+  await expect($ng('angular=app-product-card').first()).toBeNgComponent();
+});
+```
+
+**When to use this pattern**: micro-frontend shells, incremental framework migrations, and pages embedding a widget built on another stack.
+
+## When CSS and Role Locators Are Still the Right Tool
+
+Framework selectors are a complement, not a replacement. Keep standard locators for:
+
+- **User-visible behavior**: `getByRole('button', { name: 'Submit' })` asserts what the user perceives — accessible name and role — which component queries cannot express
+- **Static, non-component markup**: headings, footers, prose, layout containers — there is no component boundary to query
+- **Production-smoke suites**: anything running against a production bundle, where all three engines are blind by design
+- **Cross-framework pages**: role/text locators are framework-agnostic and keep working through a rewrite from one stack to another
+
+A sound default: role-based locators for flows, framework selectors for component contract and state assertions.
+
+## Integration with Other Best Practices
+
+- **locator-role-based**: role locators verify the accessibility contract; `angular=`/`react=`/`vue=` verify the component contract — use both, each where it is strongest
+- **stable-auto-waiting**: framework-engine locators are standard Playwright locators — auto-waiting, retry-ability, and web-first assertions apply unchanged
+- **fixture-merge-tests-expects**: `mergeTests` / `mergeExpects` combine the bundled `test`/`expect` exports of several selector packages (plus other fixture packages) into one shared fixture module
+- **Scale considerations**: in a 100+ test suite, prefer one shared `tests/setup.ts` registration (or the auto-registering fixtures) over per-file `selectors.register` calls; keep framework selectors out of page objects shared with production-smoke tests, since those run where the engines cannot
+
+Reference: [@playwright-labs/selectors-angular](https://github.com/vitalics/playwright-labs/tree/main/packages/selectors-angular) · [@playwright-labs/selectors-react](https://github.com/vitalics/playwright-labs/tree/main/packages/selectors-react) · [@playwright-labs/selectors-vue](https://github.com/vitalics/playwright-labs/tree/main/packages/selectors-vue)
+
+---
+
+### 8.5. Send Test Results to Slack with Rich Block Kit Messages via reporter-slack
 
 **Tags:** slack, reporter, notifications, block-kit, ci, on-failure, webhooks, bot-token  
 **Impact:** LOW (keeps teams informed of CI failures in their existing communication channel without checking dashboards)
@@ -4782,7 +7610,7 @@ Reference: [@playwright-labs/reporter-slack](https://github.com/vitalics/playwri
 
 ---
 
-### 8.4. Send Test Run Reports via Email with React Email Templates via reporter-email
+### 8.6. Send Test Run Reports via Email with React Email Templates via reporter-email
 
 **Tags:** email, reporter, notifications, react-email, nodemailer, ci, on-failure, html-template  
 **Impact:** LOW (delivers structured test reports to stakeholders who don't have CI access)
@@ -5071,7 +7899,323 @@ Reference: [@playwright-labs/reporter-email](https://github.com/vitalics/playwri
 
 ---
 
-### 8.5. Use API Mocking for Reliable and Fast Tests
+### 8.7. Type-Safe SQL in Tests with fixture-sql and ts-plugin-sql
+
+**Tags:** sql, sqlite, postgres, mysql, type-safety, fixtures, ts-plugin  
+**Impact:** LOW-MEDIUM (catches SQL mistakes at compile time and eliminates leaked connections in database-backed tests)
+
+**Impact: LOW-MEDIUM (catches SQL mistakes at compile time and eliminates leaked connections in database-backed tests)**
+
+End-to-end tests that touch a database usually fail in two boring ways: a query string with a typo that only blows up at runtime, and a connection opened in `beforeEach` that never closes because the test threw before `afterEach` ran. The three-package SQL system fixes both. `@playwright-labs/sql-core` provides a typed `sql` function whose `SqlStatement<P>` phantom brand encodes the parameter count at the type level — structurally invalid SQL resolves to `never` at compile time. `@playwright-labs/fixture-sql` wires connections into Playwright's fixture lifecycle so every connection auto-closes, even on failure. `@playwright-labs/ts-plugin-sql` adds schema-aware autocomplete, diagnostics, and hover inside your editor, driven by a `db-types.ts` file generated from your live database via the `sql-core pull` CLI.
+
+## When to Use
+
+- **Use fixture-sql when**: Any test reads or writes a real database — seeding data, asserting persisted state, or verifying migrations
+- **Use `sql("…")` / `sql(["…"])` when**: You want the compiler to validate SQL structure and enforce the params array length before the test ever runs
+- **Use the tagged template `` sql`…` `` when**: You want editor syntax highlighting and ts-plugin-sql completions, and compile-time param checking is not needed (the template form returns plain `string`)
+- **Add ts-plugin-sql when**: The team writes SQL by hand and you want table/column autocomplete and structural diagnostics inside the editor
+- **Consider alternatives when**: Tests only stub HTTP or use an in-memory app — a database fixture is overhead you do not need
+- **Required for**: Suites where a leaked connection exhausts the database pool in CI, or where schema drift between the app and test queries causes runtime-only failures
+
+## Guidelines
+
+### Do
+
+- Import `test` and `expect` from `@playwright-labs/fixture-sql` and set the adapter once per file: `test.use({ sqlAdapter: pgAdapter(url) })`
+- Use `sql("…")` or `sql(["…"])` for any query with parameters — the `SqlStatement<P>` brand makes TypeScript enforce the params tuple
+- Generate row types from the live database with `pnpm sql-core pull --adapter <sqlite|pg|mysql> --url <url> --out ./src/db-types.ts` and pass them to `db.query<UsersRow>(...)`
+- Point ts-plugin-sql's `schemaFile` option at the same generated file so editor autocomplete and your test types never drift apart
+- Re-run the `pull` CLI in CI (or on schema migration) to keep generated types in sync with the real schema
+- Use `useSql(adapter)` when a test needs a second connection — it is registered for automatic teardown like the primary `sql` fixture
+- Prefer `sqliteAdapter(':memory:')` for the fastest possible isolation — every test gets a brand-new database with zero cleanup
+
+### Don't
+
+- Don't concatenate values into query strings — use `?` (SQLite/MySQL) or `$1, $2, …` (PostgreSQL) placeholders with a params array
+- Don't manage connections with `beforeEach`/`afterEach` — a mid-test failure skips your `close()` and leaks the connection
+- Don't expect compile-time validation from the tagged template form `` sql`…` `` — TypeScript infers `TemplateStringsArray` for tagged templates, so it always returns `string`
+- Don't use `$N` placeholders out of order — `$3` without `$1` and `$2` resolves to `never` at compile time by design
+- Don't run `pnpm sql-core pull` with `sql-core` installed only as a transitive dependency — pnpm links bins of direct dependencies only, so install it as a direct devDependency
+- Don't hand-write row interfaces that duplicate the schema — they go stale silently; generate them with the `pull` CLI instead
+
+### Tool Usage Patterns
+
+- **Install**: `pnpm add -D @playwright-labs/fixture-sql @playwright-labs/sql-core @playwright-labs/ts-plugin-sql` plus the driver you use — `better-sqlite3 >=9.0.0`, `pg >=8.0.0`, or `mysql2 >=3.0.0`
+- **Adapters**: `sqliteAdapter` from `@playwright-labs/fixture-sql/sqlite`, `pgAdapter` from `@playwright-labs/fixture-sql/pg`, `mysqlAdapter` from `@playwright-labs/fixture-sql/mysql` — all accept a connection URL or a config object
+- **Fixtures**: `sql: SqlClient` (auto-opened/auto-closed), `useSql(adapter): Promise<SqlClient>` (extra connections), `sqlAdapter: SqlAdapter` (configuration option)
+- **Type utilities**: `SQLParams<S>`, `ValidSQL<S>`, `InferSQLParams<S>`, `SqlStatement<P>` — re-exported from `@playwright-labs/fixture-sql`
+- **Client API**: `db.query<T>(stmt, params)` → `{ rows, rowCount, command? }`; `db.execute(stmt, params)`; `db.close()`
+- **CLI**: `pnpm sql-core pull --adapter sqlite|pg|mysql --url <url> [--out <file>]` (short flags `-a`, `-u`, `-o`); npm users run `npx playwright-labs-sql-core pull ...`
+- **Editor plugin**: `{ "name": "@playwright-labs/ts-plugin-sql", "tag": "sql", "schemaFile": "./src/db-types.ts" }` in `tsconfig.json` `compilerOptions.plugins`
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- The tagged template form cannot be type-checked — TypeScript always widens tagged template arguments to `TemplateStringsArray`, so literal-type inference is impossible. This is a language limitation, not a package bug. Use `sql("…")` or `sql(["…"])` when validation matters.
+- The compile-time validator models a subset of SQL grammar: `SELECT` requires `FROM`, `UPDATE` requires a table and `SET`, `DELETE` requires `FROM` and a table, `INSERT` requires `INTO` plus `VALUES` or a sub-`SELECT`, `CREATE` requires `TABLE` and a name. Optional clauses (`JOIN`, `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT`, `OFFSET`) are accepted after the required ones. Exotic statements outside this grammar resolve to `never`.
+- ts-plugin-sql runs inside `tsserver` — it provides editor features only and has no effect on `tsc` builds or CI type-checking. Compile-time safety comes from `sql-core`'s type system, not from the plugin.
+- All three database drivers are optional peer dependencies — a missing driver surfaces as an import error, not a config warning. Install exactly the one you use.
+
+### Edge Cases
+
+1. **Multi-element array form**: `sql(["SELECT * FROM ", " WHERE id = ?"])` returns plain `string` — a multi-element array means dynamic SQL, so validation is skipped intentionally.
+2. **VS Code not showing completions**: The plugin only loads when the editor uses the workspace TypeScript version. Run **TypeScript: Select TypeScript Version → Use Workspace Version**.
+3. **`schemaFile` vs `schema`**: When both options are present in the plugin config, `schemaFile` wins. Use the inline `schema` object only for small projects without a live database to introspect.
+4. **CLI prints to stdout**: Without `--out`, generated types go to stdout — pipe or redirect them, or always pass `--out ./src/db-types.ts` in scripts.
+
+### What Breaks If Ignored
+
+- **Raw string queries**: A missing `FROM`, a wrong column name, or a mismatched params array fails at runtime — in CI, minutes after the commit, instead of at the keystroke
+- **Manual connection management**: A test that throws before `afterEach` leaks its connection; under parallel workers this exhausts the database pool and fails unrelated tests with timeout errors
+- **Stale hand-written types**: The app adds a column or changes a nullability, tests keep compiling against the old shape, and `rows[0].email` is `undefined` at runtime with no type error
+
+**Incorrect (raw strings, manual lifecycle, no generated types):**
+
+```typescript
+import { test, expect } from "@playwright/test";
+import pg from "pg";
+
+let client: pg.Client;
+
+test.beforeEach(async () => {
+  client = new pg.Client(process.env.DATABASE_URL);
+  await client.connect();
+});
+
+test.afterEach(async () => {
+  await client.end(); // ❌ never runs if the test throws before teardown is reached in CI worker shutdown
+});
+
+test("loads a user", async () => {
+  const id = 1;
+  // ❌ string concatenation — SQL injection vector, no param checking
+  const res = await client.query(`SELECT * FROM users WHERE id = ${id}`);
+  // ❌ rows is `any[]` — a renamed column compiles fine and fails at runtime
+  expect(res.rows[0].emial).toBe("alice@example.com");
+});
+```
+
+**Why this fails:**
+- `SELECT * FROM users WHERE id = ${id}` is an injection vector and bypasses every parameter check
+- `res.rows` is untyped — `emial` (typo) compiles cleanly and produces `undefined` at runtime
+- `beforeEach`/`afterEach` lifecycle breaks the moment a test throws mid-query or a worker is recycled — the connection leaks
+- Nothing ties the test's row shape to the real schema; drift is invisible
+
+**Correct (fixture lifecycle + typed `sql` + generated row types):**
+
+```typescript
+// Generate types once (and on every schema change):
+//   pnpm sql-core pull --adapter pg --url postgresql://user:pass@localhost/mydb --out ./src/db-types.ts
+import { test, expect } from "@playwright-labs/fixture-sql";
+import { pgAdapter } from "@playwright-labs/fixture-sql/pg";
+import { sql } from "@playwright-labs/fixture-sql";
+import type { UsersRow } from "./db-types.js";
+
+test.use({ sqlAdapter: pgAdapter(process.env.DATABASE_URL!) });
+
+test("loads a user", async ({ sql: db }) => {
+  // ✅ compile-time validated: correct structure, exactly one param enforced
+  const { rows } = await db.query<UsersRow>(
+    sql("SELECT id, name, email FROM users WHERE id = $1"),
+    [1],
+  );
+  // ✅ rows is UsersRow[] — a typo'd property is a compile error
+  expect(rows[0]!.email).toBe("alice@example.com");
+  // ✅ connection closes automatically even if the expect above throws
+});
+```
+
+**Why this works:**
+- `sql("…")` returns `SqlStatement<[unknown]>` — calling `db.query(stmt)` without params, or with two params, is a compile error
+- Invalid SQL (`sql("SELECT * WHERE id = $1")` — missing `FROM`) resolves to `never` and fails at the call site, before any test runs
+- The `sql` fixture is owned by Playwright's teardown — the connection closes even on failure, and each test gets its own client
+- `UsersRow` is generated from the live database by the `pull` CLI, so types track the real schema
+
+## Common Mistakes
+
+### Mistake 1: Expecting type safety from the tagged template form
+
+```typescript
+import { sql } from "@playwright-labs/fixture-sql";
+
+// ❌ returns plain string — no param checking, no structural validation
+const stmt = sql`SELECT * FROM users WHERE id = ?`;
+await db.query(stmt); // compiles fine — missing param not caught
+```
+
+**Why this is wrong**: TypeScript infers `TemplateStringsArray` for tagged template arguments, which prevents literal-type inference. The template form always returns `string`, so the typed `query` overloads never engage.
+
+**How to fix**:
+
+```typescript
+// ✅ plain string form returns SqlStatement<[unknown]>
+const stmt = sql("SELECT * FROM users WHERE id = ?");
+await db.query(stmt, [1]); // params enforced at compile time
+
+// Array form is identical — useful when SQL is stored separately
+const stmt2 = sql(["SELECT * FROM users WHERE id = ?"]);
+```
+
+Use the tagged template form deliberately — for editor syntax highlighting and ts-plugin-sql completions — not by accident.
+
+### Mistake 2: Leaking connections with manual lifecycle
+
+```typescript
+test("two databases", async () => {
+  const primary = await pgAdapter(primaryUrl).create();
+  const replica = await pgAdapter(replicaUrl).create();
+  // ❌ if anything below throws, neither connection closes
+  await primary.execute("INSERT INTO events (id, type) VALUES ($1, $2)", [1, "login"]);
+  const { rows } = await replica.query("SELECT * FROM events");
+  expect(rows).toHaveLength(1);
+  await primary.close();
+  await replica.close();
+});
+```
+
+**Why this is wrong**: The first assertion failure or unexpected throw skips every `close()` below it. Under `fullyParallel` with several workers, leaked connections accumulate until the database refuses new ones.
+
+**How to fix**:
+
+```typescript
+test("two databases", async ({ useSql }) => {
+  // ✅ both connections registered for automatic teardown
+  const primary = await useSql(pgAdapter(primaryUrl));
+  const replica = await useSql(pgAdapter(replicaUrl));
+
+  await primary.execute(
+    sql("INSERT INTO events (id, type) VALUES ($1, $2)"),
+    [1, "login"],
+  );
+  const { rows } = await replica.query(sql("SELECT * FROM events"));
+  expect(rows).toHaveLength(1);
+});
+```
+
+### Mistake 3: `pnpm sql-core` command not found
+
+```bash
+# ❌ fails — sql-core is present only as a transitive dependency of fixture-sql
+pnpm sql-core pull --adapter sqlite --url ./dev.db --out ./src/db-types.ts
+# ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command "sql-core" not found
+```
+
+**Why this is wrong**: pnpm only links bins of *direct* dependencies into `node_modules/.bin`. `fixture-sql` depends on `sql-core`, but that does not expose its CLI to your scripts.
+
+**How to fix**:
+
+```bash
+# ✅ install as a direct devDependency
+pnpm add -D @playwright-labs/sql-core
+pnpm sql-core pull --adapter sqlite --url ./dev.db --out ./src/db-types.ts
+
+# npm users can skip the explicit install:
+npx playwright-labs-sql-core pull --adapter sqlite --url ./dev.db --out ./src/db-types.ts
+```
+
+### Mistake 4: Gaps in `$N` parameter sequences
+
+```typescript
+// ❌ resolves to never — $1 and $2 are missing, so the statement is rejected
+const stmt = sql("SELECT * FROM users WHERE a = $1 AND c = $3");
+```
+
+**Why this is wrong**: The type system requires `$N` placeholders to be sequential — `$3` without `$2` means the params tuple is ambiguous, so `SQLParams<S>` returns `never` and the call site fails to compile. This is the validator working as designed, not a false positive.
+
+**How to fix**:
+
+```typescript
+// ✅ sequential placeholders compile and enforce a 3-element params tuple
+const stmt = sql("SELECT * FROM users WHERE a = $1 AND b = $2 AND c = $3");
+await db.query(stmt, ["x", "y", "z"]);
+```
+
+## Advanced Patterns
+
+### Full pipeline: live schema → generated types → editor intelligence → typed tests
+
+```bash
+# 1. Introspect the live database (run on schema changes / in CI)
+pnpm sql-core pull --adapter pg --url $DATABASE_URL --out ./src/db-types.ts
+```
+
+```json
+// 2. tsconfig.json — enable schema-aware editor features
+{
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "@playwright-labs/ts-plugin-sql",
+        "tag": "sql",
+        "schemaFile": "./src/db-types.ts"
+      }
+    ]
+  }
+}
+```
+
+```typescript
+// 3. tests/users.spec.ts — compile-time safety plus editor autocomplete
+import { test, expect } from "@playwright-labs/fixture-sql";
+import { pgAdapter } from "@playwright-labs/fixture-sql/pg";
+import { sql } from "@playwright-labs/ts-plugin-sql"; // same sql function, re-exported
+import type { UsersRow } from "../src/db-types.js";
+
+test.use({ sqlAdapter: pgAdapter(process.env.DATABASE_URL!) });
+
+test("typed query with IDE support", async ({ sql: db }) => {
+  const { rows, rowCount } = await db.query<UsersRow>(
+    sql("SELECT id, name, email FROM users WHERE id = $1"),
+    [1],
+  );
+  expect(rowCount).toBe(1);
+  expect(rows[0]!.name).toBe("Alice");
+});
+```
+
+The generated file declares one interface per table plus a `Tables` map keyed by table name — import the row types in tests and point `schemaFile` at the same file, so the editor and the compiler always agree.
+
+### Per-test schema isolation on a shared PostgreSQL instance
+
+```typescript
+import { randomUUID } from "node:crypto";
+import { test } from "@playwright-labs/fixture-sql";
+import { pgAdapter } from "@playwright-labs/fixture-sql/pg";
+
+test.use({ sqlAdapter: pgAdapter(process.env.DATABASE_URL!) });
+
+test.beforeEach(async ({ sql: db }) => {
+  const schema = `test_${randomUUID().replace(/-/g, "")}`;
+  await db.execute(`CREATE SCHEMA ${schema}`);
+  await db.execute(`SET search_path TO ${schema}`);
+});
+```
+
+**When to use this pattern**: Suites running against one shared Postgres in CI where tests must not see each other's rows. For SQLite, prefer `sqliteAdapter(':memory:')` — isolation is free. For a file-backed SQLite seeded before the suite, use `sqliteAdapter('./fixtures/seed.db')`.
+
+## Integration with Other Best Practices
+
+- **Ensure Test Isolation for Parallel Execution**: The `sql` fixture gives every test its own client by default, which is the database half of test isolation. Combine with per-test schemas (above) when the database itself is shared, and never share a module-level `SqlClient` between tests.
+- **Use Custom Fixtures for Reusable Test Setup and Teardown**: Extend the `fixture-sql` `test` object with your own fixtures (seed helpers, row factories) instead of wrapping connections in custom `beforeEach` blocks — you keep auto-close and add reuse on top.
+- **Use test.describe for Logical Test Grouping**: Override `sqlAdapter` per describe block — e.g. a read-only suite pointed at a replica — while the rest of the file uses the primary database.
+- **Scale considerations**: At 100+ database-backed tests, connection churn dominates. Keep one adapter per file via `test.use()`, prefer `:memory:` SQLite where the dialect allows, and add the `pull` CLI to CI so schema drift fails the type-check job before the e2e job starts.
+
+## Expected Input/Output
+
+**Input scenario**: A test queries `users` with a parameterised `SELECT` using `sql("…")` and a generated `UsersRow` type.
+
+**Expected outcome**: TypeScript enforces the params tuple, `db.query<UsersRow>` returns `rows: UsersRow[]`, and the connection closes automatically after the test — pass or fail.
+
+**Failure scenario**: The query is written as a raw template string, or the params array is missing.
+
+**Expected error**: For `sql("SELECT * WHERE id = ?")` — a compile error at the call site because the statement is `never` (missing `FROM`). For `db.query(stmt)` where `stmt: SqlStatement<[unknown]>` — a compile error: params argument required. Neither error waits for a test run.
+
+Reference: [@playwright-labs/sql-core](https://github.com/vitalics/playwright-labs/tree/main/packages/sql-core), [@playwright-labs/fixture-sql](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-sql), [@playwright-labs/ts-plugin-sql](https://github.com/vitalics/playwright-labs/tree/main/packages/ts-plugin-sql)
+
+---
+
+### 8.8. Use API Mocking for Reliable and Fast Tests
 
 **Tags:** api, mocking, performance, reliability, advanced  
 **Impact:** LOW (Improves test reliability and reduces execution time by 40-60% for API-dependent tests)
@@ -5683,7 +8827,7 @@ Reference: [Playwright Network Mocking](https://playwright.dev/docs/network)
 
 ---
 
-### 8.6. Validate API Response JSON Schemas with toMatchSchema Custom Matcher
+### 8.9. Validate API Response JSON Schemas with toMatchSchema Custom Matcher
 
 **Tags:** schema, validation, api-testing, json-schema, ajv-ts, toMatchSchema, fixtures  
 **Impact:** MEDIUM (catches contract regressions instantly without writing per-field assertions)
@@ -5870,8 +9014,22 @@ Reference: [@playwright-labs/fixture-ajv-ts](https://github.com/vitalics/playwri
 - https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-otel
 - https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-slack
 - https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-email
+- https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-prometheus-remote-write
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-prometheus
+- https://github.com/vitalics/playwright-labs/tree/main/packages/prometheus-core
+- https://github.com/vitalics/playwright-labs/tree/main/packages/selectors-angular
+- https://github.com/vitalics/playwright-labs/tree/main/packages/selectors-react
+- https://github.com/vitalics/playwright-labs/tree/main/packages/selectors-vue
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-faker
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-allure
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-testcontainers
+- https://github.com/vitalics/playwright-labs/tree/main/packages/ghost-cursor
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-ghost-cursor
+- https://github.com/vitalics/playwright-labs/tree/main/packages/sql-core
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-sql
+- https://github.com/vitalics/playwright-labs/tree/main/packages/ts-plugin-sql
 
 ---
 
 *This document was automatically generated from individual rule files.*  
-*Last updated: 2026-05-20*
+*Last updated: 2026-07-21*

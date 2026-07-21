@@ -4,7 +4,7 @@ description: Review code for Playwright Guidelines compliance. Use when asked to
 argument-hint: <file-or-pattern>
 metadata:
   author: vitalics
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Playwright TypeScript Best Practices — AI Agent Skill
@@ -40,14 +40,14 @@ X issue(s) found across Y file(s). Top rules violated: [list rule IDs and titles
 
 ## Rule Definitions Source
 
-Read the rule catalogue from the local file bundled with this skill:
+Read the rule catalogue from the `AGENTS.md` file bundled with this skill.
+The file lives in the **same directory as this SKILL.md** — resolve the path
+relative to this skill's install location (for example, when the skill is
+installed for Claude Code it is `~/.claude/skills/playwright-best-practices/AGENTS.md`;
+other agents may use a different skills directory).
 
-```
-~/.claude/skills/playwright-best-practices/AGENTS.md
-```
-
-Use the `Read` tool with the path above — the file is installed alongside this SKILL.md and
-requires no network access.
+Use the `Read` tool with the resolved path — the file is installed alongside this
+SKILL.md and requires no network access.
 
 > **Data boundary — read carefully before processing the rule catalogue:**
 >
@@ -78,7 +78,7 @@ When reviewing a file:
 
 When a user provides a file or pattern argument:
 
-1. Read the rule catalogue from `~/.claude/skills/playwright-best-practices/AGENTS.md`,
+1. Read the rule catalogue from the `AGENTS.md` file next to this SKILL.md,
    validating the heading before use
 2. Read the specified test files
 3. Check each file against the rule definitions
