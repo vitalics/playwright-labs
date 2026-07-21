@@ -16,6 +16,8 @@ The built-in reporter-otel metrics track test results and durations. The `@playw
 - **Use useCounter when**: Counting specific events inside a test — API calls made, items rendered, retries triggered
 - **Use useHistogram when**: Recording latency or size distributions — page load time, response sizes, render durations
 - **Use useUpDownCounter when**: Tracking values that go up and down — in-flight requests, queue depth, active connections
+- **Use useGlobalCounter when**: Counting events across the whole worker run — total URL/page calls, suite-wide API usage; one shared instance per worker, values accumulate between tests
+- **Use useGlobalHistogram when**: Recording distributions across the whole worker run — page-load latency for the entire suite, not a single test; one shared instance per worker, values accumulate between tests
 - **Use useSpan when**: Grouping a logical operation into a named span visible in Jaeger alongside Playwright steps
 - **Use withSpan when**: Wrapping a utility function in a span without needing a fixture
 - **Use useTraceparent when**: The test calls real services and you want Playwright and service spans in one trace
@@ -41,7 +43,7 @@ The built-in reporter-otel metrics track test results and durations. The `@playw
 ### Tool Usage Patterns
 
 - **Install**: `npm install @playwright-labs/fixture-otel @playwright-labs/reporter-otel`
-- **Fixtures**: `useCounter(name, options?)`, `useHistogram(name, options?)`, `useUpDownCounter(name, options?)`, `useSpan(name)`, `useTraceparent()`
+- **Fixtures**: `useCounter(name, options?)`, `useHistogram(name, options?)`, `useUpDownCounter(name, options?)`, `useGlobalCounter(name, options?)`, `useGlobalHistogram(name, options?)`, `useSpan(name)`, `useTraceparent()`
 - **Standalone helper**: `withSpan(name, callback)` — no fixture required
 - **Worker SDK**: `startWorkerSdk(options)` — call once per worker for auto-instrumented trace propagation
 - **Matchers**: `toBeOtelMetricCollected()`, `toHaveOtelCallCount(n)`, `toHaveOtelMinCallCount(min)`, `toBeOtelSpanEnded()`
@@ -229,5 +231,50 @@ test("user profile loads", async ({ page, useTraceparent }) => {
   // db.users.find span appears as child of the test span in Jaeger
 });
 ```
+
+## Global Metrics Across Tests
+
+`useGlobalCounter` and `useGlobalHistogram` return a **shared** metric instance — one per metric name for the whole worker process, cached in a module-level registry. Every test that asks for the same name receives the same object, and recorded values accumulate across the tests of that worker. All global metrics are auto-flushed at the teardown of every test that used a global fixture — no manual `collect()` needed.
+
+Two constraints to keep in mind:
+
+- **Per worker, not per run**: each Playwright worker keeps its own registry. The reporter deduplicates instruments by metric name, so data points from all workers still land in a single OTel instrument.
+- **One kind per name**: requesting a name already registered as the other kind (e.g. `useGlobalHistogram("x")` after `useGlobalCounter("x")`) throws an error. Options apply only at first creation and are ignored on subsequent calls for the same name.
+
+```typescript
+// tests/navigation.spec.ts — url_calls counted across the whole worker run
+test("home page", async ({ useGlobalCounter, page }) => {
+  const urlCalls = useGlobalCounter("url_calls", { unit: "requests" });
+
+  await page.goto("/home");
+  urlCalls.add(1, { url: "/home" });
+  // ✅ auto-flushed at teardown — no collect() call needed
+});
+
+test("dashboard", async ({ useGlobalCounter, page }) => {
+  const urlCalls = useGlobalCounter("url_calls"); // ✅ same shared instance
+
+  await page.goto("/dashboard");
+  urlCalls.add(1, { url: "/dashboard" });
+
+  // ✅ values accumulate across tests within the worker
+  expect(urlCalls).toHaveOtelCallCount(2);
+});
+```
+
+```typescript
+// Run-wide latency distribution with a shared histogram
+test("run-wide latency", async ({ useGlobalHistogram, page }) => {
+  const loadTime = useGlobalHistogram("page_load_ms", { unit: "ms" });
+
+  const start = Date.now();
+  await page.goto("/dashboard");
+  loadTime.record(Date.now() - start, { route: "/dashboard" });
+});
+```
+
+## Integration with Other Best Practices
+
+- **fixture-global-metrics**: Dedicated rule for the shared global fixtures — registry semantics, naming conventions, and aggregation pitfalls when metrics span multiple tests and workers. Use this rule for per-test instrumentation; follow `fixture-global-metrics` when metrics must accumulate across a run.
 
 Reference: [@playwright-labs/fixture-otel](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-otel)
