@@ -187,6 +187,9 @@ The OTel Collector's Prometheus exporter appends a unit suffix: `ms` → `_milli
 | `pw_test_step_duration` | `pw_test_step_duration_milliseconds_bucket/sum/count` | Histogram (ms) | same as above |
 | `pw_test_annotation_count` | `pw_test_annotation_count_total` | Counter | `annotation.type`, `test.suite` |
 | `pw_run_duration` | `pw_run_duration_milliseconds_bucket/sum/count` | Histogram (ms) | — |
+| `pw_expect_poll_total` | `pw_expect_poll_total_total` | Counter | `expect.poll.outcome` (`pass`/`timeout`), `test.suite`, project/browser |
+| `pw_expect_poll_attempts` | `pw_expect_poll_attempts_attempts_bucket/sum/count` | Histogram (attempts) | same as above |
+| `pw_expect_poll_duration` | `pw_expect_poll_duration_milliseconds_bucket/sum/count` | Histogram (ms) | same as above |
 | `pw_process_memory_heap_used` | `pw_process_memory_heap_used_bytes` | Gauge | — |
 | `pw_process_memory_heap_total` | `pw_process_memory_heap_total_bytes` | Gauge | — |
 | `pw_process_memory_rss` | `pw_process_memory_rss_bytes` | Gauge | — |

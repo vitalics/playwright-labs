@@ -26,6 +26,7 @@ import type {
 import { BaseReporter } from "@playwright-labs/reporter-core";
 import { pushTimeseries, Options, Timeseries } from "prometheus-remote-write";
 import { Counter, Event, Gauge, Metric } from "@playwright-labs/prometheus-core";
+import { getExpectPollInfo } from "@playwright-labs/reporter-core";
 
 export type PrometheusOptions = {
   /**
@@ -200,6 +201,21 @@ export default class PrometheusReporter extends BaseReporter {
   });
   private readonly failed_count = new Counter({
     name: "tests_failed_count",
+  });
+  // expect.poll / toPass assertions (poll step carries attempts as child steps)
+  private readonly expect_poll_total = new Counter({
+    name: "expect_poll_total",
+    description: "Total number of expect.poll / toPass assertions by outcome",
+  });
+  private expect_poll_attempts = new Gauge({
+    name: "expect_poll_attempts",
+    unit: "attempts",
+    description: "Number of attempts per expect.poll assertion",
+  });
+  private expect_poll_duration = new Gauge({
+    name: "expect_poll_duration",
+    unit: "ms",
+    description: "Total polling duration per expect.poll assertion",
   });
   // Node.js internals. Useful to see memory leaks
   private readonly node_memory_heap_total = new Gauge({
@@ -455,12 +471,36 @@ export default defineConfig({
         testTitle: test.title,
       })
       .inc(step.duration);
+
+    // expect.poll / toPass assertions: the poll step ends after its attempt
+    // steps, so attempt counts are available here.
+    const poll = getExpectPollInfo(step);
+    if (poll) {
+      const pollLabels = {
+        title: step.title,
+        outcome: poll.outcome,
+        testId: test.id,
+        testTitle: test.title,
+      };
+      this.expect_poll_total.labels({ outcome: poll.outcome }).inc();
+      this.expect_poll_attempts.labels(pollLabels).set(poll.attempts);
+      this.expect_poll_duration.labels(pollLabels).set(step.duration);
+    }
+
     this.updateNodejsStats();
-    await this.send(
-      [this.test_step_duration, this.test_step_error_count, this.test_step].map(
-        (m) => this.mapTimeseries(m),
-      ),
-    );
+    const batch: (Counter | Gauge)[] = [
+      this.test_step_duration,
+      this.test_step_error_count,
+      this.test_step,
+    ];
+    if (poll) {
+      batch.push(
+        this.expect_poll_total,
+        this.expect_poll_attempts,
+        this.expect_poll_duration,
+      );
+    }
+    await this.send(batch.map((m) => this.mapTimeseries(m)));
     this.test_step.reset();
   }
 
@@ -730,6 +770,7 @@ export default defineConfig({
         this.test_step_total_duration,
         this.test_step_total_error,
         this.errors_count,
+        this.expect_poll_total,
         ...this.pw_projects,
       ].map((metric) => this.mapTimeseries(metric)),
     );

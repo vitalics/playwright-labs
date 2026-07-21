@@ -69,6 +69,7 @@ import {
   createOtelSdk,
   type OtelCoreOptions,
 } from "@playwright-labs/otel-core";
+import { getExpectPollInfo } from "@playwright-labs/reporter-core";
 
 export { TRACEPARENT_ANNOTATION };
 
@@ -131,6 +132,9 @@ export default class OtelReporter extends BaseReporter {
   private testStepDuration: Histogram | undefined;
   private testAnnotationCount: Counter | undefined;
   private runDuration: Histogram | undefined;
+  private expectPollTotal: Counter | undefined;
+  private expectPollAttempts: Histogram | undefined;
+  private expectPollDuration: Histogram | undefined;
 
   // ── Observable gauge backing values ──────────────────────────────────────────
   private _heapUsed = 0;
@@ -473,6 +477,13 @@ export default class OtelReporter extends BaseReporter {
       const stepAttrs = { ...attrs, "test.step.category": step.category };
       this.testStepCount?.add(1, stepAttrs);
       this.testStepDuration?.record(step.duration, stepAttrs);
+      const poll = getExpectPollInfo(step);
+      if (poll) {
+        const pollAttrs = { ...attrs, "expect.poll.outcome": poll.outcome };
+        this.expectPollTotal?.add(1, pollAttrs);
+        this.expectPollAttempts?.record(poll.attempts, pollAttrs);
+        this.expectPollDuration?.record(step.duration, pollAttrs);
+      }
       this.recordStepMetrics(step.steps, attrs);
     }
   }
@@ -592,6 +603,17 @@ export default class OtelReporter extends BaseReporter {
     });
     this.runDuration = m.createHistogram(`${p}run_duration`, {
       description: "Total test run duration (wall clock)",
+      unit: "ms",
+    });
+    this.expectPollTotal = m.createCounter(`${p}expect_poll_total`, {
+      description: "Total number of expect.poll / toPass assertions by outcome",
+    });
+    this.expectPollAttempts = m.createHistogram(`${p}expect_poll_attempts`, {
+      description: "Number of attempts per expect.poll assertion",
+      unit: "attempts",
+    });
+    this.expectPollDuration = m.createHistogram(`${p}expect_poll_duration`, {
+      description: "Total polling duration per expect.poll assertion",
       unit: "ms",
     });
 
