@@ -6,6 +6,7 @@ import PrometheusReporter, { type PrometheusOptions } from "../src/reporter";
 
 import type {
   FullConfig,
+  FullResult,
   Suite,
   TestCase,
   TestResult,
@@ -324,9 +325,11 @@ test.describe("PrometheusReporter — onStepEnd", () => {
 
     // Series are pushed in onStepEnd itself — no onExit needed.
     const names = reporter.sentFlat.map((s) => s.labels.__name__);
-    expect(names).toHaveLength(3);
+    expect(names).toHaveLength(4);
     expect(names).toContain("pw_test_step_duration");
     expect(names).toContain("pw_test_step");
+    // otel-compatible alias is flushed in the same batch
+    expect(names).toContain("pw_test_step_count_total");
 
     const stepSeries = findSeries(reporter, "pw_test_step");
     expect(stepSeries?.labels.category).toBe("test.step");
@@ -603,5 +606,116 @@ test.describe("PrometheusReporter — expect.poll metrics", () => {
     );
 
     expect(reporter.sentFlat.some((s) => s.labels.__name__?.startsWith("pw_expect_poll"))).toBe(false);
+  });
+});
+
+
+// ── Reporter — unified (otel-compatible) aliases ─────────────────────────────
+
+test.describe("PrometheusReporter — unified otel-compatible aliases", () => {
+  test("onTestEnd emits pw_tests_total with otel label semantics", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    await reporter.onTestEnd(makeTest({}), makeResult({ status: "passed" }));
+
+    const series = findSeries(reporter, "pw_tests_total");
+    expect(series).toBeDefined();
+    expect(series?.labels["test_status"]).toBe("passed");
+    expect(series?.labels["test_result"]).toBe("pass");
+    expect(series?.labels["test_suite"]).toBe("my suite");
+    expect(series?.samples.at(-1)?.value).toBe(1);
+  });
+
+  test("a failed test is labeled test.result=fail", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    await reporter.onTestEnd(makeTest({}), makeResult({ status: "failed" }));
+
+    const series = findSeries(reporter, "pw_tests_total");
+    expect(series?.labels["test_result"]).toBe("fail");
+  });
+
+  test("different suites produce separate pw_tests_total series", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const t1 = makeTest({});
+    await reporter.onTestEnd(t1, makeResult({}));
+    const t2 = makeTest({});
+    (t2 as { parent: { title: string } }).parent = {
+      title: "other suite",
+    } as never;
+    await reporter.onTestEnd(t2, makeResult({}));
+
+    const suites = reporter.sentFlat
+      .filter((s) => s.labels.__name__ === "pw_tests_total")
+      .map((s) => s.labels["test_suite"]);
+    expect(suites).toContain("my suite");
+    expect(suites).toContain("other suite");
+  });
+
+  test("retry emits pw_test_retries_total with the retry count", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    const result = makeResult({});
+    (result as { retry: number }).retry = 2;
+    await reporter.onTestEnd(makeTest({}), result);
+
+    const series = findSeries(reporter, "pw_test_retries_total");
+    expect(series).toBeDefined();
+    expect(series?.labels["test_suite"]).toBe("my suite");
+    expect(series?.samples.at(-1)?.value).toBe(2);
+  });
+
+  test("onStepEnd emits pw_test_step_count_total with category and suite", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    await reporter.onStepEnd(
+      makeTest({}),
+      makeResult({}),
+      makeStep({ category: "expect", title: "check" }),
+    );
+
+    const series = findSeries(reporter, "pw_test_step_count_total");
+    expect(series).toBeDefined();
+    expect(series?.labels["test_step_category"]).toBe("expect");
+    expect(series?.labels["test_suite"]).toBe("my suite");
+  });
+
+  test("onError emits pw_test_error_count_total with otel labels on onExit", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    reporter.onError({
+      message: "boom",
+      location: { file: "/tmp/test.spec.ts", line: 1, column: 0 },
+    } as TestError);
+    await reporter.onExit();
+
+    const series = findSeries(reporter, "pw_test_error_count_total");
+    expect(series).toBeDefined();
+    expect(series?.labels["error_message"]).toBe("boom");
+    expect(series?.labels["error_location"]).toBeDefined();
+    expect(series?.samples.at(-1)?.value).toBe(1);
+  });
+
+  test("onEnd + onExit flush pw_run_duration and process_* aliases", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+
+    reporter.onEnd({ status: "passed", duration: 12_345 } as unknown as FullResult);
+    await reporter.onExit();
+
+    const run = findSeries(reporter, "pw_run_duration");
+    expect(run?.samples.at(-1)?.value).toBe(12_345);
+
+    expect(findSeries(reporter, "pw_process_memory_heap_used")).toBeDefined();
+    expect(findSeries(reporter, "pw_process_memory_rss")).toBeDefined();
+    expect(findSeries(reporter, "pw_os_memory_free")).toBeDefined();
+    expect(findSeries(reporter, "pw_process_cpu_user")).toBeDefined();
   });
 });

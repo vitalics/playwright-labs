@@ -67,6 +67,24 @@ export default defineConfig({
 
 Each metric name starts from `prefix`. By default it's `pw_`. So every metric name described without prefix.
 
+## Unified metric names (shared with reporter-otel)
+
+Next to the legacy names below, the reporter also emits **otel-compatible aliases** for the auto-collected metrics — the same names and label semantics that `@playwright-labs/reporter-otel` uses. Dashboards written against the unified names work with either reporter.
+
+| Concept | Unified name (this reporter) | reporter-otel → via OTel Collector | Match |
+| --- | --- | --- | --- |
+| Tests by status/result | `pw_tests_total{test_status,test_result,test_suite}` | `pw_tests_total{test_status,test_result,test_suite}` | ✅ identical |
+| Retries | `pw_test_retries_total` | `pw_test_retries_total` | ✅ identical |
+| Global errors | `pw_test_error_count_total` | `pw_test_error_count_total` | ✅ identical |
+| Steps by category | `pw_test_step_count_total` | `pw_test_step_count_total` | ✅ identical |
+| expect.poll | `pw_expect_poll_total` / `pw_expect_poll_attempts` / `pw_expect_poll_duration` | same names | ✅ identical |
+| Process memory | `pw_process_memory_*` | `pw_process_memory_*_bytes` | ⚠️ `_bytes` suffix on the OTel side |
+| OS free memory | `pw_os_memory_free` | `pw_os_memory_free_bytes` | ⚠️ `_bytes` suffix on the OTel side |
+| Process CPU | `pw_process_cpu_user`, `pw_process_cpu_system` | `pw_process_cpu_*_microseconds` | ⚠️ `_microseconds` suffix on the OTel side |
+| Run wall-clock duration | `pw_run_duration` (gauge) | `pw_run_duration_milliseconds_*` (histogram) | ⚠️ type/suffix differs |
+
+Note: the OTel Collector's Prometheus exporter appends `_total` to counters and a unit suffix (`_milliseconds`, `_bytes`, `_microseconds`) where a unit is declared — the ✅ names already account for that. The legacy series (`pw_tests_total_count`, `pw_test_retry_count`, `pw_error_count`, `pw_node_*`, `pw_tests_total_duration`, `pw_test_step_total_count`) are still emitted for backward compatibility and will be removed in the next major version.
+
 ### Test(s)
 
 this metrics below sends periodically and you may found when they sends

@@ -243,6 +243,109 @@ export default class PrometheusReporter extends BaseReporter {
     unit: "bytes",
   });
 
+  // ── Unified metric names shared with reporter-otel ─────────────────────────
+  // Aliases emitted next to the legacy names above so the same dashboards can
+  // be reused across both reporters. Legacy series are kept for compatibility.
+  // One Counter per label set — a single shared counter would let per-item
+  // labels overwrite each other and report cumulative values for the wrong
+  // label set.
+  private readonly unifiedCounters = new Map<string, Counter>();
+
+  private unified(
+    name: string,
+    description: string,
+    labels: Record<string, string>,
+  ): Counter {
+    const key = `${name}${JSON.stringify(labels)}`;
+    let counter = this.unifiedCounters.get(key);
+    if (!counter) {
+      counter = new Counter({ name, description, ...labels });
+      this.unifiedCounters.set(key, counter);
+    }
+    return counter;
+  }
+
+  private unifiedTestsTotal(test: TestCase, result: TestResult): Counter {
+    const isPassing =
+      result.status === "skipped" || result.status === test.expectedStatus;
+    return this.unified(
+      "tests_total",
+      "Total number of tests partitioned by status and result (otel-compatible)",
+      {
+        test_status: result.status,
+        test_result: isPassing ? "pass" : "fail",
+        test_suite: test.parent.title,
+      },
+    );
+  }
+
+  private unifiedTestRetries(test: TestCase): Counter {
+    return this.unified(
+      "test_retries_total",
+      "Number of test retries (otel-compatible)",
+      { test_suite: test.parent.title },
+    );
+  }
+
+  private unifiedStepCount(test: TestCase, step: TestStep): Counter {
+    return this.unified(
+      "test_step_count_total",
+      "Total number of test steps partitioned by category (otel-compatible)",
+      {
+        test_step_category: step.category,
+        test_suite: test.parent.title,
+      },
+    );
+  }
+
+  private unifiedTestErrorCount(error: TestError): Counter {
+    return this.unified(
+      "test_error_count_total",
+      "Number of global test errors (otel-compatible)",
+      {
+        error_location: this.location(error),
+        error_message: (error.message ?? "").slice(0, 256),
+      },
+    );
+  }
+  private readonly process_memory_heap_used = new Gauge({
+    name: "process_memory_heap_used",
+    unit: "bytes",
+  });
+  private readonly process_memory_heap_total = new Gauge({
+    name: "process_memory_heap_total",
+    unit: "bytes",
+  });
+  private readonly process_memory_rss = new Gauge({
+    name: "process_memory_rss",
+    unit: "bytes",
+  });
+  private readonly process_memory_external = new Gauge({
+    name: "process_memory_external",
+    unit: "bytes",
+  });
+  private readonly process_memory_array_buffers = new Gauge({
+    name: "process_memory_array_buffers",
+    unit: "bytes",
+  });
+  private readonly os_memory_free = new Gauge({
+    name: "os_memory_free",
+    unit: "bytes",
+  });
+  private readonly process_cpu_user = new Gauge({
+    name: "process_cpu_user",
+    unit: "us",
+  });
+  private readonly process_cpu_system = new Gauge({
+    name: "process_cpu_system",
+    unit: "us",
+  });
+  private readonly run_duration = new Gauge({
+    name: "run_duration",
+    unit: "ms",
+    description: "Total test run duration (wall clock)",
+  });
+
   private readonly node_cpu_user = new Gauge({
     name: "node_cpu_user",
   });
@@ -333,8 +436,12 @@ export default defineConfig({
     this.cpuDelta = cpuUsage(this.cpuDelta);
     this.node_cpu_user.set(this.cpuDelta.user);
     this.node_cpu_system.set(this.cpuDelta.system);
+    // otel-compatible aliases
+    this.process_cpu_user.set(this.cpuDelta.user);
+    this.process_cpu_system.set(this.cpuDelta.system);
 
     this.node_memory_free.set(freemem());
+    this.os_memory_free.set(freemem());
 
     this.memoryDelta = memoryUsage();
     this.node_memory_array_buffers.set(this.memoryDelta.arrayBuffers);
@@ -342,6 +449,12 @@ export default defineConfig({
     this.node_memory_heap_total.set(this.memoryDelta.heapTotal);
     this.node_memory_heap_used.set(this.memoryDelta.heapUsed);
     this.node_memory_rss.set(this.memoryDelta.rss);
+    // otel-compatible aliases
+    this.process_memory_array_buffers.set(this.memoryDelta.arrayBuffers);
+    this.process_memory_external.set(this.memoryDelta.external);
+    this.process_memory_heap_total.set(this.memoryDelta.heapTotal);
+    this.process_memory_heap_used.set(this.memoryDelta.heapUsed);
+    this.process_memory_rss.set(this.memoryDelta.rss);
   }
   private async sendNodejsStats() {
     const stats = [
@@ -356,6 +469,15 @@ export default defineConfig({
       this.node_env,
       this.node_argv,
       this.node_versions,
+      // otel-compatible aliases
+      this.process_cpu_user,
+      this.process_cpu_system,
+      this.process_memory_array_buffers,
+      this.process_memory_external,
+      this.process_memory_heap_total,
+      this.process_memory_heap_used,
+      this.process_memory_rss,
+      this.os_memory_free,
     ].map((s) => this.mapTimeseries(s));
 
     await this.send(stats);
@@ -411,7 +533,7 @@ export default defineConfig({
     this.updateNodejsStats();
   }
 
-  private updateResults(result: TestResult) {
+  private updateResults(test: TestCase, result: TestResult) {
     if (result.status === "passed") {
       this.passed_count.inc();
     }
@@ -472,6 +594,12 @@ export default defineConfig({
       })
       .inc(step.duration);
 
+    // otel-compatible step counter (drained per step — one counter per
+    // category+suite label set, so counts stay per-series)
+    const unifiedStepSeries = this.mapTimeseries(
+      this.unifiedStepCount(test, step).inc(),
+    );
+
     // expect.poll / toPass assertions: the poll step ends after its attempt
     // steps, so attempt counts are available here.
     const poll = getExpectPollInfo(step);
@@ -488,25 +616,26 @@ export default defineConfig({
     }
 
     this.updateNodejsStats();
-    const batch: (Counter | Gauge)[] = [
+    const batch = [
       this.test_step_duration,
       this.test_step_error_count,
       this.test_step,
-    ];
+    ].map((m) => this.mapTimeseries(m));
+    batch.push(unifiedStepSeries);
     if (poll) {
       batch.push(
-        this.expect_poll_total,
-        this.expect_poll_attempts,
-        this.expect_poll_duration,
+        this.mapTimeseries(this.expect_poll_total),
+        this.mapTimeseries(this.expect_poll_attempts),
+        this.mapTimeseries(this.expect_poll_duration),
       );
     }
-    await this.send(batch.map((m) => this.mapTimeseries(m)));
+    await this.send(batch);
     this.test_step.reset();
   }
 
   async onTestEnd(test: TestCase, result: TestResult) {
     super.onTestEnd(test, result);
-    this.updateResults(result);
+    this.updateResults(test, result);
 
     // Per-attachment / per-annotation series: each item is drained immediately
     // after its labels are applied, otherwise the shared counter's labels would
@@ -573,6 +702,17 @@ export default defineConfig({
     const testDuration = this.test_duration.labels(labels).set(result.duration);
     const testRetries = this.test_retry_count.labels(labels).inc(result.retry);
 
+    // otel-compatible series (drained per test — one counter per label set,
+    // so counts stay per-series instead of accumulating under mutated labels)
+    const unifiedSeries: Timeseries[] = [
+      this.mapTimeseries(this.unifiedTestsTotal(test, result).inc()),
+    ];
+    if (result.retry > 0) {
+      unifiedSeries.push(
+        this.mapTimeseries(this.unifiedTestRetries(test).inc(result.retry)),
+      );
+    }
+
     await this.send([
       this.mapTimeseries(this.test_step),
       this.mapTimeseries(this.test_step_total_duration),
@@ -584,6 +724,7 @@ export default defineConfig({
       this.mapTimeseries(this.test_step_total_error),
       ...attachmentCountSeries,
       this.mapTimeseries(this.test_step_total_count),
+      ...unifiedSeries,
     ]);
 
     this.test_step = this.test_step.reset();
@@ -605,6 +746,12 @@ export default defineConfig({
       })
       .inc();
     this.test_errors.inc();
+
+    // otel-compatible error counter — drained immediately so the next error
+    // cannot overwrite these labels on the shared counter
+    this.timeseries.push(
+      this.mapTimeseries(this.unifiedTestErrorCount(error).inc()),
+    );
     this.updateNodejsStats();
   }
 
@@ -736,6 +883,8 @@ export default defineConfig({
   }
 
   onEnd(result: FullResult) {
+    // Wall-clock duration of the whole run — the otel-compatible pw_run_duration.
+    this.run_duration.set(result.duration);
     this.updateNodejsStats();
   }
   onStepBegin(test: TestCase, result: TestResult, step: TestStep): void {
@@ -771,6 +920,7 @@ export default defineConfig({
         this.test_step_total_error,
         this.errors_count,
         this.expect_poll_total,
+        this.run_duration,
         ...this.pw_projects,
       ].map((metric) => this.mapTimeseries(metric)),
     );
