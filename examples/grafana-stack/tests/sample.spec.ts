@@ -123,6 +123,20 @@ test.describe("Prometheus reporter — sample data generation", () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
   });
+
+  test("expect.poll is auto-instrumented as poll metrics", async () => {
+    // The reporter detects expect.poll steps and records
+    // pw_expect_poll_total{outcome}, pw_expect_poll_attempts and
+    // pw_expect_poll_duration — this poll passes on the 3rd attempt.
+    let attempts = 0;
+    await expect
+      .poll(() => ++attempts, { timeout: 5_000 })
+      .toBe(3);
+  });
+
+  test.skip("skipped test — keeps pw_tests_skipped_count non-zero", async () => {
+    // Intentionally skipped so every status has data on the dashboards.
+  });
 });
 
 
