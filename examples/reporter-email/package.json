@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test:e2e": "playwright test",
-    "ci:pretest": "playwright install --with-deps chromium",
+    "ci:pretest": "playwright install chromium",
     "email:preview": "email dev --dir emails"
   },
   "dependencies": {
