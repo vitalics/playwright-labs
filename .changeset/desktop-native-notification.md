@@ -17,6 +17,7 @@ export default defineConfig({
 ```
 
 - Run summary notification with status-derived title (`Playwright — Failed`, `Playwright — Flaky`, …) and counts + wall time in the body (`✓ 12 passed, ✗ 2 failed, ⊘ 1 skipped in 45.3s`).
+- `message` option — replace the built-in body with a static string or a `(result, testCases) => string` template (same contract as reporter-email's `text`/`html`, powered by `@playwright-labs/reporter-core`).
 - `notifyOn: "always" | "success" | "failure"` — notify on every run or only on the outcomes you care about.
 - `notifyOnError` — optional immediate notification for global errors.
 - CI-aware: notifications are skipped when `process.env.CI` is set, unless `ci: true`.

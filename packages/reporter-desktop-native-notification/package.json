@@ -41,6 +41,7 @@
     "@playwright/test": ">=1.13.0"
   },
   "dependencies": {
+    "@playwright-labs/reporter-core": "workspace:*",
     "node-notifier": "10.0.1"
   },
   "devDependencies": {

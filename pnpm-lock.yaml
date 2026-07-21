@@ -292,8 +292,17 @@ importers:
         specifier: 1.57.0
         version: 1.57.0
 
+  packages/reporter-core:
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
   packages/reporter-desktop-native-notification:
     dependencies:
+      '@playwright-labs/reporter-core':
+        specifier: workspace:*
+        version: link:../reporter-core
       node-notifier:
         specifier: 10.0.1
         version: 10.0.1
@@ -307,6 +316,9 @@ importers:
 
   packages/reporter-email:
     dependencies:
+      '@playwright-labs/reporter-core':
+        specifier: workspace:*
+        version: link:../reporter-core
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -362,6 +374,9 @@ importers:
       '@playwright-labs/otel-core':
         specifier: workspace:*
         version: link:../otel-core
+      '@playwright-labs/reporter-core':
+        specifier: workspace:*
+        version: link:../reporter-core
     devDependencies:
       '@playwright/test':
         specifier: 1.57.0
@@ -372,6 +387,9 @@ importers:
       '@playwright-labs/prometheus-core':
         specifier: workspace:*
         version: link:../prometheus-core
+      '@playwright-labs/reporter-core':
+        specifier: workspace:*
+        version: link:../reporter-core
       prometheus-remote-write:
         specifier: 0.5.0
         version: 0.5.0
@@ -381,6 +399,10 @@ importers:
         version: 1.57.0
 
   packages/reporter-slack:
+    dependencies:
+      '@playwright-labs/reporter-core':
+        specifier: workspace:*
+        version: link:../reporter-core
     devDependencies:
       '@playwright-labs/slack-buildkit':
         specifier: workspace:*

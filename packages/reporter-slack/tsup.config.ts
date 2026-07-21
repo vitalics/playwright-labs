@@ -11,6 +11,7 @@ export default defineConfig(() => ({
   external: [
     "@playwright/test",
     "@playwright-labs/slack-buildkit",
+    "@playwright-labs/reporter-core",
     "react",
     "react-dom",
   ],

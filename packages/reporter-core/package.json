@@ -1,17 +1,12 @@
 {
-  "name": "@playwright-labs/reporter-otel",
-  "version": "1.2.1",
-  "description": "OpenTelemetry reporter for Playwright — send test metrics and traces to any OTEL-compatible backend",
+  "name": "@playwright-labs/reporter-core",
+  "version": "0.0.0",
+  "description": "Base reporter class and shared types (TestCases, Template, StatusCounts) for @playwright-labs reporter packages",
   "keywords": [
     "playwright",
     "reporter",
-    "opentelemetry",
-    "otel",
-    "otlp",
-    "metrics",
-    "traces",
-    "monitoring",
-    "grafana",
+    "base",
+    "core",
     "playwright-labs"
   ],
   "author": "Vitali Haradkou <vitalicset@yandex.ru>",
@@ -40,14 +35,6 @@
   },
   "peerDependencies": {
     "@playwright/test": ">=1.13.0"
-  },
-  "dependencies": {
-    "@playwright-labs/otel-core": "workspace:*",
-    "@playwright-labs/reporter-core": "workspace:*",
-    "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/resources": "^2.6.0",
-    "@opentelemetry/sdk-node": "^0.217.0",
-    "@opentelemetry/semantic-conventions": "^1.28.0"
   },
   "devDependencies": {
     "@playwright/test": "1.57.0"

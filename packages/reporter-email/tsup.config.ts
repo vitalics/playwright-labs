@@ -14,6 +14,7 @@ export default defineConfig(() => ({
   },
   external: [
     "@playwright/test",
+    "@playwright-labs/reporter-core",
     "react",
     "react-dom",
     "@react-email/components",

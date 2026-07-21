@@ -7,6 +7,7 @@ export default defineConfig(() => ({
   external: [
     "@playwright/test",
     "@playwright-labs/prometheus-core",
+    "@playwright-labs/reporter-core",
     "prometheus-remote-write",
   ],
   format: ["cjs", "esm"],

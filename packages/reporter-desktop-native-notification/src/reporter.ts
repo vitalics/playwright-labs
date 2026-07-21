@@ -1,18 +1,23 @@
-import type {
-  FullConfig,
-  FullResult,
-  Reporter,
-  Suite,
-  TestCase,
-  TestError,
-  TestResult,
-} from "@playwright/test/reporter";
+import type { FullResult, TestError } from "@playwright/test/reporter";
+import {
+  BaseReporter,
+  type Template,
+} from "@playwright-labs/reporter-core";
 
 export type DesktopNotificationOptions = {
   /** When to send the run summary notification. @default 'always' */
   notifyOn?: "always" | "success" | "failure";
   /** Notification title. @default derived from run status, e.g. "Playwright — Failed" */
   title?: string;
+  /**
+   * Notification body: a static string or a template called with
+   * `(result, testCases)` — same contract as reporter-email's `text`/`html`.
+   * @default built-in counts summary, e.g. "✓ 12 passed, ✗ 2 failed in 45.3s"
+   * @example
+   * (result, testCases) =>
+ *   `${result.status}: ${testCases.filter(([, r]) => r.status === 'failed').map(([t]) => t.title).join(', ')}`
+   */
+  message?: Template;
   /** Play the default notification sound. @default false */
   sound?: boolean;
   /** Path to a custom app icon. */
@@ -37,9 +42,9 @@ export type NotificationPayload = {
 };
 
 type ResolvedOptions = Required<
-  Omit<DesktopNotificationOptions, "title" | "icon">
+  Omit<DesktopNotificationOptions, "title" | "message" | "icon">
 > &
-  Pick<DesktopNotificationOptions, "title" | "icon">;
+  Pick<DesktopNotificationOptions, "title" | "message" | "icon">;
 
 const ERROR_MESSAGE_MAX_LENGTH = 200;
 
@@ -60,19 +65,15 @@ function statusLabel(status: string): string {
   }
 }
 
-export default class DesktopNotificationReporter implements Reporter {
+export default class DesktopNotificationReporter extends BaseReporter {
   private readonly options: ResolvedOptions;
 
-  private passed = 0;
-  private failed = 0;
-  private timedOut = 0;
-  private skipped = 0;
-  private interrupted = 0;
-
   constructor(options: DesktopNotificationOptions = {}) {
+    super();
     this.options = {
       notifyOn: options.notifyOn ?? "always",
       title: options.title,
+      message: options.message,
       sound: options.sound ?? false,
       icon: options.icon,
       wait: options.wait ?? false,
@@ -82,44 +83,17 @@ export default class DesktopNotificationReporter implements Reporter {
     };
   }
 
-  onBegin(_config: FullConfig, _suite: Suite): void {
-    this.passed = 0;
-    this.failed = 0;
-    this.timedOut = 0;
-    this.skipped = 0;
-    this.interrupted = 0;
-  }
-
-  onTestEnd(_test: TestCase, result: TestResult): void {
-    switch (result.status) {
-      case "passed":
-        this.passed += 1;
-        break;
-      case "failed":
-        this.failed += 1;
-        break;
-      case "timedOut":
-        this.timedOut += 1;
-        break;
-      case "skipped":
-        this.skipped += 1;
-        break;
-      case "interrupted":
-        this.interrupted += 1;
-        break;
-      default:
-        // Unknown statuses are ignored.
-        break;
-    }
-  }
-
   async onEnd(result: FullResult): Promise<void> {
     if (this.isCiBlocked()) return;
     if (!this.shouldNotifyFor(result.status)) return;
 
+    const message =
+      (await this.resolveTemplate(this.options.message, result)) ??
+      this.buildSummaryMessage(result);
+
     await this.notify({
       title: this.options.title ?? `Playwright — ${statusLabel(result.status)}`,
-      message: this.buildSummaryMessage(result),
+      message,
       sound: this.options.sound,
       wait: this.options.wait,
       timeout: this.options.timeout,
@@ -145,10 +119,6 @@ export default class DesktopNotificationReporter implements Reporter {
       timeout: this.options.timeout,
       ...(this.options.icon ? { icon: this.options.icon } : {}),
     });
-  }
-
-  printsToStdio(): boolean {
-    return false;
   }
 
   /**
@@ -195,19 +165,22 @@ export default class DesktopNotificationReporter implements Reporter {
   private buildSummaryMessage(result: FullResult): string {
     const seconds = (result.duration / 1000).toFixed(1);
     const total =
-      this.passed +
-      this.failed +
-      this.timedOut +
-      this.skipped +
-      this.interrupted;
+      this.counts.passed +
+      this.counts.failed +
+      this.counts.timedOut +
+      this.counts.skipped +
+      this.counts.interrupted;
     if (total === 0) {
       return `No tests run in ${seconds}s`;
     }
-    const parts = [`✓ ${this.passed} passed`];
-    if (this.failed > 0) parts.push(`✗ ${this.failed} failed`);
-    if (this.timedOut > 0) parts.push(`⏱ ${this.timedOut} timed out`);
-    if (this.skipped > 0) parts.push(`⊘ ${this.skipped} skipped`);
-    if (this.interrupted > 0) parts.push(`⚠ ${this.interrupted} interrupted`);
+    const parts = [`✓ ${this.counts.passed} passed`];
+    if (this.counts.failed > 0) parts.push(`✗ ${this.counts.failed} failed`);
+    if (this.counts.timedOut > 0)
+      parts.push(`⏱ ${this.counts.timedOut} timed out`);
+    if (this.counts.skipped > 0)
+      parts.push(`⊘ ${this.counts.skipped} skipped`);
+    if (this.counts.interrupted > 0)
+      parts.push(`⚠ ${this.counts.interrupted} interrupted`);
     return `${parts.join(", ")} in ${seconds}s`;
   }
 }

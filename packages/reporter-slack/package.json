@@ -93,5 +93,8 @@
     "react": {
       "optional": true
     }
+  },
+  "dependencies": {
+    "@playwright-labs/reporter-core": "workspace:*"
   }
 }

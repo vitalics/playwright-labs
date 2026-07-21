@@ -44,10 +44,10 @@ function makeSuite(): Suite {
   return { title: "" } as unknown as Suite;
 }
 
-function makeTest(): TestCase {
+function makeTest(overrides: { id?: string; title?: string } = {}): TestCase {
   return {
-    id: "test-1",
-    title: "my test",
+    id: overrides.id ?? "test-1",
+    title: overrides.title ?? "my test",
   } as unknown as TestCase;
 }
 
@@ -291,5 +291,59 @@ test.describe("DesktopNotificationReporter — printsToStdio", () => {
   test("returns false", () => {
     const reporter = new TestReporter();
     expect(reporter.printsToStdio()).toBe(false);
+  });
+});
+
+
+// ── Reporter — message template ───────────────────────────────────────────────
+
+test.describe("DesktopNotificationReporter — message template", () => {
+  test("static string is used as-is", async () => {
+    const reporter = new TestReporter({ message: "custom body" });
+
+    await runToCompletion(reporter, ["passed"]);
+
+    expect(reporter.notifications).toHaveLength(1);
+    expect(reporter.notifications[0].message).toBe("custom body");
+  });
+
+  test("template function receives (result, testCases)", async () => {
+    const reporter = new TestReporter({
+      message: (result, testCases) =>
+        `${result.status}: ${testCases
+          .filter(([, r]) => r.status === "failed")
+          .map(([t]) => t.title)
+          .join(", ")}`,
+    });
+
+    reporter.onBegin(makeConfig(), makeSuite());
+    const t1 = makeTest({ title: "good" });
+    const t2 = makeTest({ title: "bad" });
+    await reporter.onTestEnd(t1, makeResult({ status: "passed" }));
+    await reporter.onTestEnd(t2, makeResult({ status: "failed" }));
+    await reporter.onEnd(makeFullResult({ status: "failed" }));
+
+    expect(reporter.notifications).toHaveLength(1);
+    expect(reporter.notifications[0].message).toBe("failed: bad");
+  });
+
+  test("promise-returning template is awaited", async () => {
+    const reporter = new TestReporter({
+      message: async (result) => `async ${result.status}`,
+    });
+
+    await runToCompletion(reporter, ["passed"]);
+
+    expect(reporter.notifications[0].message).toBe("async passed");
+  });
+
+  test("default counts summary is used when message is not set", async () => {
+    const reporter = new TestReporter({});
+
+    await runToCompletion(reporter, ["passed", "failed"]);
+
+    expect(reporter.notifications[0].message).toBe(
+      "✓ 1 passed, ✗ 1 failed in 45.3s",
+    );
   });
 });

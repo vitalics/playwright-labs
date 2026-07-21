@@ -15,7 +15,6 @@ import {
 } from "node:os";
 
 import type {
-  Reporter,
   FullConfig,
   Suite,
   TestCase,
@@ -24,6 +23,7 @@ import type {
   TestStep,
   TestError,
 } from "@playwright/test/reporter";
+import { BaseReporter } from "@playwright-labs/reporter-core";
 import { pushTimeseries, Options, Timeseries } from "prometheus-remote-write";
 import { Counter, Event, Gauge, Metric } from "@playwright-labs/prometheus-core";
 
@@ -97,7 +97,7 @@ const DEFAULT_PREFIX = `pw_`;
 type CPUUsageObject = ReturnType<typeof cpuUsage>;
 type MemoryUsageObject = ReturnType<typeof memoryUsage>;
 
-export default class PrometheusReporter implements Reporter {
+export default class PrometheusReporter extends BaseReporter {
   private readonly options: Options = {};
   private readonly prefix: string;
   private readonly env: Record<string, string | undefined>;
@@ -275,6 +275,7 @@ export default class PrometheusReporter implements Reporter {
   /** timeseries from user tests */
   private readonly timeseries: Timeseries[] = [];
   constructor(options: PrometheusOptions = {} as PrometheusOptions) {
+    super();
     this.options.url =
       new URL(options.serverUrl).toString() ??
       (() => {
@@ -363,6 +364,7 @@ export default defineConfig({
   }
 
   onBegin(config: FullConfig, suite: Suite) {
+    super.onBegin(config, suite);
     this.pw_config.labels({
       workers: String(config.workers),
       forbidOnly: String(config.forbidOnly),
@@ -463,6 +465,7 @@ export default defineConfig({
   }
 
   async onTestEnd(test: TestCase, result: TestResult) {
+    super.onTestEnd(test, result);
     this.updateResults(result);
 
     // Per-attachment / per-annotation series: each item is drained immediately
