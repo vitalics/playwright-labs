@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/reporter-desktop-native-notification",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Desktop native notifications for Playwright test runs via node-notifier (macOS, Windows, Linux)",
   "keywords": [
     "playwright",

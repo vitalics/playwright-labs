@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/grafana-stack-example",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": true,
   "description": "Full working example: reporter-prometheus-remote-write + fixture-prometheus with a real Prometheus + Grafana infrastructure",
   "type": "module",

@@ -1,5 +1,12 @@
 # @playwright-labs/reporter-email
 
+## 1.1.5
+
+### Patch Changes
+
+- Updated dependencies [2c8022d]
+  - @playwright-labs/reporter-core@1.1.0
+
 ## 1.1.4
 
 ### Patch Changes

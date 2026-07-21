@@ -1,5 +1,12 @@
 # @playwright-labs/reporter-desktop-native-notification
 
+## 1.0.1
+
+### Patch Changes
+
+- Updated dependencies [2c8022d]
+  - @playwright-labs/reporter-core@1.1.0
+
 ## 1.0.0
 
 ### Major Changes
