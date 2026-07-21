@@ -1,5 +1,44 @@
 # @playwright-labs/reporter-prometheus-remote-write
 
+## 1.1.0
+
+### Minor Changes
+
+- 2c8022d: Feature: auto-instrumented `expect.poll` / `expect().toPass()` metrics in both reporters.
+
+  Playwright reports a poll as an `expect`-category step whose children are the individual poll attempts — so occurrence, attempt counts, total duration, and outcome are all available to the reporter with zero test-code changes.
+
+  New metrics (same names in both reporters, `pw_` prefix):
+  - `expect_poll_total` (counter, `outcome=pass|timeout`) — how many polls ran and how they ended
+  - `expect_poll_attempts` — attempts per poll (child steps when reported; 1 for `toPass`)
+  - `expect_poll_duration` — total polling time per assertion (ms)
+
+  `reporter-core` exports the shared detectors used by both reporters:
+
+  ```ts
+  import {
+    isExpectPollStep,
+    getExpectPollInfo,
+  } from "@playwright-labs/reporter-core";
+
+  getExpectPollInfo(step); // { attempts: 3, outcome: "pass" } | null
+  ```
+
+- 2f582b3: Feature: otel-compatible unified metric names for the auto-collected metrics.
+
+  The reporter now emits the same metric names and label semantics that `@playwright-labs/reporter-otel` uses, next to the legacy series (kept for backward compatibility, to be removed in the next major):
+  - `pw_tests_total{test_status,test_result,test_suite}` — one counter with labels, matching the OTel metric exactly
+  - `pw_test_retries_total`, `pw_test_error_count_total`, `pw_test_step_count_total` — named to match what the OTel Collector's Prometheus exporter produces from the OTel counterparts
+  - `pw_process_memory_*`, `pw_os_memory_free`, `pw_process_cpu_user/system` — aliases of the existing `pw_node_*` gauges under the OTel-style names (note: the OTel Collector additionally appends `_bytes` / `_microseconds` suffixes)
+  - `pw_run_duration` — wall-clock run duration (gauge), mirroring the OTel histogram
+
+  The grafana-stack example's Base dashboard now queries the shared names (`pw_tests_total`, `pw_test_retries_total`, `pw_test_step_count_total`, `pw_process_*`), so its key panels work against either reporter's data.
+
+### Patch Changes
+
+- Updated dependencies [2c8022d]
+  - @playwright-labs/reporter-core@1.1.0
+
 ## 1.0.3
 
 ### Patch Changes

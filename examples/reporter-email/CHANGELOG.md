@@ -1,5 +1,11 @@
 # reporter-email-example
 
+## 0.0.6
+
+### Patch Changes
+
+- @playwright-labs/reporter-email@1.1.5
+
 ## 0.0.5
 
 ### Patch Changes

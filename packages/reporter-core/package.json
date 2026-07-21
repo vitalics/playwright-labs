@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/reporter-core",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Base reporter class and shared types (TestCases, Template, StatusCounts) for @playwright-labs reporter packages",
   "keywords": [
     "playwright",
