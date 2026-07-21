@@ -251,6 +251,22 @@ test.describe("Prometheus reporter — built-in metric verification", () => {
       r.some((s) => s.metric.titlePath?.includes("checkout")),
     ).toBe(true);
   });
+
+  test("pw_expect_poll metrics are exported for the expect.poll test", async ({
+    request,
+  }) => {
+    // The sample test's expect.poll succeeds on the 3rd attempt.
+    await pollQuery(
+      request,
+      'pw_expect_poll_total{outcome="pass"}',
+      (r) => !isNaN(firstValue(r)) && firstValue(r) >= 1,
+    ).toBe(true);
+    await pollQuery(
+      request,
+      "max(pw_expect_poll_attempts)",
+      (r) => !isNaN(firstValue(r)) && firstValue(r) >= 3,
+    ).toBe(true);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -385,6 +401,35 @@ test.describe("Prometheus reporter — interactive UIs", () => {
     const resp = await request.get("http://localhost:3000/api/health");
     expect(resp.ok()).toBeTruthy();
     console.log("  Grafana UI → http://localhost:3000");
-    console.log("    Explore → Prometheus: pw_tests_total_count");
+    console.log("    Dashboards → Playwright folder: Prometheus — Base / Details");
+  });
+
+  test("Grafana provisions the Playwright dashboards", async ({ request }) => {
+    // Dashboards are auto-provisioned from grafana/dashboards/ into the
+    // "Playwright" folder at stack startup.
+    const resp = await request.get(
+      "http://localhost:3000/api/search?query=Playwright",
+    );
+    expect(resp.ok()).toBeTruthy();
+    const items = (await resp.json()) as {
+      uid: string;
+      title: string;
+      folderTitle?: string;
+    }[];
+
+    const dashboards = items.filter((i) => i.uid.startsWith("playwright-"));
+    expect(dashboards.map((d) => d.uid).sort()).toEqual([
+      "playwright-prometheus-base",
+      "playwright-prometheus-details",
+    ]);
+    for (const d of dashboards) {
+      expect(d.folderTitle).toBe("Playwright");
+    }
+
+    // And they actually resolve via the dashboard API.
+    for (const uid of dashboards.map((d) => d.uid)) {
+      const dash = await request.get(`http://localhost:3000/api/dashboards/uid/${uid}`);
+      expect(dash.ok()).toBeTruthy();
+    }
   });
 });

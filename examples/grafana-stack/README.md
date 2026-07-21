@@ -79,6 +79,27 @@ The Prometheus datasource is pre-configured:
 2. Select **Prometheus** from the datasource dropdown
 3. Run a PromQL query, e.g. `pw_tests_total_count`
 
+## Dashboards
+
+Two dashboards are auto-provisioned into the **Playwright** folder
+(Grafana sidebar → Dashboards → Playwright) — no manual import needed:
+
+- **Playwright Prometheus — Base** — the run at a glance: stat panels for
+  tests run / passed / failed / skipped / timed out, pass rate, retries and
+  average duration; result trends and a pass/fail pie chart; duration by
+  suite; step counts and rate; `expect.poll` outcomes; Node.js memory/CPU of
+  the Playwright process; and the Playwright config/projects tables.
+- **Playwright Prometheus — Details** — the deep dive: slowest steps
+  (top 10) and step errors, attachments and annotations, `expect.poll`
+  attempts/duration per title, the error table, Node/OS/env info, and the
+  custom example metrics (`pw_e2e_*`, including the step-duration
+  histogram).
+
+The dashboards are defined as JSON in `grafana/dashboards/` and loaded by the
+file provider in `grafana/provisioning/dashboards/dashboards.yaml`. They use
+the pre-configured Prometheus datasource directly (fixed uid `prometheus`)
+and refresh every 10s.
+
 ## Project structure
 
 ```
@@ -93,9 +114,14 @@ grafana-stack/
 ├── docker-compose.yml        # Prometheus (remote-write receiver) + Grafana
 ├── prometheus.yml            # self-scrape only — metrics arrive via remote write
 └── grafana/
+    ├── dashboards/
+    │   ├── playwright-prometheus-base.json     # overview dashboard (auto-provisioned)
+    │   └── playwright-prometheus-details.json  # deep-dive dashboard (auto-provisioned)
     └── provisioning/
+        ├── dashboards/
+        │   └── dashboards.yaml     # dashboard provider → "Playwright" folder
         └── datasources/
-            └── datasources.yaml  # Prometheus datasource
+            └── datasources.yaml    # Prometheus datasource
 ```
 
 ## How it works
