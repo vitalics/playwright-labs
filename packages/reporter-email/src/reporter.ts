@@ -1,11 +1,7 @@
 import nodemailer, { type TransportOptions } from "nodemailer";
 import type { ReactElement } from "react";
-import type {
-  FullResult,
-  Reporter,
-  TestCase,
-  TestResult,
-} from "@playwright/test/reporter";
+import type { FullResult } from "@playwright/test/reporter";
+import { BaseReporter, type TestCases } from "@playwright-labs/reporter-core";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import type { Attachment } from "nodemailer/lib/mailer";
 
@@ -20,7 +16,7 @@ type Email = `${string}@${string}.${string}`;
 type EmailWithName = `"${string}" <${Email}>`;
 
 /** Array of the test cases with its results. This is Array of Array because it helps to organize tables */
-export type NodemailerTestCases = [test: TestCase, result: TestResult][];
+export type NodemailerTestCases = TestCases;
 
 export type NodemailerReporterOptions = {
   /**
@@ -291,13 +287,13 @@ async function renderElement(element: ReactElement): Promise<string> {
   }
 }
 
-export default class EmailReporter implements Reporter {
+export default class EmailReporter extends BaseReporter {
   readonly #options: Readonly<NodemailerReporterOptions>;
-  readonly #testCases: NodemailerTestCases = [];
   #html: string | null = null;
   #text: string | null = null;
 
   constructor(options: NodemailerReporterOptions) {
+    super();
     this.#options = options;
   }
 
@@ -378,7 +374,7 @@ export default class EmailReporter implements Reporter {
     if ("html" in this.#options) {
       let htmlValue: string | ReactElement;
       if (typeof this.#options.html === "function") {
-        htmlValue = await this.#options.html(result, this.#testCases);
+        htmlValue = await this.#options.html(result, this.testCases);
       } else {
         htmlValue = this.#options.html;
       }
@@ -400,7 +396,7 @@ export default class EmailReporter implements Reporter {
     var preparedText: string;
     if ("text" in this.#options) {
       if (typeof this.#options.text === "function") {
-        preparedText = await this.#options.text(result, this.#testCases);
+        preparedText = await this.#options.text(result, this.testCases);
         if (typeof preparedText !== "string") {
           throw new TypeError(
             `"text" function should return a string. Got ${typeof preparedText}`,
@@ -416,10 +412,6 @@ export default class EmailReporter implements Reporter {
       this.#text = preparedText;
       return this.#text;
     }
-  }
-
-  onTestEnd(test: TestCase, result: TestResult): void {
-    this.#testCases.push([test, result]);
   }
 
   async onEnd(

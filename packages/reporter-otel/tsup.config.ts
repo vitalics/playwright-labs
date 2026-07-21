@@ -4,7 +4,7 @@ export default defineConfig(() => ({
   entry: {
     index: "src/index.ts",
   },
-  external: ["@playwright/test", "@playwright-labs/otel-core"],
+  external: ["@playwright/test", "@playwright-labs/otel-core", "@playwright-labs/reporter-core"],
   format: ["cjs", "esm"],
   splitting: false,
   clean: true,

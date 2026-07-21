@@ -1,8 +1,9 @@
 import type { SlackBlock, SlackMessage } from "@playwright-labs/slack-buildkit";
-import type { FullResult, TestCase, TestResult } from "@playwright/test/reporter";
+import type { FullResult } from "@playwright/test/reporter";
+import type { TestCases } from "@playwright-labs/reporter-core";
 
 /** Array of [TestCase, TestResult] pairs collected during the run. */
-export type SlackTestCases = [test: TestCase, result: TestResult][];
+export type SlackTestCases = TestCases;
 
 type BlocksValue = SlackBlock[] | SlackMessage;
 type BlocksResolver =

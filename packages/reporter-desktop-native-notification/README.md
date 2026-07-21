@@ -44,6 +44,7 @@ All options are optional — an empty options object uses the defaults shown bel
 |---|---|---|---|
 | `notifyOn` | `'always' \| 'success' \| 'failure'` | `'always'` | When to send the run summary notification |
 | `title` | `string` | derived from run status, e.g. `'Playwright — Failed'` | Notification title |
+| `message` | `string \| ((result, testCases) => string \| Promise<string>)` | built-in counts summary | Notification body — static or a template called with the run result and all test cases (same contract as reporter-email's `text`/`html`) |
 | `sound` | `boolean` | `false` | Play the default notification sound |
 | `icon` | `string` | — | Path to a custom app icon |
 | `wait` | `boolean` | `false` | Wait for the user to dismiss/click the notification |

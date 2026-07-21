@@ -1,10 +1,8 @@
 import { defineConfig } from "tsup";
 
-export default defineConfig(() => ({
-  entry: {
-    index: "src/index.ts",
-  },
-  external: ["@playwright/test", "@playwright-labs/reporter-core", "node-notifier"],
+export default defineConfig({
+  entry: { index: "src/index.ts" },
+  external: ["@playwright/test"],
   format: ["cjs", "esm"],
   splitting: false,
   clean: true,
@@ -15,7 +13,7 @@ export default defineConfig(() => ({
   tsconfig: "./tsconfig.json",
   outExtension({ format }) {
     return {
-      js: format === "cjs" ? ".cjs" : format === "esm" ? `.mjs` : ".js",
+      js: format === "cjs" ? ".cjs" : format === "esm" ? ".mjs" : ".js",
     };
   },
-}));
+});

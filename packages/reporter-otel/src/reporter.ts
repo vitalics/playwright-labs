@@ -50,13 +50,13 @@ import type {
   FullConfig,
   FullProject,
   FullResult,
-  Reporter,
   Suite,
   TestCase,
   TestError,
   TestResult,
   TestStep,
 } from "@playwright/test/reporter";
+import { BaseReporter } from "@playwright-labs/reporter-core";
 
 import {
   OtelEvent,
@@ -100,7 +100,7 @@ export function annotationLabel(label: string): string {
 
 export type OtelReporterOptions = OtelCoreOptions;
 
-export default class OtelReporter implements Reporter {
+export default class OtelReporter extends BaseReporter {
   protected readonly baseUrl: string;
   protected readonly headers: Record<string, string>;
   protected readonly prefix: string;
@@ -143,6 +143,7 @@ export default class OtelReporter implements Reporter {
   private _cpuSystem = 0;
 
   constructor(options: OtelReporterOptions = {}) {
+    super();
     const config = resolveOtelConfig(options);
     this.baseUrl = config.baseUrl;
     this.headers = config.headers;
@@ -161,6 +162,7 @@ export default class OtelReporter implements Reporter {
   // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
   onBegin(config: FullConfig, _suite: Suite): void {
+    super.onBegin(config, _suite);
     const runtime = resolveRuntime();
     const resource = resourceFromAttributes({
       [ATTR_SERVICE_NAME]: "playwright",
@@ -215,6 +217,7 @@ export default class OtelReporter implements Reporter {
   }
 
   onTestEnd(test: TestCase, result: TestResult): void {
+    super.onTestEnd(test, result);
     const isPassing =
       result.status === "skipped" || result.status === test.expectedStatus;
     const project = findProject(test);
