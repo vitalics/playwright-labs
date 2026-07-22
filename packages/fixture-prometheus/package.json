@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/fixture-prometheus",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Prometheus metric fixtures (useCounterMetric, useGaugeMetric) for @playwright/test — use with @playwright-labs/reporter-prometheus-remote-write",
   "keywords": [
     "playwright",
