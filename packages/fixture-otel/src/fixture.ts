@@ -15,6 +15,8 @@ import {
   Histogram,
   UpDownCounter,
   type MetricOptions,
+  OtelEvent,
+  OTEL_ATTACHMENT_NAME,
   TRACEPARENT_ANNOTATION,
   otelContext,
   otelTrace,
@@ -281,12 +283,35 @@ export interface OtelFixture {
  * });
  * ```
  */
+/**
+ * Internal fixture that routes `OtelEvent.emit()` through the current test's
+ * attachments instead of stdout, so transport events never leak into the
+ * console output. Every public fixture depends on it, which guarantees the
+ * writer is still installed when their teardown flushes buffered data.
+ */
+type OtelInternalFixtures = { _otelSink: void };
+
 export const test: TestType<
   PlaywrightTestArgs & PlaywrightTestOptions & OtelFixture,
   PlaywrightWorkerArgs & PlaywrightWorkerOptions
-> = baseTest.extend<OtelFixture>({
+> = baseTest.extend<OtelFixture & OtelInternalFixtures>({
+  _otelSink: [
+    async ({}, use, testInfo: TestInfo) => {
+      OtelEvent.setWriter((payload) => {
+        testInfo.attachments.push({
+          name: OTEL_ATTACHMENT_NAME,
+          contentType: "application/json",
+          body: Buffer.from(JSON.stringify(payload)),
+        });
+      });
+      await use();
+      OtelEvent.setWriter(undefined);
+    },
+    { auto: true, box: true },
+  ],
+
   useCounter: [
-    async ({}, use) => {
+    async ({ _otelSink }, use) => {
       const created: Counter[] = [];
       await use((name, options) => {
         const counter = new Counter(name, options);
@@ -299,7 +324,7 @@ export const test: TestType<
   ],
 
   useHistogram: [
-    async ({}, use) => {
+    async ({ _otelSink }, use) => {
       const created: Histogram[] = [];
       await use((name, options) => {
         const histogram = new Histogram(name, options);
@@ -312,7 +337,7 @@ export const test: TestType<
   ],
 
   useUpDownCounter: [
-    async ({}, use) => {
+    async ({ _otelSink }, use) => {
       const created: UpDownCounter[] = [];
       await use((name, options) => {
         const counter = new UpDownCounter(name, options);
@@ -325,7 +350,7 @@ export const test: TestType<
   ],
 
   useGlobalCounter: [
-    async ({}, use) => {
+    async ({ _otelSink }, use) => {
       let used = false;
       await use((name, options) => {
         used = true;
@@ -339,7 +364,7 @@ export const test: TestType<
   ],
 
   useGlobalHistogram: [
-    async ({}, use) => {
+    async ({ _otelSink }, use) => {
       let used = false;
       await use((name, options) => {
         used = true;
@@ -351,7 +376,7 @@ export const test: TestType<
   ],
 
   useSpan: [
-    async ({}, use) => {
+    async ({ _otelSink }, use) => {
       const created: Span[] = [];
       await use((name) => {
         const span = new Span(name);

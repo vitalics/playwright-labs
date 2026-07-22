@@ -250,6 +250,7 @@ function makeResult(overrides: {
   status?: string;
   duration?: number;
   steps?: TestStep[];
+  attachments?: Array<{ name: string; contentType: string; body?: Buffer }>;
 }): TestResult {
   return {
     startTime: new Date("2024-01-01T00:00:00Z"),
@@ -258,10 +259,23 @@ function makeResult(overrides: {
     retry: 0,
     workerIndex: 0,
     parallelIndex: 0,
-    attachments: [],
+    attachments: overrides.attachments ?? [],
     steps: overrides.steps ?? [],
     error: undefined,
   } as unknown as TestResult;
+}
+
+/** Serialises an OTel payload the way fixture-otel's attachment sink does. */
+function makeOtelAttachment(payload: object): {
+  name: string;
+  contentType: string;
+  body: Buffer;
+} {
+  return {
+    name: "__pw_otel__",
+    contentType: "application/json",
+    body: Buffer.from(JSON.stringify(payload)),
+  };
 }
 
 // ── Reporter — deferred span creation ────────────────────────────────────────
@@ -291,6 +305,87 @@ test.describe("OtelReporter — span lifecycle", () => {
 
     const span = reporter.spyTracer.spans[0];
     expect(span.ended).toBe(true);
+  });
+});
+
+// ── Reporter — attachment event transport ────────────────────────────────────
+
+test.describe("OtelReporter — attachment transport", () => {
+  test("span payloads in attachments become child spans of the test span", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+    const test_ = makeTest({});
+    const result = makeResult({
+      attachments: [
+        makeOtelAttachment({
+          kind: "span",
+          spanId: "aaaaaaaaaaaaaaaa",
+          name: "worker.op",
+          startTime: 1000,
+          endTime: 2000,
+        }),
+      ],
+    });
+
+    reporter.onTestBegin(test_, result);
+    reporter.onTestEnd(test_, result);
+
+    // Test span + one worker span decoded from the attachment.
+    expect(reporter.spyTracer.spans).toHaveLength(2);
+    const workerSpan = reporter.spyTracer.spans.find(
+      (s) => s.name === "worker.op",
+    );
+    expect(workerSpan).toBeDefined();
+    expect(workerSpan!.ended).toBe(true);
+  });
+
+  test("transport attachments are excluded from test.attachments_count", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+    const test_ = makeTest({});
+    const result = makeResult({
+      attachments: [
+        makeOtelAttachment({
+          kind: "span",
+          spanId: "bbbbbbbbbbbbbbbb",
+          name: "worker.op2",
+          startTime: 1000,
+          endTime: 2000,
+        }),
+        {
+          name: "screenshot",
+          contentType: "image/png",
+          body: Buffer.from("fake"),
+        },
+      ],
+    });
+
+    reporter.onTestBegin(test_, result);
+    reporter.onTestEnd(test_, result);
+
+    const testSpan = reporter.spyTracer.spans.find((s) => s.name !== "worker.op2");
+    expect(testSpan!.attrs["test.attachments_count"]).toBe(1);
+  });
+
+  test("malformed attachment bodies are ignored", () => {
+    const reporter = new TestReporter();
+    reporter.onBegin(makeConfig(), makeSuite());
+    const test_ = makeTest({});
+    const result = makeResult({
+      attachments: [
+        {
+          name: "__pw_otel__",
+          contentType: "application/json",
+          body: Buffer.from("not-json"),
+        },
+      ],
+    });
+
+    reporter.onTestBegin(test_, result);
+    reporter.onTestEnd(test_, result);
+
+    // Only the test span — the broken payload neither crashes nor produces spans.
+    expect(reporter.spyTracer.spans).toHaveLength(1);
   });
 });
 
