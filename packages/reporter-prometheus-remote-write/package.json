@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/reporter-prometheus-remote-write",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Prometheus Remote Write reporter for Playwright — send test metrics to Prometheus in real time",
   "keywords": [
     "playwright",

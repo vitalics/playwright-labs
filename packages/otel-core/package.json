@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/otel-core",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Core OpenTelemetry primitives and SDK factory for Playwright Labs",
   "keywords": [
     "playwright",
