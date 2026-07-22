@@ -13,14 +13,12 @@ export default defineConfig({
     },
   ],
 
-  webServer: process.env.CI
-    ? undefined
-    : {
-        command: "pnpm --filter fixture-qrcode run dev",
-        url: "http://localhost:5173",
-        reuseExistingServer: true,
-        timeout: 120_000,
-        stdout: "pipe",
-        stderr: "pipe",
-      },
+  webServer: {
+    command: "pnpm run dev",
+    url: "http://localhost:5173",
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+    stdout: "pipe",
+    stderr: "pipe",
+  },
 });
