@@ -1,0 +1,65 @@
+{
+  "name": "@playwright-labs/fixture-qrcode",
+  "version": "0.0.0",
+  "description": "QR code decode fixture and custom matchers for Playwright",
+  "main": "dist/index.cjs",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "ci:pretest": "playwright install",
+    "package:pack": "pnpm exec npm pack",
+    "package:pack:dry-run": "pnpm package:pack --dry-run",
+    "dev": "vite"
+  },
+  "keywords": [
+    "playwright",
+    "fixture",
+    "testing",
+    "playwright-labs",
+    "qrcode",
+    "decode",
+    "matchers"
+  ],
+  "author": "Vitali Haradkou <vitalicset@yandex.ru>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitalics/playwright-labs.git",
+    "directory": "packages/fixture-qrcode"
+  },
+  "packageManager": "pnpm@10.29.2",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.57.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0",
+    "vite": "8.1.5"
+  },
+  "dependencies": {
+    "@playwright-labs/qrcode-core": "workspace:*"
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "name": "@playwright-labs/barcode-core",
+  "version": "1.0.0",
+  "description": "1D barcode (EAN, Code128, UPC, ...) encode/decode primitives",
+  "main": "dist/index.cjs",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "package:pack": "pnpm exec npm pack",
+    "package:pack:dry-run": "pnpm package:pack --dry-run"
+  },
+  "keywords": [
+    "barcode",
+    "ean",
+    "code128",
+    "upc",
+    "encode",
+    "decode",
+    "playwright-labs"
+  ],
+  "author": "Vitali Haradkou <vitalicset@yandex.ru>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitalics/playwright-labs.git",
+    "directory": "packages/barcode-core"
+  },
+  "packageManager": "pnpm@10.29.2",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.9.8",
+    "javascript-barcode-reader": "1.0.0",
+    "jimp": "1.6.1",
+    "jsbarcode": "3.12.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "@types/jsbarcode": "^3.11.4",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0"
+  }
+}
