@@ -167,7 +167,10 @@ test.describe("math utilities", () => {
     const start: Vector = { x: 0, y: 0 };
     const end: Vector = { x: 500, y: 300 };
 
-    const points = path(start, end) as Vector[];
+    // moveSpeed pins the otherwise random speed factor: with the default
+    // Math.random() speed the curve can legitimately shrink to ~9 points,
+    // which made the step-count assertion below flaky.
+    const points = path(start, end, { moveSpeed: 25 }) as Vector[];
 
     // Should produce many intermediate steps
     expect(points.length).toBeGreaterThan(10);
