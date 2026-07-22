@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/fixture-qrcode",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "QR code decode fixture and custom matchers for Playwright",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
