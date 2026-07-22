@@ -1,3 +1,6 @@
+import type { TestInfo } from "@playwright/test";
+import { Event } from "@playwright-labs/prometheus-core";
+
 import { Counter, Histogram, expect, test } from "../src/index";
 
 // The config enables `fullyParallel`, which would run these tests in separate
@@ -6,42 +9,14 @@ import { Counter, Histogram, expect, test } from "../src/index";
 test.describe.configure({ mode: "serial" });
 
 /**
- * Tests in one spec file run sequentially in the same worker process, so the
- * module-level global metric registry is shared between tests — exactly what
- * these tests rely on.
- *
- * The stdout spy lives for the whole file: global metrics are flushed at
- * fixture teardown, which runs *after* the test body, so a spy created and
- * restored inside a single test would never see the flush.
+ * Decodes a test's attachments back into `prometheus-remote-writer` events.
+ * Metric events are transported via `testInfo.attachments` (not stdout), so
+ * the transport never pollutes the console output.
  */
-const stdoutWrites: string[] = [];
-let originalWrite: typeof process.stdout.write;
-
-test.beforeAll(() => {
-  originalWrite = process.stdout.write;
-  process.stdout.write = ((chunk: unknown) => {
-    stdoutWrites.push(String(chunk));
-    return true;
-  }) as typeof process.stdout.write;
-});
-
-test.afterAll(() => {
-  process.stdout.write = originalWrite;
-});
-
-/** Parses captured stdout writes back into `prometheus-remote-writer` events. */
-function parseEvents(writes: string[]) {
-  return writes
-    .flatMap((write) => write.split("\n"))
-    .filter((line) => line.trim() !== "")
-    .map((line) => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return undefined;
-      }
-    })
-    .filter((event) => event?.name === "prometheus-remote-writer");
+function parseEvents(attachments: TestInfo["attachments"]) {
+  return attachments
+    .map((attachment) => Event.fromAttachment(attachment))
+    .filter((event) => event !== null);
 }
 
 test.describe("useGlobalCounter", () => {
@@ -116,13 +91,19 @@ test.describe("global metric kind collision", () => {
 });
 
 test.describe("global metrics auto-flush", () => {
+  let autoflushTestInfo: TestInfo | undefined;
+
   test("records a sample without calling collect()", async ({
     useGlobalCounter,
   }) => {
+    // The flush happens in the fixture teardown, after this body completes,
+    // and lands in this test's attachments. Keep a reference to the TestInfo
+    // so the next test can assert on it.
+    autoflushTestInfo = test.info();
     useGlobalCounter("auto_flush_counter").inc();
 
     // nothing emitted during the test body itself
-    const events = parseEvents(stdoutWrites);
+    const events = parseEvents(test.info().attachments);
     expect(
       events.some(
         (event) => event.payload.labels.__name__ === "auto_flush_counter",
@@ -130,12 +111,12 @@ test.describe("global metrics auto-flush", () => {
     ).toBe(false);
   });
 
-  test("the previous test's teardown flushed the metric to stdout", () => {
-    const events = parseEvents(stdoutWrites).filter(
+  test("the previous test's teardown flushed the metric to its attachments", () => {
+    const events = parseEvents(autoflushTestInfo!.attachments).filter(
       (event) => event.payload.labels.__name__ === "auto_flush_counter",
     );
 
     expect(events.length).toBeGreaterThan(0);
-    expect(events.at(-1).payload.samples.at(-1).value).toBe(1);
+    expect(events.at(-1)!.payload.samples.at(-1)!.value).toBe(1);
   });
 });

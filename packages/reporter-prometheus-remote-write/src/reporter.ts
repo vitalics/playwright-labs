@@ -637,11 +637,25 @@ export default defineConfig({
     super.onTestEnd(test, result);
     this.updateResults(test, result);
 
+    // Metric events transported via testInfo.attachments (the console-silent
+    // channel used by fixture-prometheus). Transport attachments are excluded
+    // from the user-facing attachment series below.
+    const workerSeries: Timeseries[] = [];
+    const userAttachments: TestResult["attachments"] = [];
+    for (const attach of result.attachments) {
+      const event = Event.fromAttachment(attach);
+      if (event) {
+        workerSeries.push(this.mapTimeseries(event.payload));
+      } else {
+        userAttachments.push(attach);
+      }
+    }
+
     // Per-attachment / per-annotation series: each item is drained immediately
     // after its labels are applied, otherwise the shared counter's labels would
     // be overwritten by the next item and only the last one would be sent.
     const attachmentCountSeries: Timeseries[] = [];
-    result.attachments.forEach((attach) => {
+    userAttachments.forEach((attach) => {
       const size = attach.body?.length ?? 0;
       this.tests_total_attachment_size.inc(size);
       const labels = {
@@ -692,7 +706,7 @@ export default defineConfig({
       actualStatus: result.status,
       duration: String(result.duration),
       parallelIndex: String(result.parallelIndex),
-      attachmentsCount: String(result.attachments.length),
+      attachmentsCount: String(userAttachments.length),
       stepsCount: String(result.steps.length),
       workerIndex: String(result.workerIndex),
       retryCount: String(result.retry),
@@ -714,6 +728,7 @@ export default defineConfig({
     }
 
     await this.send([
+      ...workerSeries,
       this.mapTimeseries(this.test_step),
       this.mapTimeseries(this.test_step_total_duration),
       this.mapTimeseries(this.test_attachment_size),

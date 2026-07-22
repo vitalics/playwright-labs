@@ -58,10 +58,7 @@ export abstract class Metric<
     if (!this._hasPendingSamples()) {
       return this;
     }
-    const event = new Event(this._drainSeries());
-    // Newline-terminated so back-to-back events can be split into single
-    // JSON lines by the reporter (`JSON.parse` tolerates the trailing "\n").
-    process.stdout.write(JSON.stringify(event) + "\n");
+    Event.emit(new Event(this._drainSeries()));
     return this;
   }
   /** revert metric to initial state */

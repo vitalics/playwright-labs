@@ -5,10 +5,17 @@ import {
   PlaywrightTestOptions,
   PlaywrightWorkerArgs,
   PlaywrightWorkerOptions,
+  TestInfo,
   TestType,
 } from "@playwright/test";
 
-import { Counter, Gauge, Histogram } from "@playwright-labs/prometheus-core";
+import {
+  Counter,
+  Event,
+  Gauge,
+  Histogram,
+  PROM_ATTACHMENT_NAME,
+} from "@playwright-labs/prometheus-core";
 
 /**
  * Worker-local registry of shared ("global") metrics, keyed by
@@ -237,12 +244,35 @@ export interface PromRWFixture {
  * });
  * ```
  */
+/**
+ * Internal fixture that routes `Event.emit()` through the current test's
+ * attachments instead of stdout, so transport events never leak into the
+ * console output. Every public fixture depends on it, which guarantees the
+ * writer is still installed when their teardown flushes buffered data.
+ */
+type PromInternalFixtures = { _promSink: void };
+
 export const test: TestType<
   PlaywrightTestArgs & PlaywrightTestOptions & PromRWFixture,
   PlaywrightWorkerArgs & PlaywrightWorkerOptions
-> = baseTest.extend<PromRWFixture>({
+> = baseTest.extend<PromRWFixture & PromInternalFixtures>({
+  _promSink: [
+    async ({}, use, testInfo: TestInfo) => {
+      Event.setWriter((event) => {
+        testInfo.attachments.push({
+          name: PROM_ATTACHMENT_NAME,
+          contentType: "application/json",
+          body: Buffer.from(JSON.stringify(event)),
+        });
+      });
+      await use();
+      Event.setWriter(undefined);
+    },
+    { auto: true, box: true },
+  ],
+
   useCounterMetric: [
-    async ({}, use) => {
+    async ({ _promSink }, use) => {
       await use(
         <
           Name extends string = string,
@@ -261,7 +291,7 @@ export const test: TestType<
     { box: true },
   ],
   useGaugeMetric: [
-    async ({}, use) => {
+    async ({ _promSink }, use) => {
       await use((name, labels) => {
         return new Gauge({ name, ...labels });
       });
@@ -269,7 +299,7 @@ export const test: TestType<
     { box: true },
   ],
   useGlobalCounter: [
-    async ({}, use) => {
+    async ({ _promSink }, use) => {
       await use(
         <
           Name extends string = string,
@@ -291,7 +321,7 @@ export const test: TestType<
     { box: true },
   ],
   useGlobalHistogram: [
-    async ({}, use) => {
+    async ({ _promSink }, use) => {
       await use((name, options) =>
         getGlobalMetric(
           "histogram",

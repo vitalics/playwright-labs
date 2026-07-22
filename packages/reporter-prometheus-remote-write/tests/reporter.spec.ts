@@ -295,6 +295,78 @@ test.describe("PrometheusReporter — attachments", () => {
   });
 });
 
+// ── Reporter — attachment event transport ─────────────────────────────────────
+
+test.describe("PrometheusReporter — attachment transport", () => {
+  /** Serialises an event the way fixture-prometheus' attachment sink does. */
+  function makeEventAttachment(payload: Timeseries) {
+    return {
+      name: "__pw_prom__",
+      contentType: "application/json",
+      body: Buffer.from(JSON.stringify(new Event(payload))),
+    };
+  }
+
+  test("event payloads in attachments are forwarded as prefixed series", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+    const test_ = makeTest({});
+    const result = makeResult({
+      attachments: [
+        makeEventAttachment({
+          labels: { __name__: "api_requests", endpoint: "/users" },
+          samples: [{ value: 1, timestamp: 1000 }],
+        }),
+      ],
+    });
+    await reporter.onTestEnd(test_, result);
+
+    const series = findSeries(reporter, "pw_api_requests");
+    expect(series).toBeDefined();
+    expect(series?.labels.endpoint).toBe("/users");
+    expect(series?.samples.at(-1)?.value).toBe(1);
+  });
+
+  test("transport attachments are excluded from attachment series and count", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+    const test_ = makeTest({});
+    const result = makeResult({
+      attachments: [
+        makeEventAttachment({
+          labels: { __name__: "api_requests" },
+          samples: [{ value: 1, timestamp: 1000 }],
+        }),
+      ],
+    });
+    await reporter.onTestEnd(test_, result);
+
+    expect(findSeries(reporter, "pw_test_attachment_count")).toBeUndefined();
+    const testSeries = findSeries(reporter, "pw_test");
+    expect(testSeries?.labels.attachmentsCount).toBe("0");
+  });
+
+  test("malformed attachment bodies are ignored", async () => {
+    const reporter = new TestReporter({ serverUrl: SERVER_URL });
+    reporter.onBegin(makeConfig(), makeSuite());
+    const test_ = makeTest({});
+    const result = makeResult({
+      attachments: [
+        {
+          name: "__pw_prom__",
+          contentType: "application/json",
+          body: Buffer.from("not-json"),
+        },
+      ],
+    });
+
+    // Does not throw; the broken payload is treated as a user attachment.
+    await reporter.onTestEnd(test_, result);
+    const testSeries = findSeries(reporter, "pw_test");
+    expect(testSeries?.labels.attachmentsCount).toBe("1");
+  });
+});
+
 // ── Reporter — annotations ────────────────────────────────────────────────────
 
 test.describe("PrometheusReporter — annotations", () => {
