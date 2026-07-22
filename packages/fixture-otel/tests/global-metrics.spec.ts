@@ -2,6 +2,7 @@ import {
   OtelEvent,
   type MetricPayload,
 } from "@playwright-labs/otel-core";
+import type { TestInfo } from "@playwright/test";
 
 import { test, expect, Counter, Histogram } from "../src/index";
 
@@ -10,29 +11,17 @@ import { test, expect, Counter, Histogram } from "../src/index";
 // running tests in declaration order (the config sets fullyParallel: true).
 test.describe.configure({ mode: "serial" });
 
-/** Captures every chunk written to `process.stdout` until the returned restore function is called. */
-function spyOnStdout(buffer: string[]): () => void {
-  const original = process.stdout.write;
-  process.stdout.write = function (
-    chunk: unknown,
-    ...rest: unknown[]
-  ): boolean {
-    buffer.push(String(chunk));
-    return (original as (...args: unknown[]) => boolean).call(
-      process.stdout,
-      chunk,
-      ...rest,
-    );
-  } as typeof process.stdout.write;
-  return () => {
-    process.stdout.write = original;
-  };
-}
-
-/** Decodes all captured stdout chunks into metric events for `name`. */
-function metricEvents(writes: string[], name: string): MetricPayload[] {
-  return writes
-    .map((chunk) => OtelEvent.parse(chunk))
+/**
+ * Decodes all OTel transport attachments of a test into metric events for
+ * `name`. Events are emitted as `testInfo.attachments` entries (not stdout),
+ * so the transport never pollutes the console output.
+ */
+function metricEvents(
+  attachments: TestInfo["attachments"],
+  name: string,
+): MetricPayload[] {
+  return attachments
+    .map((a) => OtelEvent.fromAttachment(a))
     .filter(
       (p): p is MetricPayload => p?.kind === "metric" && p.name === name,
     );
@@ -75,33 +64,31 @@ test.describe("useGlobalCounter", () => {
 
 // ── Auto-flush at fixture teardown ────────────────────────────────────────────
 
-const autoflushWrites: string[] = [];
-let restoreStdout: (() => void) | undefined;
+let autoflushTestInfo: TestInfo | undefined;
 
 test.describe("useGlobalCounter — auto-flush", () => {
   test("records a data point without calling collect()", ({
     useGlobalCounter,
   }) => {
-    // The spy must outlive this test body: the fixture teardown (which
-    // triggers the flush) runs after the body completes. It is restored in
-    // the next test.
-    restoreStdout = spyOnStdout(autoflushWrites);
+    // The flush happens in the fixture teardown, after this body completes,
+    // and lands in this test's attachments. Keep a reference to the TestInfo
+    // so the next test can assert on it.
+    autoflushTestInfo = test.info();
     const counter = useGlobalCounter("gm_autoflush");
     counter.add(1, { url: "/auto" });
     // No manual collect() — the teardown flush is what we are proving.
   });
 
-  test("teardown of the previous test flushed the data point to stdout", () => {
-    try {
-      const events = metricEvents(autoflushWrites, "gm_autoflush");
-      expect(events).toHaveLength(1);
-      expect(events[0].type).toBe("counter");
-      expect(events[0].dataPoints).toEqual([
-        { value: 1, attributes: { url: "/auto" } },
-      ]);
-    } finally {
-      restoreStdout?.();
-    }
+  test("teardown of the previous test flushed the data point to its attachments", () => {
+    const events = metricEvents(
+      autoflushTestInfo!.attachments,
+      "gm_autoflush",
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0].type).toBe("counter");
+    expect(events[0].dataPoints).toEqual([
+      { value: 1, attributes: { url: "/auto" } },
+    ]);
   });
 });
 
@@ -157,26 +144,21 @@ test.describe("global metrics — manual collect()", () => {
   test("collect() drains; a second collect() emits nothing", ({
     useGlobalCounter,
   }) => {
-    const writes: string[] = [];
-    const restore = spyOnStdout(writes);
-    try {
-      const counter = useGlobalCounter("gm_manual_collect");
-      counter.add(1);
-      counter.collect();
-      expect(metricEvents(writes, "gm_manual_collect")).toHaveLength(1);
+    const attachments = test.info().attachments;
+    const counter = useGlobalCounter("gm_manual_collect");
+    counter.add(1);
+    counter.collect();
+    expect(metricEvents(attachments, "gm_manual_collect")).toHaveLength(1);
 
-      // No new data since the last flush — no new event is written.
-      counter.collect();
-      expect(metricEvents(writes, "gm_manual_collect")).toHaveLength(1);
+    // No new data since the last flush — no new event is written.
+    counter.collect();
+    expect(metricEvents(attachments, "gm_manual_collect")).toHaveLength(1);
 
-      counter.add(2);
-      counter.collect();
-      const events = metricEvents(writes, "gm_manual_collect");
-      expect(events).toHaveLength(2);
-      expect(events[1].dataPoints).toEqual([{ value: 2 }]);
-      expect(counter).toHaveOtelCallCount(2);
-    } finally {
-      restore();
-    }
+    counter.add(2);
+    counter.collect();
+    const events = metricEvents(attachments, "gm_manual_collect");
+    expect(events).toHaveLength(2);
+    expect(events[1].dataPoints).toEqual([{ value: 2 }]);
+    expect(counter).toHaveOtelCallCount(2);
   });
 });

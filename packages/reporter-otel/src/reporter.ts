@@ -227,6 +227,25 @@ export default class OtelReporter extends BaseReporter {
     const project = findProject(test);
     const browserAttrs = resolveBrowserAttrs(project);
 
+    // Metric and span events transported via testInfo.attachments (the
+    // console-silent channel used by fixture-otel). Transport attachments are
+    // excluded from the user-facing attachment metrics below.
+    const userAttachments: TestResult["attachments"] = [];
+    for (const attachment of result.attachments) {
+      const payload = OtelEvent.fromAttachment(attachment);
+      if (!payload) {
+        userAttachments.push(attachment);
+        continue;
+      }
+      if (payload.kind === "span") {
+        const buf = this.workerSpanBuffer.get(test.id) ?? [];
+        buf.push(payload);
+        this.workerSpanBuffer.set(test.id, buf);
+      } else {
+        this.recordWorkerMetric(payload);
+      }
+    }
+
     if (this.tracer) {
       const startTime =
         this.testStartTimes.get(test.id) ?? result.startTime;
@@ -256,7 +275,7 @@ export default class OtelReporter extends BaseReporter {
         "test.retry": result.retry,
         "test.worker_index": result.workerIndex,
         "test.parallel_index": result.parallelIndex,
-        "test.attachments_count": result.attachments.length,
+        "test.attachments_count": userAttachments.length,
         "test.steps_count": result.steps.length,
         ...browserAttrs,
         // user_agent is long — keep it in spans only, not in metric labels
@@ -308,7 +327,7 @@ export default class OtelReporter extends BaseReporter {
     if (result.retry > 0) {
       this.testRetries?.add(result.retry, { "test.suite": test.parent.title });
     }
-    for (const attachment of result.attachments) {
+    for (const attachment of userAttachments) {
       const size = attachment.body?.length ?? 0;
       this.testAttachmentCount?.add(1, {
         "attachment.content_type": attachment.contentType,

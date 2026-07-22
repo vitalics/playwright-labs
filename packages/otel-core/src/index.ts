@@ -1,6 +1,7 @@
 export {
   OtelEvent,
   OTEL_EVENT_PREFIX,
+  OTEL_ATTACHMENT_NAME,
   WORKER_BASE_URL_ENV,
   WORKER_HEADERS_ENV,
   TRACEPARENT_ANNOTATION,
@@ -9,6 +10,7 @@ export {
   type MetricPayload,
   type SpanPayload,
   type OtelPayload,
+  type OtelEventWriter,
 } from "./events";
 
 export { Span, type SpanStatus } from "./span";

@@ -7,6 +7,9 @@ export const WORKER_HEADERS_ENV = "PLAYWRIGHT_OTEL_HEADERS";
 /** Prefix that OTel event lines written to stdout must start with. */
 export const OTEL_EVENT_PREFIX = "__pw_otel__";
 
+/** Attachment name used when events are transported via `testInfo.attachments`. */
+export const OTEL_ATTACHMENT_NAME = "__pw_otel__";
+
 /**
  * Annotation type used to carry a W3C traceparent from a test fixture to the
  * reporter.  When present, the reporter creates the test span as a child of
@@ -63,20 +66,61 @@ export type OtelPayload = MetricPayload | SpanPayload;
 // ── Event bridge ──────────────────────────────────────────────────────────────
 
 /**
- * Emits and parses OTel payloads over the worker's stdout stream.
+ * Custom transport for OTel payloads, installed via {@link OtelEvent.setWriter}.
+ */
+export type OtelEventWriter = (payload: OtelPayload) => void;
+
+/**
+ * Emits and parses OTel payloads between worker and reporter processes.
  *
  * Workers call `OtelEvent.emit()` to forward metrics / spans to the reporter.
- * The reporter's `onStdOut` hook calls `OtelEvent.parse()` to decode them.
+ * Inside a test, fixture-otel installs an attachment-based writer so events
+ * travel via `testInfo.attachments` and stay out of the console; the reporter
+ * decodes them with `OtelEvent.fromAttachment()` in `onTestEnd`. Outside a
+ * test context, `emit()` falls back to writing a prefixed line to stdout,
+ * which the reporter's `onStdOut` hook decodes with `OtelEvent.parse()`.
  */
 export class OtelEvent {
   static readonly PREFIX = OTEL_EVENT_PREFIX;
 
+  private static writer: OtelEventWriter | undefined;
+
   /**
-   * Writes a single-line JSON event to the worker's stdout.
-   * The reporter will intercept this via `onStdOut`.
+   * Routes subsequent `emit()` calls through `writer` instead of stdout.
+   * Pass `undefined` to restore the stdout fallback.
+   */
+  static setWriter(writer: OtelEventWriter | undefined): void {
+    OtelEvent.writer = writer;
+  }
+
+  /**
+   * Forwards a single event to the reporter — through the installed writer
+   * when one is active, otherwise as a single-line JSON event on stdout.
    */
   static emit(payload: OtelPayload): void {
+    if (OtelEvent.writer) {
+      OtelEvent.writer(payload);
+      return;
+    }
     process.stdout.write(`${OtelEvent.PREFIX}${JSON.stringify(payload)}\n`);
+  }
+
+  /**
+   * Tries to decode a test attachment as an OTel event.
+   * Returns `null` when the attachment is unrelated to this transport.
+   */
+  static fromAttachment(attachment: {
+    name: string;
+    body?: Buffer;
+  }): OtelPayload | null {
+    if (attachment.name !== OTEL_ATTACHMENT_NAME || !attachment.body) {
+      return null;
+    }
+    try {
+      return JSON.parse(attachment.body.toString("utf-8")) as OtelPayload;
+    } catch {
+      return null;
+    }
   }
 
   /**

@@ -1,3 +1,5 @@
+import { Event } from "@playwright-labs/prometheus-core";
+
 import { Counter, Gauge, expect, test } from "../src/index";
 
 test("useCounterMetric returns a Counter with the given name and labels", async ({
@@ -49,31 +51,26 @@ test("useGaugeMetric returns a Gauge; set/inc/dec/zero work", async ({
   expect(gauge._getSeries().samples.at(-1)?.value).toBe(0);
 });
 
-test("collect() writes a single JSON event to stdout", async ({
+test("collect() writes a single event to the test's attachments", async ({
   useCounterMetric,
 }) => {
   const counter = useCounterMetric("api_requests", { endpoint: "/users" });
   counter.inc();
 
-  const writes: string[] = [];
-  const originalWrite = process.stdout.write;
-  process.stdout.write = ((chunk: unknown) => {
-    writes.push(String(chunk));
-    return true;
-  }) as typeof process.stdout.write;
+  const before = test.info().attachments.length;
+  counter.collect();
 
-  try {
-    counter.collect();
-  } finally {
-    process.stdout.write = originalWrite;
-  }
+  const events = test
+    .info()
+    .attachments.slice(before)
+    .map((attachment) => Event.fromAttachment(attachment))
+    .filter((event) => event !== null);
+  expect(events).toHaveLength(1);
 
-  expect(writes).toHaveLength(1);
-
-  const event = JSON.parse(writes[0]);
+  const event = events[0]!;
   expect(event.name).toBe("prometheus-remote-writer");
   expect(event.payload).toBeDefined();
   expect(event.payload.labels.__name__).toBe("api_requests");
   expect(event.payload.labels.endpoint).toBe("/users");
-  expect(event.payload.samples.at(-1).value).toBe(1);
+  expect(event.payload.samples.at(-1)!.value).toBe(1);
 });

@@ -11,8 +11,10 @@
  *   2. The `useCounterMetric` / `useGaugeMetric` fixtures from
  *      `@playwright-labs/fixture-prometheus` — created per test.
  *
- * Both flush via `.collect()`, which writes the series as JSON to stdout;
- * the reporter picks it up in `onStdOut` and remote-writes it to Prometheus.
+ * Both flush via `.collect()`. Inside a test the series travels to the
+ * reporter via `testInfo.attachments` (decoded in `onTestEnd`); outside a
+ * test context it falls back to a JSON line on stdout picked up by
+ * `onStdOut`. Either way the reporter remote-writes it to Prometheus.
  * Every metric name is prefixed with `pw_` by the reporter, so
  * `e2e_page_visits` lands in Prometheus as `pw_e2e_page_visits`.
  *
