@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/fixture-s3",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "S3 upload fixture for Playwright — useBucket() handle, shipped by @playwright-labs/reporter-s3",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
