@@ -6,7 +6,11 @@ import type {
   TestResult,
 } from "@playwright/test/reporter";
 import { BaseReporter } from "@playwright-labs/reporter-core";
-import { S3Client, parseS3AttachmentName } from "@playwright-labs/s3-core";
+import {
+  S3Client,
+  parseS3AttachmentName,
+  S3Event,
+} from "@playwright-labs/s3-core";
 
 export type Attachment = TestResult["attachments"][number];
 
@@ -59,8 +63,28 @@ export type S3ReporterOptions = {
   acl?: string;
   /** Path-style URLs (MinIO etc.). @default true */
   forcePathStyle?: boolean;
-  /** Callback to see after the result has been sent. It has been called after onEnd reporter event */
-  afterSend?: () => Promise<void>;
+  /**
+   * custom fetch client.
+   * @default
+   * globalThis.fetch
+   */
+  fetch?: (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ) => Promise<Response>;
+  /**
+   * count of retries if HTTP request does not sended.
+   * @default 0
+   */
+  retries?: number;
+  /** Per-attempt timeout in milliseconds (via `AbortSignal.timeout`). */
+  timeoutMs?: number;
+  /**
+   * Capture rejections from eventEmitter.
+   * It's captures [automatic capturing of promise rejection](https://nodejs.org/docs/latest-v25.x/api/events.html#capture-rejections-of-promises).
+   * @default false
+   */
+  captureRejections?: boolean;
 };
 
 function sanitizeKeySegment(segment: string): string {
@@ -81,13 +105,12 @@ function sanitizeKeySegment(segment: string): string {
 export default class S3Reporter extends BaseReporter {
   #options: S3ReporterOptions;
 
+  #client: S3Client;
+  #ensuredBuckets = new Set<string>();
+
   constructor(options: S3ReporterOptions) {
     super();
     this.#options = options;
-  }
-
-  async onEnd(result: FullResult): Promise<void> {
-    const options = this.#options;
     const endpoint = options.endpoint ?? process.env.AWS_S3_URL;
     const accessKeyId = options.accessKeyId ?? process.env.AWS_ACCESS_KEY_ID;
     const secretAccessKey =
@@ -107,48 +130,57 @@ export default class S3Reporter extends BaseReporter {
       throw new TypeError("S3Reporter: bucket is required");
     }
 
-    const client = new S3Client({
+    this.#client = new S3Client({
       endpoint,
       region: options.region ?? process.env.AWS_REGION ?? "us-east-1",
       accessKeyId,
       secretAccessKey,
       forcePathStyle: options.forcePathStyle,
+      fetch: this.#options.fetch ?? fetch,
+      http: {
+        retries: this.#options?.retries,
+        timeoutMs: this.#options.timeoutMs,
+      },
+      captureRejections: this.#options.captureRejections,
     });
+  }
 
-    const ensuredBuckets = new Set<string>();
-    const ensureBucket = async (bucket: string): Promise<void> => {
-      if (ensuredBuckets.has(bucket)) return;
-      if (options.createBucket ?? true) {
-        await client.ensureBucket(bucket);
-      }
-      ensuredBuckets.add(bucket);
-    };
+  async #ensureBucket(bucket: string): Promise<void> {
+    if (this.#ensuredBuckets.has(bucket)) return;
+    if (this.#options.createBucket ?? true) {
+      await this.#client.ensureBucket(bucket);
+    }
+    this.#ensuredBuckets.add(bucket);
+  }
 
-    const resolveAttachmentBucket = (
-      attachment: Attachment,
-      test: TestCase,
-      testResult: TestResult,
-    ): string => {
-      const route = options.attachmentBucket;
-      if (typeof route === "function") {
-        return route(attachment, test, testResult) ?? options.bucket;
-      }
-      return route ?? options.bucket;
-    };
+  #resolveAttachmentBucket(
+    attachment: Attachment,
+    test: TestCase,
+    testResult: TestResult,
+  ): string {
+    const route = this.#options.attachmentBucket;
+    if (typeof route === "function") {
+      return route(attachment, test, testResult) ?? this.#options.bucket;
+    }
+    return route ?? this.#options.bucket;
+  }
 
-    await ensureBucket(options.bucket);
+  async onEnd(result: FullResult): Promise<void> {
+    await this.#ensureBucket(this.#options.bucket);
 
     const prefix =
-      options.prefix ??
+      this.#options.prefix ??
       `runs/${result.startTime.toISOString().replace(/[:.]/g, "-")}`;
-    const putOptions = options.acl ? { acl: options.acl } : undefined;
+    const putOptions = this.#options.acl
+      ? { acl: this.#options.acl }
+      : undefined;
 
     const attachmentRefs = new Map<
       string,
       Array<{ bucket: string; key: string }>
     >();
 
-    if (options.uploadAttachments ?? true) {
+    if (this.#options.uploadAttachments ?? true) {
       for (const [test, testResult] of this.testCases) {
         const refs: Array<{ bucket: string; key: string }> = [];
         for (const [index, attachment] of testResult.attachments.entries()) {
@@ -169,8 +201,8 @@ export default class S3Reporter extends BaseReporter {
           const marker = parseS3AttachmentName(attachment.name ?? "");
           const bucket =
             marker?.bucket ??
-            resolveAttachmentBucket(attachment, test, testResult);
-          await ensureBucket(bucket);
+            this.#resolveAttachmentBucket(attachment, test, testResult);
+          await this.#ensureBucket(bucket);
 
           const name = sanitizeKeySegment(
             marker?.name ||
@@ -178,7 +210,7 @@ export default class S3Reporter extends BaseReporter {
               basename(attachment.path ?? `attachment-${index}`),
           );
           const key = `${prefix}/attachments/${test.id}/${testResult.retry}-${index}-${name}`;
-          await client.putObject(bucket, key, content, {
+          await this.#client.putObject(bucket, key, content, {
             contentType: attachment.contentType,
             ...putOptions,
           });
@@ -190,7 +222,7 @@ export default class S3Reporter extends BaseReporter {
       }
     }
 
-    if (options.uploadSummary ?? true) {
+    if (this.#options.uploadSummary ?? true) {
       const summary = {
         status: result.status,
         startTime: result.startTime.toISOString(),
@@ -207,8 +239,8 @@ export default class S3Reporter extends BaseReporter {
             attachmentRefs.get(`${test.id}:${testResult.retry}`) ?? [],
         })),
       };
-      await client.putObject(
-        options.bucket,
+      await this.#client.putObject(
+        this.#options.bucket,
         `${prefix}/summary.json`,
         JSON.stringify(summary, null, 2),
         { contentType: "application/json", ...putOptions },

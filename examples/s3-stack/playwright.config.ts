@@ -1,5 +1,5 @@
 import { defineConfig } from "@playwright/test";
-
+import { type S3ReporterOptions } from '@playwright-labs/reporter-s3'
 /**
  * Fixed prefix so verify.ts knows where to look. Without it the reporter
  * defaults to `runs/<ISO start timestamp>` — better for real projects
@@ -28,11 +28,12 @@ export default defineConfig({
         secretAccessKey: "minioadmin",
         bucket: ARTIFACTS_BUCKET,
         prefix: RUN_PREFIX,
+
         // Route image attachments to their own bucket; everything else
         // falls back to `bucket`. fixture-s3 markers win over this resolver.
         attachmentBucket: ({ contentType }) =>
           contentType?.startsWith("image/") ? "pw-screenshots" : undefined,
-      },
+      } as const satisfies S3ReporterOptions,
     ],
   ],
 });
