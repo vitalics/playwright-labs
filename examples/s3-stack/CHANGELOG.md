@@ -1,5 +1,14 @@
 # @playwright-labs/s3-stack-example
 
+## 0.0.2
+
+### Patch Changes
+
+- Updated dependencies [8cd9a82]
+  - @playwright-labs/s3-core@1.2.0
+  - @playwright-labs/reporter-s3@1.1.1
+  - @playwright-labs/fixture-s3@0.1.1
+
 ## 0.0.1
 
 ### Patch Changes

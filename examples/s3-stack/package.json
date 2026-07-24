@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/s3-stack-example",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Full working example: reporter-s3 + fixture-s3 against a real MinIO, with a post-run verification script",
   "type": "module",
