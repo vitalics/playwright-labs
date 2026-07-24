@@ -1,0 +1,21 @@
+{
+  "name": "@playwright-labs/s3-stack-example",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Full working example: reporter-s3 + fixture-s3 against a real MinIO, with a post-run verification script",
+  "type": "module",
+  "packageManager": "pnpm@10.29.2",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "verify": "tsx verify.ts",
+    "demo": "pnpm test:e2e && pnpm verify",
+    "infra:up": "docker compose up -d --wait",
+    "infra:down": "docker compose down --remove-orphans"
+  },
+  "dependencies": {
+    "@playwright-labs/fixture-s3": "workspace:*",
+    "@playwright-labs/reporter-s3": "workspace:*",
+    "@playwright-labs/s3-core": "workspace:*",
+    "@playwright/test": "1.57.0"
+  }
+}

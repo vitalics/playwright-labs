@@ -5,6 +5,7 @@ packages:
   - examples/grafana-stack
   - examples/sql
   - examples/ghost-cursor
+  - examples/s3-stack
   - '!packages/playwright-best-practices'
   - '!packages/playwright-best-practices-build'
 

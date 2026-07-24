@@ -103,6 +103,21 @@ importers:
         specifier: 1.57.0
         version: 1.57.0
 
+  examples/s3-stack:
+    dependencies:
+      '@playwright-labs/fixture-s3':
+        specifier: workspace:*
+        version: link:../../packages/fixture-s3
+      '@playwright-labs/reporter-s3':
+        specifier: workspace:*
+        version: link:../../packages/reporter-s3
+      '@playwright-labs/s3-core':
+        specifier: workspace:*
+        version: link:../../packages/s3-core
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+
   examples/sql:
     dependencies:
       '@playwright-labs/fixture-sql':
@@ -279,6 +294,19 @@ importers:
       vite:
         specifier: 8.1.5
         version: 8.1.5(@types/node@25.0.9)(esbuild@0.27.3)(jiti@2.4.2)(sass@1.71.1)(tsx@4.21.0)(yaml@2.8.3)
+
+  packages/fixture-s3:
+    dependencies:
+      '@playwright-labs/s3-core':
+        specifier: workspace:*
+        version: link:../s3-core
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
 
   packages/fixture-sql:
     dependencies:
@@ -486,6 +514,22 @@ importers:
         specifier: 1.57.0
         version: 1.57.0
 
+  packages/reporter-s3:
+    dependencies:
+      '@playwright-labs/reporter-core':
+        specifier: workspace:*
+        version: link:../reporter-core
+      '@playwright-labs/s3-core':
+        specifier: workspace:*
+        version: link:../s3-core
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+      testcontainers:
+        specifier: 11.13.0
+        version: 11.13.0
+
   packages/reporter-slack:
     dependencies:
       '@playwright-labs/reporter-core':
@@ -504,6 +548,15 @@ importers:
       react:
         specifier: 19.1.0
         version: 19.1.0
+
+  packages/s3-core:
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+      testcontainers:
+        specifier: 11.13.0
+        version: 11.13.0
 
   packages/selectors-angular:
     dependencies:
