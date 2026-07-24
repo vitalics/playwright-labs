@@ -1,5 +1,12 @@
 # @playwright-labs/fixture-s3
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [8cd9a82]
+  - @playwright-labs/s3-core@1.2.0
+
 ## 0.1.0
 
 ### Minor Changes

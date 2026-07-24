@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/s3-core",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Zero-dependency S3-compatible client (AWS Signature V4 over fetch) shared by @playwright-labs S3 packages",
   "keywords": [
     "playwright",
