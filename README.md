@@ -47,6 +47,7 @@ Runnable examples showing each package integrated with real infrastructure.
 | Example | Packages demonstrated | What it shows |
 | ------- | --------------------- | ------------- |
 | [reporter-otel](./examples/reporter-otel) | `reporter-otel` · `fixture-otel` | Full OTel stack (OTel Collector → Jaeger + Prometheus + Grafana) — traces per test/step, built-in metrics, custom counters/histograms/spans |
+| [s3-stack](./examples/s3-stack) | `reporter-otel` · `fixture-otel` | S3 examples with reporter + fixture |
 | [grafana-stack](./examples/grafana-stack) | `reporter-prometheus-remote-write` · `fixture-prometheus` | Prometheus remote-write receiver + Grafana — real-time test metrics, custom counters/gauges, verify project querying the Prometheus API |
 | [reporter-email](./examples/reporter-email) | `reporter-email` | Live preview server for all email templates (plain HTML, Tailwind, shadcn/ui, charts) |
 | [selectors-angular](./examples/selectors-angular) | `selectors-angular` | Angular application used to test the `angular=` selector engine and component inspection |
