@@ -46,6 +46,7 @@ export type S3RequestEvent = {
    */
   headers: Record<string, string>;
   bodyLength: number;
+  body?: Uint8Array | Buffer;
 };
 
 export type S3ResponseEvent = {
@@ -72,8 +73,8 @@ export type S3ClientEvents = {
   [K_EVENT_REQUEST_REJECT]: [S3Error];
   [K_EVENT_REQUEST_ABORT]: [S3AbortEvent];
   [K_EVENT_ERROR]: [S3Error];
-  error: [S3Error];
   [K_EVENT_RESPONSE]: [S3ResponseEvent];
+  error: [S3Error];
 };
 
 export type HttpOptions = {
@@ -577,12 +578,13 @@ export class S3Client extends EventEmitter<S3ClientEvents> {
         const { authorization: _authorization, ...safeHeaders } =
           requestHeaders;
         this.emit(S3Event.requestSend, {
-          url: new URL(url),
+          url,
           method,
           attempt,
           maxAttempts,
           headers: safeHeaders,
           bodyLength: requestBody?.length ?? 0,
+          body: requestBody,
         });
         const response = await this.#fetch(url, {
           method,
@@ -616,7 +618,7 @@ export class S3Client extends EventEmitter<S3ClientEvents> {
               (error.name === "AbortError" || error.name === "TimeoutError"));
           if (aborted) {
             this.emit(S3Event.requestAbort, {
-              url: new URL(url),
+              url,
               method,
               attempt,
               reason: callerSignal?.reason ?? error,
