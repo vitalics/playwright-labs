@@ -1,31 +1,32 @@
 {
   "name": "@playwright-labs/reporter-s3",
   "version": "1.0.0",
-  "description": "Playwright reporter that uploads test attachments and a run summary to S3-compatible storage (AWS S3, MinIO, R2)",
+  "description": "Playwright reporter that uploads run summary and test attachments to any S3-compatible storage (AWS S3, MinIO, R2)",
+  "main": "dist/index.cjs",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "package:pack": "pnpm exec npm pack",
+    "package:pack:dry-run": "pnpm package:pack --dry-run"
+  },
   "keywords": [
     "playwright",
     "s3",
-    "minio",
     "reporter",
-    "attachments",
+    "minio",
+    "artifacts",
     "playwright-labs"
   ],
   "author": "Vitali Haradkou <vitalicset@yandex.ru>",
   "license": "MIT",
-  "type": "module",
-  "main": "dist/index.cjs",
-  "types": "dist/index.d.ts",
   "packageManager": "pnpm@10.29.2",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vitalics/playwright-labs.git",
     "directory": "packages/reporter-s3"
-  },
-  "scripts": {
-    "build": "tsup",
-    "test": "playwright test",
-    "package:pack": "pnpm exec npm pack",
-    "package:pack:dry-run": "pnpm package:pack --dry-run"
   },
   "files": [
     "dist",
@@ -46,15 +47,17 @@
       }
     }
   },
+  "peerDependencies": {
+    "@playwright/test": ">=1.57.0"
+  },
   "dependencies": {
     "@playwright-labs/reporter-core": "workspace:*",
     "@playwright-labs/s3-core": "workspace:*"
   },
-  "peerDependencies": {
-    "@playwright/test": ">=1.57.0"
-  },
   "devDependencies": {
     "@playwright/test": "1.57.0",
-    "testcontainers": "11.13.0"
+    "testcontainers": "11.13.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0"
   }
 }
