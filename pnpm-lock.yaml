@@ -268,6 +268,19 @@ importers:
         specifier: 1.57.0
         version: 1.57.0
 
+  packages/fixture-gmail:
+    dependencies:
+      nodemailer:
+        specifier: 9.0.1
+        version: 9.0.1
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+      '@types/nodemailer':
+        specifier: 7.0.9
+        version: 7.0.9
+
   packages/fixture-otel:
     dependencies:
       '@playwright-labs/otel-core':
