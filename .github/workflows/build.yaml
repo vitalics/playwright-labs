@@ -37,7 +37,7 @@ jobs:
           version: 10.24.0
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "pnpm"
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install

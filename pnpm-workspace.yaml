@@ -18,3 +18,5 @@ onlyBuiltDependencies:
   - ssh2
 
 savePrefix: ''
+nodeVersion: 24.16.0
+engineStrict: true
