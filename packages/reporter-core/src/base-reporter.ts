@@ -4,8 +4,11 @@ import type {
   Reporter,
   Suite,
   TestCase,
+  TestError,
   TestResult,
+  TestStep,
 } from "@playwright/test/reporter";
+import EventEmitter from "node:events";
 
 /**
  * Array of test cases with their results, collected over the run.
@@ -25,8 +28,7 @@ export type TestCases = [test: TestCase, result: TestResult][];
  * ```
  */
 export type Template<T = string> =
-  | T
-  | ((result: FullResult, testCases: TestCases) => T | Promise<T>);
+  T | ((result: FullResult, testCases: TestCases) => T | Promise<T>);
 
 /** Per-status test counters accumulated by {@link BaseReporter}. */
 export type StatusCounts = {
@@ -37,6 +39,42 @@ export type StatusCounts = {
   interrupted: number;
 };
 
+type PickFromReporter<Method extends keyof Reporter> = Required<
+  Pick<Reporter, Method>
+>;
+
+type ReporterEvents = {
+  begin: [config: FullConfig, _suite: Suite];
+  "test.begin": [test: TestCase, result: TestResult];
+  "step.begin": [test: TestCase, result: TestResult, step: TestStep];
+  "step.end": [test: TestCase, result: TestResult, step: TestStep];
+  "test.end": [test: TestCase, result: TestResult];
+  "reporter.init": [...args: readonly any[]];
+  "reporter.dispose": [];
+  result: [FullResult];
+  error: [error: TestError];
+  exit: [];
+  stdErr: [
+    chunk: string | Buffer,
+    test: void | TestCase,
+    result: void | TestResult,
+  ];
+  stdOut: [
+    chunk: string | Buffer,
+    test: void | TestCase,
+    result: void | TestResult,
+  ];
+  end: [result: FullResult];
+};
+
+type BaseReporterOptions = {
+  captureRejections: boolean;
+};
+
+type EMPTY_OBJECT = {};
+type IsEmptyObject<T> = [keyof T] extends [keyof EMPTY_OBJECT] ? true : false;
+
+type EventMap<T> = Record<keyof T, any[]>;
 /**
  * Base class for Playwright reporters — the unified API shared by all
  * `@playwright-labs/reporter-*` packages.
@@ -54,8 +92,12 @@ export type StatusCounts = {
  * `super.onTestEnd(test, result)` when overriding those hooks,
  * otherwise the accumulation silently stops working.
  *
+ * @extends EventEmitter
+ *
+ * Extends node.js `EventEmitter`, so you can pass own object for `reporter.init` arguments
  * @example
  * ```ts
+ * // filename: demo.ts
  * export default class MyReporter extends BaseReporter {
  *   async onEnd(result: FullResult) {
  *     const text = await this.resolveTemplate(this.options.text, result);
@@ -63,8 +105,41 @@ export type StatusCounts = {
  *   }
  * }
  * ```
+ *  @example
+ * ```ts
+ * // filename: custom-expose.ts
+ * type OwnOptions = {someProp: boolean}
+ * export default class MyReporter extends BaseReporter {
+ *   constructor(options: OwnOptions) {
+ *     super({captureRejections: false}, options) // note: options will appear in `reporter.init` event
+ *   }
+ * }
+ * ```
  */
-export abstract class BaseReporter implements Reporter {
+export abstract class BaseReporter<
+  const AdditionalEvents extends Record<string | symbol, readonly unknown[]> =
+    {},
+  const Merged extends Record<string | symbol, readonly unknown[]> =
+    AdditionalEvents & ReporterEvents,
+>
+  extends EventEmitter<
+    EventMap<Omit<AdditionalEvents, keyof ReporterEvents> & ReporterEvents>
+  >
+  implements Reporter
+{
+  /** typescript type, not a real prop */
+  _mergedEvents!: Merged;
+  /** typescript type, not a real prop */
+  _additionalEvents!: AdditionalEvents;
+  /** typescript type, not a real prop */
+  _reporterEvents!: ReporterEvents;
+  // @ts-expect-error fix later
+  override emit<const K extends string | symbol | keyof Merged = keyof Merged>(
+    eventName: K,
+    ...args: Merged[K] extends unknown[] ? Merged[K] : [Merged[K]]
+  ): boolean {
+    return super.emit(eventName as string, ...(args as never));
+  }
   /** Every finished test with its result, in execution order. */
   protected readonly testCases: TestCases = [];
   /** Per-status counters, updated in `onTestEnd`. */
@@ -78,6 +153,17 @@ export abstract class BaseReporter implements Reporter {
   /** The resolved Playwright config, available after `onBegin`. */
   protected config: FullConfig | undefined;
 
+  constructor(options?: BaseReporterOptions, ...args: any[]) {
+    super({ captureRejections: options?.captureRejections ?? false });
+    // @ts-expect-error fix later
+    this.emit("reporter.init", args);
+  }
+
+  [Symbol.dispose]() {
+    // @ts-expect-error fix later
+    this.emit("reporter.dispose");
+  }
+
   onBegin(config: FullConfig, _suite: Suite): void {
     this.config = config;
     this.testCases.length = 0;
@@ -86,9 +172,56 @@ export abstract class BaseReporter implements Reporter {
     this.counts.timedOut = 0;
     this.counts.skipped = 0;
     this.counts.interrupted = 0;
+    // @ts-expect-error fix later
+    this.emit("begin", config, _suite);
+  }
+
+  onEnd(
+    result: FullResult,
+  ): Promise<{ status?: FullResult["status"] } | undefined | void> | void {
+    // @ts-expect-error fix later
+    this.emit("end", result);
+  }
+  onError(error: TestError): void {
+    // @ts-expect-error fix later
+    this.emit("error", error);
+  }
+  async onExit(): Promise<void> {
+    // @ts-expect-error fix later
+    this.emit("exit");
+  }
+  onStdErr(
+    chunk: string | Buffer,
+    test: void | TestCase,
+    result: void | TestResult,
+  ): void {
+    // @ts-expect-error fix later
+    this.emit("stdErr", chunk, test, result);
+  }
+  onStdOut(
+    chunk: string | Buffer,
+    test: void | TestCase,
+    result: void | TestResult,
+  ): void {
+    // @ts-expect-error fix later
+    this.emit("stdOut", chunk, test, result);
+  }
+  onStepBegin(test: TestCase, result: TestResult, step: TestStep): void {
+    // @ts-expect-error fix later
+    this.emit("step.begin", test, result, step);
+  }
+  onStepEnd(test: TestCase, result: TestResult, step: TestStep): void {
+    // @ts-expect-error fix later
+    this.emit("step.end", test, result, step);
+  }
+  onTestBegin(test: TestCase, result: TestResult): void {
+    // @ts-expect-error fix later
+    this.emit("test.begin", test, result);
   }
 
   onTestEnd(test: TestCase, result: TestResult): void {
+    // @ts-expect-error fix later
+    this.emit("test.end", test, result);
     this.testCases.push([test, result]);
     switch (result.status) {
       case "passed":
@@ -120,10 +253,9 @@ export abstract class BaseReporter implements Reporter {
   ): Promise<T | undefined> {
     if (value === undefined) return undefined;
     if (typeof value === "function") {
-      return (value as (result: FullResult, testCases: TestCases) => T | Promise<T>)(
-        result,
-        this.testCases,
-      );
+      return (
+        value as (result: FullResult, testCases: TestCases) => T | Promise<T>
+      )(result, this.testCases);
     }
     return value;
   }
