@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/reporter-inline",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Build a Playwright reporter from plain callbacks — no class required",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",

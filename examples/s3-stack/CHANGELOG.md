@@ -1,5 +1,11 @@
 # @playwright-labs/s3-stack-example
 
+## 0.0.3
+
+### Patch Changes
+
+- @playwright-labs/reporter-s3@1.1.2
+
 ## 0.0.2
 
 ### Patch Changes
