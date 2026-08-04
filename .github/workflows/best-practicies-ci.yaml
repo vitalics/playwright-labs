@@ -12,6 +12,9 @@ on:
       - "packages/playwright-best-practices/**"
       - "packages/playwright-best-practices-build/**"
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
