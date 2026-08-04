@@ -1,5 +1,11 @@
 # @playwright-labs/grafana-stack-example
 
+## 0.0.7
+
+### Patch Changes
+
+- @playwright-labs/reporter-prometheus-remote-write@1.2.1
+
 ## 0.0.6
 
 ### Patch Changes

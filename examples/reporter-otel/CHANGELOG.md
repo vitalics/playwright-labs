@@ -1,5 +1,11 @@
 # @playwright-labs/reporter-otel-example
 
+## 0.0.10
+
+### Patch Changes
+
+- @playwright-labs/reporter-otel@1.4.1
+
 ## 0.0.9
 
 ### Patch Changes

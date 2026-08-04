@@ -1,5 +1,12 @@
 # @playwright-labs/reporter-s3
 
+## 1.1.2
+
+### Patch Changes
+
+- Updated dependencies [7e9a4f3]
+  - @playwright-labs/reporter-core@1.2.0
+
 ## 1.1.1
 
 ### Patch Changes
