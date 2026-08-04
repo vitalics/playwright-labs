@@ -24,6 +24,9 @@ on:
       - "packages/slack-buildkit/**"
       - "packages/ghost-cursor/**"
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
