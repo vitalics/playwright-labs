@@ -499,10 +499,11 @@ importers:
         version: 19.1.0(react@19.1.0)
 
   packages/reporter-inline:
-    devDependencies:
+    dependencies:
       '@playwright-labs/reporter-core':
         specifier: workspace:*
         version: link:../reporter-core
+    devDependencies:
       '@playwright/test':
         specifier: 1.57.0
         version: 1.57.0
