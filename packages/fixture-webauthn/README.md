@@ -39,6 +39,22 @@ yarn add -D @playwright-labs/fixture-webauthn
 
 The CDP `WebAuthn` domain is Chromium-specific. Using this fixture with Firefox/WebKit throws a clear error as soon as `webauthn`/`useWebAuthn()` is first resolved. Scope your Playwright config's `projects` to Chromium-based browsers (`chromium`, or the `chrome`/`msedge` channels) for tests that use it.
 
+## Or use Playwright's built-in `context.credentials` (≥1.61)
+
+Playwright 1.61 added a native virtual WebAuthn authenticator: `context.credentials` — `install()`, `create(rpId, options?)`, `get(options?)`, `delete(id)`. For a plain "register a passkey, then sign in with it" test, that's simpler and needs no extra package.
+
+Reach for this fixture instead when you need something `context.credentials` doesn't expose:
+
+| Need | `context.credentials` | `fixture-webauthn` |
+| --- | --- | --- |
+| Authenticator `protocol`/`transport`/`ctap2Version` | ❌ (fixed) | ✅ |
+| Simulate "user never confirms presence" (`automaticPresenceSimulation: false`) | ❌ | ✅ |
+| Force `isUserVerified` on/off | ❌ | ✅ |
+| Bogus signature/UV/UP responses (`setResponseOverrideBits`) — RP-validation testing | ❌ | ✅ |
+| Multiple independent authenticators per context | ❌ (one implicit authenticator) | ✅ |
+| `waitForCredentialAdded`/`Asserted`/`Updated`/`Deleted` event waiters | ❌ | ✅ |
+| Minimum Playwright version | 1.61 | 1.57 |
+
 ## How it works
 
 A virtual authenticator is a fake FIDO2/U2F device the browser talks to instead of a real one. Once added, the page's own `navigator.credentials.create()` / `.get()` calls are transparently satisfied by it — your application code doesn't need to know it's running under test.
