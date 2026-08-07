@@ -11,6 +11,38 @@ test.describe("webauthn fixture", () => {
     expect(webauthn).toBeWebAuthnEnabled();
   });
 
+  test("matchers accept the Page a WebAuthn was created for", async ({
+    webauthn,
+    page,
+  }) => {
+    expect(page).not.toBeWebAuthnEnabled();
+
+    await webauthn.enable();
+    const authenticator = await webauthn.addVirtualAuthenticator({
+      protocol: "ctap2",
+      transport: "internal",
+    });
+
+    expect(page).toBeWebAuthnEnabled();
+    expect(page).toHaveVirtualAuthenticators(1);
+
+    await authenticator.remove();
+
+    expect(page).toHaveVirtualAuthenticators(0);
+  });
+
+  test("matchers throw a clear error for a Page with no WebAuthn created on it", async ({
+    page,
+  }) => {
+    const otherPage = await page.context().newPage();
+
+    expect(() => expect(otherPage).toBeWebAuthnEnabled()).toThrow(
+      /No WebAuthn instance found for this page/,
+    );
+
+    await otherPage.close();
+  });
+
   test("useWebAuthn() creates independent instances", async ({
     useWebAuthn,
     page,

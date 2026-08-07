@@ -208,6 +208,7 @@ The export carries the credential's private key — treat the file like any othe
 | --- | --- |
 | `expect(webauthn).toBeWebAuthnEnabled()` | `webauthn.enable()` has been called |
 | `expect(webauthn).toHaveVirtualAuthenticators(count)` | `webauthn.authenticators.length === count` |
+| `expect(page).toBeWebAuthnEnabled()` / `toHaveVirtualAuthenticators(count)` | Same two checks, but takes the `Page` a `WebAuthn` was created for (via `useWebAuthn(page)`/the `webauthn` fixture) instead of the `WebAuthn` instance itself. Throws a clear error if no `WebAuthn` was ever created for that page. If `useWebAuthn(page)` was called more than once for the same page, resolves to the most recently created one. |
 | `await expect(authenticator).toHaveCredentials(count)` | the authenticator has exactly `count` stored credentials |
 | `await expect(authenticator).toHaveCredential(credentialId)` | the authenticator has a credential with that id |
 | `await expect(authenticator).toMatchCredential(filter)` | the authenticator has a credential matching every given field, e.g. `{ userName: 'dave@example.com' }` |
