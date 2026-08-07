@@ -3,13 +3,16 @@ import {
   expect as baseExpect,
   type Page,
   type CDPSession,
-  Frame,
+  type Frame,
 } from "@playwright/test";
 
-import { WebAuthn } from "./webauthn.js";
-import { matchesCredentialFilter } from "./virtual-authenticator.js";
-import type { VirtualAuthenticator } from "./virtual-authenticator.js";
-import type { Credential, CredentialFilter } from "./types.js";
+import {
+  WebAuthn,
+  matchesCredentialFilter,
+  type VirtualAuthenticator,
+  type Credential,
+  type CredentialFilter,
+} from "@playwright-labs/webauthn";
 
 /**
  * Creates a {@link WebAuthn} controller bound to a page's CDP session.
@@ -132,7 +135,10 @@ export const expect = baseExpect.extend({
    * expect(page).toHaveVirtualAuthenticators(1); // equivalent
    * ```
    */
-  toHaveVirtualAuthenticators(received: WebAuthn | Page | Frame, count: number) {
+  toHaveVirtualAuthenticators(
+    received: WebAuthn | Page | Frame,
+    count: number,
+  ) {
     const webauthn = resolveWebAuthn(received);
     const actual = webauthn.authenticators.length;
     const pass = actual === count;

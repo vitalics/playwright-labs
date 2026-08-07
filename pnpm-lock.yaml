@@ -389,6 +389,10 @@ importers:
         version: 1.57.0
 
   packages/fixture-webauthn:
+    dependencies:
+      '@playwright-labs/webauthn':
+        specifier: workspace:*
+        version: link:../webauthn
     devDependencies:
       '@playwright/test':
         specifier: 1.57.0
@@ -739,6 +743,15 @@ importers:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
+
+  packages/webauthn:
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+      playwright-core:
+        specifier: 1.57.0
+        version: 1.57.0
 
 packages:
 

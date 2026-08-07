@@ -1,4 +1,4 @@
-import type { CDPSession } from "@playwright/test";
+import type { CDPSession } from "playwright-core";
 
 import { isCredential } from "./types.js";
 import type {

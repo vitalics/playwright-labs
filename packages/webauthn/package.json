@@ -1,0 +1,48 @@
+{
+  "name": "@playwright-labs/webauthn",
+  "version": "0.1.0",
+  "description": "Module to work with webauthn - FIDO2 passcode keys & authorization",
+  "main": "dist/index.cjs",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "test": "playwright test",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "dev": "tsup --watch"
+  },
+  "keywords": [
+    "playwright",
+    "webauthn",
+    "passkey",
+    "fido2",
+    "u2f",
+    "authenticator",
+    "cdp",
+    "automation",
+    "testing",
+    "playwright-labs"
+  ],
+  "author": "Vitali Haradkou <vitalicset@yandex.ru>",
+  "license": "MIT",
+  "packageManager": "pnpm@10.29.2",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "playwright-core": "1.57.0"
+  },
+  "peerDependencies": {
+    "playwright-core": "1.57.0"
+  }
+}

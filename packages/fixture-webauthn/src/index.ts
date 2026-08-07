@@ -1,25 +1,23 @@
 export { expect, test, type Fixture, type UseWebAuthn } from "./fixture.js";
-export { WebAuthn } from "./webauthn.js";
 export {
+  WebAuthn,
   VirtualAuthenticator,
   VirtualAuthenticatorArray,
   matchesCredentialFilter,
-} from "./virtual-authenticator.js";
-export { isCredential } from "./types.js";
-export type {
-  AuthenticatorProtocol,
-  AuthenticatorTransport,
-  Credential,
-  CredentialAddedEvent,
-  CredentialAssertedEvent,
-  CredentialDeletedEvent,
-  CredentialExport,
-  CredentialFilter,
-  CredentialProperties,
-  CredentialUpdatedEvent,
-  Ctap2Version,
-  EnableOptions,
-  ResponseOverrideBits,
-  VirtualAuthenticatorOptions,
-  WaitForEventOptions,
-} from "./types.js";
+  isCredential,
+  type AuthenticatorProtocol,
+  type AuthenticatorTransport,
+  type Credential,
+  type CredentialAddedEvent,
+  type CredentialAssertedEvent,
+  type CredentialDeletedEvent,
+  type CredentialExport,
+  type CredentialFilter,
+  type CredentialProperties,
+  type CredentialUpdatedEvent,
+  type Ctap2Version,
+  type EnableOptions,
+  type ResponseOverrideBits,
+  type VirtualAuthenticatorOptions,
+  type WaitForEventOptions,
+} from "@playwright-labs/webauthn";
