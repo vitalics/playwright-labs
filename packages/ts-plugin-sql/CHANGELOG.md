@@ -1,5 +1,13 @@
 # @playwright-labs/ts-plugin-sql
 
+## 1.0.2
+
+### Patch Changes
+
+- Updated dependencies [2a9f041]
+- Updated dependencies [56acdfe]
+  - @playwright-labs/sql-core@1.0.2
+
 ## 1.0.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/fixture-lock",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Cross-worker and cross-process resource locking for Playwright/test — pluggable HTTP, WebSocket, IPC and filesystem transports",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",

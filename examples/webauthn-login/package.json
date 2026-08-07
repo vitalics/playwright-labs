@@ -1,6 +1,6 @@
 {
   "name": "webauthn-login-example",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Example: @playwright-labs/fixture-webauthn — a fake passkey login page tested end to end",
   "type": "module",
