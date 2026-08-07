@@ -1,5 +1,5 @@
 import { expect, test } from "../src/fixture.js";
-import { WebAuthn } from "../src/webauthn.js";
+import { WebAuthn } from "@playwright-labs/webauthn";
 
 test.describe("webauthn fixture", () => {
   test("provides a ready-to-use WebAuthn instance", async ({ webauthn }) => {
