@@ -72,7 +72,7 @@ A ready-to-use controller bound to the test's `page`.
 
 ### `useWebAuthn(page?): Promise<WebAuthn>`
 
-Factory for a controller bound to any `Page` (e.g. a popup opened during the flow). Every `WebAuthn` created this way — including the default `webauthn` fixture — is disposed automatically after the test, even on failure.
+Factory for a controller bound to any `Page` or `Frame` (e.g. a popup, or an iframe hosting the passkey ceremony). Every `WebAuthn` created this way — including the default `webauthn` fixture — is disposed automatically after the test, even on failure.
 
 ## API
 
@@ -83,8 +83,7 @@ Factory for a controller bound to any `Page` (e.g. a popup opened during the flo
 | `enable(options?)` | Enables the CDP `WebAuthn` domain. Idempotent. Must be called before `addVirtualAuthenticator()`. |
 | `disable()` | Disables the domain and forgets every authenticator created on this session. Idempotent. |
 | `isEnabled` | `boolean` getter — whether `enable()` has been called. |
-| `authenticators` | `VirtualAuthenticator[]` getter — every authenticator added and not yet removed. |
-| `[Symbol.iterator]` | `webauthn` itself is iterable over the same authenticators as `.authenticators` — `for (const authenticator of webauthn)` or `[...webauthn]` both work. |
+| `authenticators` | `VirtualAuthenticatorArray` getter — every authenticator added and not yet removed. Behaves like a plain `VirtualAuthenticator[]` (indexing, `.length`, `for...of`, `[...spread]`) plus a few extra members — see [`VirtualAuthenticatorArray`](#virtualauthenticatorarray). |
 | `addVirtualAuthenticator(options)` | Creates a virtual authenticator. Returns a `VirtualAuthenticator`. Throws if `enable()` wasn't called first. |
 | `removeVirtualAuthenticator(idOrAuthenticator)` | Removes an authenticator and every credential on it. |
 | `waitForCredentialAdded(options?)` | Resolves on the next `navigator.credentials.create()` completed by any authenticator. |
@@ -94,8 +93,7 @@ Factory for a controller bound to any `Page` (e.g. a popup opened during the flo
 | `dispose()` | Detaches the underlying CDP session. Called automatically after each test; also available via `Symbol.asyncDispose`. |
 
 ```ts
-// Equivalent to iterating webauthn.authenticators
-for (const authenticator of webauthn) {
+for (const authenticator of webauthn.authenticators) {
   await expect(authenticator).toHaveCredentials(1);
 }
 ```
@@ -133,6 +131,25 @@ Every `waitForCredential*` method accepts `{ authenticatorId?, timeoutMs? }` (`t
 | `exportCredentials(filter?)` | Returns credentials on this authenticator — including private keys — as a JSON-serializable `{ version, credentials }` snapshot. `filter` (e.g. `{ userName }`) narrows it to matching credentials; omit to export all of them. |
 | `importCredentials(data, filter?)` | Seeds credentials from a snapshot produced by `exportCredentials()` (object, its `JSON.stringify`'d string, or a `Buffer` — e.g. `fs.readFile(path)` with no encoding) onto this authenticator. `filter` narrows which credentials in `data` get imported. Throws on an unrecognized export `version` or if `data.credentials` doesn't structurally look like `Credential[]` (see `isCredential`) — a malformed/corrupted file fails loudly instead of forwarding garbage to the browser. |
 | `remove()` | Removes this authenticator. Also available via `Symbol.asyncDispose`. |
+
+### `VirtualAuthenticatorArray`
+
+The type of `webauthn.authenticators`. A real `Array` of `VirtualAuthenticator` — indexing, `.length`, `for...of`, `[...spread]`, `.map()`/`.filter()`/`.slice()` all work as expected (array-copying methods return a plain `Array`, not another `VirtualAuthenticatorArray`) — plus:
+
+| Member | Description |
+| --- | --- |
+| `iter()` | Returns an `Iterable<VirtualAuthenticator>` snapshot of the array — a readable alias for `[...array]` when you just need to iterate. |
+| `arr()` | Returns the array itself, typed as a mutable `VirtualAuthenticator[]`. |
+| `readonlyArr()` | Returns the array itself, typed as `readonly VirtualAuthenticator[]` — for signatures that shouldn't mutate it. |
+| `[Symbol.asyncDispose]` | Removes every authenticator in the array (calls each one's `remove()`). |
+
+```ts
+// Dispose every authenticator in one shot.
+{
+  await using authenticators = webauthn.authenticators;
+  // ... run assertions ...
+} // each authenticator.remove() is called automatically here
+```
 
 ### Persisting a passkey across test runs
 
@@ -191,6 +208,7 @@ The export carries the credential's private key — treat the file like any othe
 | --- | --- |
 | `expect(webauthn).toBeWebAuthnEnabled()` | `webauthn.enable()` has been called |
 | `expect(webauthn).toHaveVirtualAuthenticators(count)` | `webauthn.authenticators.length === count` |
+| `expect(page).toBeWebAuthnEnabled()` / `toHaveVirtualAuthenticators(count)` | Same two checks, but takes the `Page`/`Frame` a `WebAuthn` was created for (via `useWebAuthn(page)`/the `webauthn` fixture) instead of the `WebAuthn` instance itself. Throws a clear error if no `WebAuthn` was ever created for it. If `useWebAuthn()` was called more than once for the same `Page`/`Frame`, resolves to the most recently created one. |
 | `await expect(authenticator).toHaveCredentials(count)` | the authenticator has exactly `count` stored credentials |
 | `await expect(authenticator).toHaveCredential(credentialId)` | the authenticator has a credential with that id |
 | `await expect(authenticator).toMatchCredential(filter)` | the authenticator has a credential matching every given field, e.g. `{ userName: 'dave@example.com' }` |

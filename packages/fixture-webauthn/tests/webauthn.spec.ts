@@ -160,7 +160,7 @@ test.describe("WebAuthn", () => {
     test("is empty when there are no authenticators", () => {
       const webauthn = new WebAuthn(createFakeSession());
 
-      expect([...webauthn]).toEqual([]);
+      expect([...webauthn.authenticators]).toEqual([]);
     });
 
     test("yields the same authenticators as .authenticators, in the same order", async () => {
@@ -182,8 +182,8 @@ test.describe("WebAuthn", () => {
         transport: "internal",
       });
 
-      expect([...webauthn]).toEqual([a, b]);
-      expect([...webauthn]).toEqual(webauthn.authenticators);
+      expect([...webauthn.authenticators]).toEqual([a, b]);
+      expect([...webauthn.authenticators]).toEqual(webauthn.authenticators);
     });
 
     test("supports for...of", async () => {
@@ -200,7 +200,7 @@ test.describe("WebAuthn", () => {
       });
 
       const seen: VirtualAuthenticator[] = [];
-      for (const item of webauthn) {
+      for (const item of webauthn.authenticators) {
         seen.push(item);
       }
 
@@ -223,7 +223,7 @@ test.describe("WebAuthn", () => {
 
       await authenticator.remove();
 
-      expect([...webauthn]).toEqual([]);
+      expect([...webauthn.authenticators]).toEqual([]);
     });
   });
 

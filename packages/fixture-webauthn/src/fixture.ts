@@ -2,6 +2,8 @@ import {
   test as baseTest,
   expect as baseExpect,
   type Page,
+  type CDPSession,
+  Frame,
 } from "@playwright/test";
 
 import { WebAuthn } from "./webauthn.js";
@@ -17,7 +19,21 @@ import type { Credential, CredentialFilter } from "./types.js";
  * Every `WebAuthn` created this way is disposed automatically after the
  * test, even on failure.
  */
-export type UseWebAuthn = (page?: Page) => Promise<WebAuthn>;
+export type UseWebAuthn = (page?: Page | Frame) => Promise<WebAuthn>;
+
+/** Tracks the most recent `WebAuthn` created for a given `Page` via `useWebAuthn`/the `webauthn` fixture, so matchers can accept either. */
+const pageToWebAuthn = new WeakMap<Page | Frame, WebAuthn>();
+
+function resolveWebAuthn(received: WebAuthn | Page | Frame): WebAuthn {
+  if (received instanceof WebAuthn) return received;
+  const webauthn = pageToWebAuthn.get(received);
+  if (!webauthn) {
+    throw new Error(
+      "No WebAuthn instance found for this page/frame — call useWebAuthn(page) (or use the `webauthn` fixture) before asserting on it.",
+    );
+  }
+  return webauthn;
+}
 
 export type Fixture = {
   useWebAuthn: UseWebAuthn;
@@ -51,7 +67,7 @@ export const test = baseTest.extend<Fixture>({
     const created: WebAuthn[] = [];
 
     const useWebAuthn: UseWebAuthn = async (target = page) => {
-      let session;
+      let session: CDPSession;
       try {
         session = await context.newCDPSession(target);
       } catch (cause) {
@@ -64,6 +80,7 @@ export const test = baseTest.extend<Fixture>({
       }
       const webauthn = new WebAuthn(session);
       created.push(webauthn);
+      pageToWebAuthn.set(target, webauthn);
       return webauthn;
     };
 
@@ -80,16 +97,19 @@ export const test = baseTest.extend<Fixture>({
 export const expect = baseExpect.extend({
   /**
    * Asserts that `webauthn.enable()` has been called (and `disable()`
-   * hasn't since).
+   * hasn't since). Accepts a `WebAuthn` instance, or the `Page`/`Frame` it
+   * was created for (via `useWebAuthn(page)`/the `webauthn` fixture).
    *
    * @example
    * ```ts
    * await webauthn.enable();
    * expect(webauthn).toBeWebAuthnEnabled();
+   * expect(page).toBeWebAuthnEnabled(); // equivalent
    * ```
    */
-  toBeWebAuthnEnabled(received: WebAuthn) {
-    const pass = received.isEnabled === true;
+  toBeWebAuthnEnabled(received: WebAuthn | Page | Frame) {
+    const webauthn = resolveWebAuthn(received);
+    const pass = webauthn.isEnabled === true;
     return {
       pass,
       message: () =>
@@ -101,16 +121,20 @@ export const expect = baseExpect.extend({
 
   /**
    * Asserts on the number of virtual authenticators currently registered
-   * on a `WebAuthn` instance.
+   * on a `WebAuthn` instance. Accepts a `WebAuthn` instance, or the
+   * `Page`/`Frame` it was created for (via `useWebAuthn(page)`/the
+   * `webauthn` fixture).
    *
    * @example
    * ```ts
    * await webauthn.addVirtualAuthenticator({ protocol: 'ctap2', transport: 'internal' });
    * expect(webauthn).toHaveVirtualAuthenticators(1);
+   * expect(page).toHaveVirtualAuthenticators(1); // equivalent
    * ```
    */
-  toHaveVirtualAuthenticators(received: WebAuthn, count: number) {
-    const actual = received.authenticators.length;
+  toHaveVirtualAuthenticators(received: WebAuthn | Page | Frame, count: number) {
+    const webauthn = resolveWebAuthn(received);
+    const actual = webauthn.authenticators.length;
     const pass = actual === count;
     return {
       pass,
