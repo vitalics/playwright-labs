@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-import { VirtualAuthenticator } from "../src/virtual-authenticator.js";
+import {
+  VirtualAuthenticator,
+  VirtualAuthenticatorArray,
+} from "../src/virtual-authenticator.js";
 import { createFakeSession } from "./helpers/fake-cdp-session.js";
 
 function setup() {
@@ -372,5 +375,95 @@ test.describe("VirtualAuthenticator", () => {
 
       expect(called).toBe(true);
     });
+  });
+});
+
+test.describe("VirtualAuthenticatorArray", () => {
+  function setupTwo() {
+    const session = createFakeSession();
+    const a = new VirtualAuthenticator(session, "auth-1", async () => {});
+    const b = new VirtualAuthenticator(session, "auth-2", async () => {});
+    return { a, b, array: new VirtualAuthenticatorArray([a, b]) };
+  }
+
+  test("behaves like a real array of the given items", () => {
+    const { a, b, array } = setupTwo();
+
+    expect(array).toHaveLength(2);
+    expect(array[0]).toBe(a);
+    expect(array[1]).toBe(b);
+    expect(array).toEqual([a, b]);
+  });
+
+  test("is empty for an empty iterable", () => {
+    const array = new VirtualAuthenticatorArray([]);
+
+    expect(array).toEqual([]);
+    expect(array.arr()).toEqual([]);
+    expect([...array.iter()]).toEqual([]);
+  });
+
+  test("arr() and readonlyArr() return the same elements as the array itself", () => {
+    const { a, b, array } = setupTwo();
+
+    expect(array.arr()).toEqual([a, b]);
+    expect(array.readonlyArr()).toEqual([a, b]);
+  });
+
+  test("iter() yields the same elements and can be consumed more than once", () => {
+    const { a, b, array } = setupTwo();
+
+    expect([...array.iter()]).toEqual([a, b]);
+    expect([...array.iter()]).toEqual([a, b]);
+  });
+
+  test("iter() still works when constructed from a one-shot iterator, e.g. Map.values()", () => {
+    const session = createFakeSession();
+    const a = new VirtualAuthenticator(session, "auth-1", async () => {});
+    const authenticators = new Map([["auth-1", a]]);
+
+    const array = new VirtualAuthenticatorArray(authenticators.values());
+
+    expect([...array.iter()]).toEqual([a]);
+    expect([...array.iter()]).toEqual([a]);
+  });
+
+  test("snapshots the iterable at construction time", () => {
+    const session = createFakeSession();
+    const a = new VirtualAuthenticator(session, "auth-1", async () => {});
+    const authenticators = new Map([["auth-1", a]]);
+
+    const array = new VirtualAuthenticatorArray(authenticators.values());
+    authenticators.clear();
+
+    expect(array).toEqual([a]);
+  });
+
+  test("array-copying methods (slice/map/filter) return a plain Array, not another VirtualAuthenticatorArray", () => {
+    const { a, b, array } = setupTwo();
+
+    expect(array.slice()).toEqual([a, b]);
+    expect(array.slice()).not.toBeInstanceOf(VirtualAuthenticatorArray);
+    expect(array.map((x) => x)).not.toBeInstanceOf(VirtualAuthenticatorArray);
+    expect(array.filter(() => true)).not.toBeInstanceOf(
+      VirtualAuthenticatorArray,
+    );
+  });
+
+  test("[Symbol.asyncDispose] disposes every item", async () => {
+    const session = createFakeSession();
+    const removed: string[] = [];
+    const a = new VirtualAuthenticator(session, "auth-1", async () => {
+      removed.push("auth-1");
+    });
+    const b = new VirtualAuthenticator(session, "auth-2", async () => {
+      removed.push("auth-2");
+    });
+
+    {
+      await using _array = new VirtualAuthenticatorArray([a, b]);
+    }
+
+    expect(removed).toEqual(["auth-1", "auth-2"]);
   });
 });

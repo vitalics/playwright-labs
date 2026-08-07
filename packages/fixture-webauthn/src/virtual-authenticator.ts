@@ -235,3 +235,36 @@ export class VirtualAuthenticator {
     await this.remove();
   }
 }
+
+export class VirtualAuthenticatorArray extends Array<VirtualAuthenticator> {
+  /**
+   * Array methods that build a new array (`slice`, `map`, `filter`, …) would
+   * otherwise try to construct `new VirtualAuthenticatorArray(length)` per
+   * the species pattern — a single-number call our constructor doesn't
+   * understand. Route them to a plain `Array` instead.
+   */
+  static get [Symbol.species](): ArrayConstructor {
+    return Array;
+  }
+
+  #iterable: Iterable<VirtualAuthenticator>;
+  constructor(iterable: Iterable<VirtualAuthenticator>) {
+    const items = [...iterable];
+    super(...items);
+    this.#iterable = items;
+  }
+  iter(): Iterable<VirtualAuthenticator> {
+    return this.#iterable;
+  }
+  arr(): VirtualAuthenticator[] {
+    return this;
+  }
+  readonlyArr(): readonly VirtualAuthenticator[] {
+    return this;
+  }
+  async [Symbol.asyncDispose]() {
+    for (const i of this.#iterable) {
+      await i[Symbol.asyncDispose]();
+    }
+  }
+}

@@ -1,6 +1,9 @@
 import type { CDPSession } from "@playwright/test";
 
-import { VirtualAuthenticator } from "./virtual-authenticator.js";
+import {
+  VirtualAuthenticator,
+  VirtualAuthenticatorArray,
+} from "./virtual-authenticator.js";
 import type {
   EnableOptions,
   VirtualAuthenticatorOptions,
@@ -33,12 +36,8 @@ export class WebAuthn implements AsyncDisposable {
   }
 
   /** Every virtual authenticator created via {@link addVirtualAuthenticator} that hasn't been removed. */
-  get authenticators(): VirtualAuthenticator[] {
-    return [...this.#authenticators.values()];
-  }
-
-  [Symbol.iterator](): ArrayIterator<VirtualAuthenticator> {
-    return this.authenticators.values();
+  get authenticators(): VirtualAuthenticatorArray {
+    return new VirtualAuthenticatorArray(this.#authenticators.values());
   }
 
   /**
