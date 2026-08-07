@@ -17,11 +17,7 @@ export type Ctap2Version = "ctap2_0" | "ctap2_1";
 
 /** Transport advertised by the virtual authenticator. */
 export type AuthenticatorTransport =
-  | "usb"
-  | "nfc"
-  | "ble"
-  | "cable"
-  | "internal";
+  "usb" | "nfc" | "ble" | "cable" | "internal";
 
 /** Options passed to {@link WebAuthn.addVirtualAuthenticator}. */
 export interface VirtualAuthenticatorOptions {
@@ -97,6 +93,25 @@ export interface Credential {
   userDisplayName?: string;
 }
 
+/**
+ * Structural check for whether `value` looks like a {@link Credential} —
+ * has the required fields, with the right types. Unlike a `Symbol` brand,
+ * this survives `JSON.stringify`/`JSON.parse`, so it works on data loaded
+ * from a file — used by {@link VirtualAuthenticator.importCredentials} to
+ * reject a malformed/corrupted snapshot with a clear error instead of
+ * forwarding garbage to the browser.
+ */
+export function isCredential(value: unknown): value is Credential {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.credentialId === "string" &&
+    typeof candidate.isResidentCredential === "boolean" &&
+    typeof candidate.privateKey === "string" &&
+    typeof candidate.signCount === "number"
+  );
+}
+
 /** Options accepted by {@link VirtualAuthenticator.setCredentialProperties}. */
 export interface CredentialProperties {
   backupEligibility?: boolean;
@@ -160,4 +175,33 @@ export interface WaitForEventOptions {
   authenticatorId?: string;
   /** Milliseconds to wait before rejecting. Defaults to `30_000`. */
   timeoutMs?: number;
+}
+
+/**
+ * JSON-serializable snapshot produced by {@link VirtualAuthenticator.exportCredentials}
+ * and consumed by {@link VirtualAuthenticator.importCredentials}. Carries the
+ * credentials' private keys, so treat it like any other secret (e.g. a
+ * storage state file) — anyone with it can assert as that user.
+ */
+export interface CredentialExport {
+  version: 1;
+  credentials: Credential[];
+}
+
+/**
+ * Narrows {@link VirtualAuthenticator.exportCredentials} /
+ * {@link VirtualAuthenticator.importCredentials} to credentials matching
+ * every given field — e.g. `{ userName: 'dave@example.com', rpId: 'localhost' }`
+ * to export just Dave's `localhost` passkey out of an authenticator holding
+ * several users' and/or several relying parties' credentials.
+ */
+export interface CredentialFilter {
+  credentialId?: string;
+  rpId?: string;
+  userName?: string;
+  userDisplayName?: string;
+  /** Only matches credentials with `signCount >=` this value. */
+  signCountMin?: number;
+  /** Only matches credentials with `signCount <=` this value. */
+  signCountMax?: number;
 }

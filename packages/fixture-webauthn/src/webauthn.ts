@@ -37,6 +37,10 @@ export class WebAuthn implements AsyncDisposable {
     return [...this.#authenticators.values()];
   }
 
+  [Symbol.iterator](): ArrayIterator<VirtualAuthenticator> {
+    return this.authenticators.values();
+  }
+
   /**
    * Enables the WebAuthn domain. Must be called before
    * {@link addVirtualAuthenticator}. Safe to call more than once.

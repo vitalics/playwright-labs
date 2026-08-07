@@ -1,6 +1,10 @@
 export { expect, test, type Fixture, type UseWebAuthn } from "./fixture.js";
 export { WebAuthn } from "./webauthn.js";
-export { VirtualAuthenticator } from "./virtual-authenticator.js";
+export {
+  VirtualAuthenticator,
+  matchesCredentialFilter,
+} from "./virtual-authenticator.js";
+export { isCredential } from "./types.js";
 export type {
   AuthenticatorProtocol,
   AuthenticatorTransport,
@@ -8,6 +12,8 @@ export type {
   CredentialAddedEvent,
   CredentialAssertedEvent,
   CredentialDeletedEvent,
+  CredentialExport,
+  CredentialFilter,
   CredentialProperties,
   CredentialUpdatedEvent,
   Ctap2Version,
