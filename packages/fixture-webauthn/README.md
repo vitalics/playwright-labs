@@ -107,7 +107,7 @@ Every `waitForCredential*` method accepts `{ authenticatorId?, timeoutMs? }` (`t
 | `setCredentialProperties(credentialId, props)` | Updates `backupEligibility`/`backupState` on a stored credential. |
 | `setResponseOverrideBits(overrides)` | Forces the next assertion's response to look bogus (`isBogusSignature`/`isBadUV`/`isBadUP`) — for testing relying-party validation. |
 | `exportCredentials(filter?)` | Returns credentials on this authenticator — including private keys — as a JSON-serializable `{ version, credentials }` snapshot. `filter` (e.g. `{ userName }`) narrows it to matching credentials; omit to export all of them. |
-| `importCredentials(data, filter?)` | Seeds credentials from a snapshot produced by `exportCredentials()` (object or its `JSON.stringify`'d string) onto this authenticator. `filter` narrows which credentials in `data` get imported. Throws on an unrecognized export `version` or if `data.credentials` doesn't structurally look like `Credential[]` (see `isCredential`) — a malformed/corrupted file fails loudly instead of forwarding garbage to the browser. |
+| `importCredentials(data, filter?)` | Seeds credentials from a snapshot produced by `exportCredentials()` (object, its `JSON.stringify`'d string, or a `Buffer` — e.g. `fs.readFile(path)` with no encoding) onto this authenticator. `filter` narrows which credentials in `data` get imported. Throws on an unrecognized export `version` or if `data.credentials` doesn't structurally look like `Credential[]` (see `isCredential`) — a malformed/corrupted file fails loudly instead of forwarding garbage to the browser. |
 | `remove()` | Removes this authenticator. Also available via `Symbol.asyncDispose`. |
 
 ### Persisting a passkey across test runs
@@ -139,7 +139,7 @@ const authenticator = await webauthn.addVirtualAuthenticator({
   hasUserVerification: true,
   isUserVerified: true,
 });
-await authenticator.importCredentials(await fs.readFile("Dave-localhost.json", "utf8"));
+await authenticator.importCredentials(await fs.readFile("Dave-localhost.json")); // a Buffer — no encoding needed
 // ... navigator.credentials.get() on the page now succeeds with the imported passkey ...
 ```
 

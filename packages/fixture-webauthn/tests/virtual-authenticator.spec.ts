@@ -207,6 +207,22 @@ test.describe("VirtualAuthenticator", () => {
       ]);
     });
 
+    test("importCredentials() accepts a Buffer", async () => {
+      const { session, authenticator } = setup();
+      session.onSend("WebAuthn.addCredential", () => ({}));
+
+      await authenticator.importCredentials(
+        Buffer.from(JSON.stringify({ version: 1, credentials: [credential] })),
+      );
+
+      expect(session.sentCommands).toEqual([
+        {
+          method: "WebAuthn.addCredential",
+          params: { authenticatorId: "auth-1", credential },
+        },
+      ]);
+    });
+
     test("importCredentials() rejects an unknown export version", async () => {
       const { authenticator } = setup();
 

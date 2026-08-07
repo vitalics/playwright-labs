@@ -77,9 +77,12 @@ export class VirtualAuthenticator {
 
   /** Fetches every credential currently stored on this authenticator. */
   async getCredentials(): Promise<Credential[]> {
-    const { credentials } = await this.#session.send("WebAuthn.getCredentials", {
-      authenticatorId: this.id,
-    });
+    const { credentials } = await this.#session.send(
+      "WebAuthn.getCredentials",
+      {
+        authenticatorId: this.id,
+      },
+    );
     return credentials;
   }
 
@@ -116,7 +119,9 @@ export class VirtualAuthenticator {
    * await fs.writeFile('Dave-localhost.json', JSON.stringify(snapshot));
    * ```
    */
-  async exportCredentials(filter?: CredentialFilter): Promise<CredentialExport> {
+  async exportCredentials(
+    filter?: CredentialFilter,
+  ): Promise<CredentialExport> {
     let credentials = await this.getCredentials();
     if (filter) {
       credentials = credentials.filter((credential) =>
@@ -129,7 +134,9 @@ export class VirtualAuthenticator {
   /**
    * Seeds credentials previously produced by {@link exportCredentials} onto
    * this authenticator, without going through a `navigator.credentials.create()`
-   * ceremony. Accepts the export object itself or its `JSON.stringify`'d form.
+   * ceremony. Accepts the export object itself, its `JSON.stringify`'d
+   * string, or a `Buffer` — e.g. straight from `fs.readFile(path)` without
+   * an encoding.
    *
    * @param filter - Only import credentials matching every given field —
    * useful when `data` is a shared snapshot holding several users' passkeys
@@ -138,16 +145,22 @@ export class VirtualAuthenticator {
    *
    * @example
    * ```ts
-   * const snapshot = JSON.parse(await fs.readFile('passkey.json', 'utf8'));
-   * await authenticator.importCredentials(snapshot, { userName: 'dave@example.com' });
+   * const data = await fs.readFile('passkey.json'); // a Buffer
+   * await authenticator.importCredentials(data, { userName: 'dave@example.com' });
    * ```
    */
   async importCredentials(
-    data: CredentialExport | string,
+    data: CredentialExport | string | Buffer,
     filter?: CredentialFilter,
   ): Promise<void> {
-    const snapshot: CredentialExport =
-      typeof data === "string" ? JSON.parse(data) : data;
+    let snapshot: CredentialExport;
+    if (Buffer.isBuffer(data)) {
+      snapshot = JSON.parse(data.toString("utf-8"));
+    } else if (typeof data === "string") {
+      snapshot = JSON.parse(data);
+    } else {
+      snapshot = data;
+    }
     if (snapshot.version !== CREDENTIAL_EXPORT_VERSION) {
       throw new Error(
         `Unsupported credential export version: ${snapshot.version}. Expected ${CREDENTIAL_EXPORT_VERSION}.`,
@@ -204,7 +217,9 @@ export class VirtualAuthenticator {
   }
 
   /** Forces the next assertion's response to look bogus/bad-UV/bad-UP — for testing relying-party validation. */
-  async setResponseOverrideBits(overrides: ResponseOverrideBits): Promise<void> {
+  async setResponseOverrideBits(
+    overrides: ResponseOverrideBits,
+  ): Promise<void> {
     await this.#session.send("WebAuthn.setResponseOverrideBits", {
       authenticatorId: this.id,
       ...overrides,

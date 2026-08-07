@@ -221,7 +221,8 @@ test.describe("register + login with a virtual passkey", () => {
       hasUserVerification: true,
       isUserVerified: true,
     });
-    await restored.importCredentials(await fs.readFile(passkeyFile, "utf8"));
+    // No encoding — fs.readFile() resolves with a Buffer here.
+    await restored.importCredentials(await fs.readFile(passkeyFile));
     await expect(restored).toHaveCredentials(1);
 
     const [assertedEvent, assertion] = await Promise.all([

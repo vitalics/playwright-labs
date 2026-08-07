@@ -8,4 +8,6 @@ Both methods accept an optional `CredentialFilter` (`{ credentialId?, rpId?, use
 
 `importCredentials()` validates the snapshot's `credentials` with the new exported `isCredential(value): value is Credential` structural type guard before seeding anything, throwing a clear error on a malformed/corrupted file instead of forwarding garbage to the browser. Unlike a `Symbol` brand, this survives `JSON.stringify`/`JSON.parse`.
 
+`importCredentials()` also now accepts a `Buffer` directly — e.g. `fs.readFile(path)` with no encoding — no need to add `'utf8'` yourself.
+
 Also adds matchers: `toMatchCredential(filter)` for asserting a credential matching a `CredentialFilter` exists on an authenticator, and `toBeSignCountLessThan`/`toBeSignCountLessThanOrEqual`/`toBeSignCountGreaterThan`/`toBeSignCountGreaterThanOrEqual` for asserting on a specific `Credential`'s usage count directly.
