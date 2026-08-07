@@ -1,0 +1,21 @@
+{
+  "name": "webauthn-login-example",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Example: @playwright-labs/fixture-webauthn — a fake passkey login page tested end to end",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "ci:pretest": "playwright install chromium"
+  },
+  "dependencies": {
+    "@playwright-labs/fixture-webauthn": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "vite": "8.1.5"
+  }
+}

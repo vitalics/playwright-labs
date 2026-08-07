@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>fixture-webauthn test page</title>
+  </head>
+  <body>
+    <h1>fixture-webauthn test page</h1>
+    <p>
+      Exposes <code>window.webauthnCreate()</code> /
+      <code>window.webauthnGet()</code> wrappers around
+      <code>navigator.credentials</code> for the package's own test suite.
+    </p>
+
+    <script type="module">
+      /** @param {string} base64url */
+      function base64urlToBuffer(base64url) {
+        const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
+        const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+        const binary = atob(base64 + padding);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes.buffer;
+      }
+
+      /** @param {ArrayBuffer} buffer */
+      function bufferToBase64url(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let binary = "";
+        for (const byte of bytes) binary += String.fromCharCode(byte);
+        return btoa(binary)
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=+$/, "");
+      }
+
+      /** @param {readonly { id: string }[] | undefined} list */
+      function decodeCredentialList(list) {
+        return list?.map((entry) => ({
+          ...entry,
+          id: base64urlToBuffer(entry.id),
+        }));
+      }
+
+      /** Converts a JSON-safe `PublicKeyCredentialCreationOptions`-like object into the real thing. */
+      function decodeCreationOptions(options) {
+        return {
+          ...options,
+          challenge: base64urlToBuffer(options.challenge),
+          user: { ...options.user, id: base64urlToBuffer(options.user.id) },
+          excludeCredentials: decodeCredentialList(options.excludeCredentials),
+        };
+      }
+
+      /** Converts a JSON-safe `PublicKeyCredentialRequestOptions`-like object into the real thing. */
+      function decodeRequestOptions(options) {
+        return {
+          ...options,
+          challenge: base64urlToBuffer(options.challenge),
+          allowCredentials: decodeCredentialList(options.allowCredentials),
+        };
+      }
+
+      /** Converts a `PublicKeyCredential` from `create()` into a JSON-safe object. */
+      function encodeCreationCredential(credential) {
+        const response = credential.response;
+        return {
+          id: credential.id,
+          type: credential.type,
+          rawId: bufferToBase64url(credential.rawId),
+          response: {
+            clientDataJSON: bufferToBase64url(response.clientDataJSON),
+            attestationObject: bufferToBase64url(response.attestationObject),
+            transports: response.getTransports?.() ?? [],
+          },
+        };
+      }
+
+      /** Converts a `PublicKeyCredential` from `get()` into a JSON-safe object. */
+      function encodeAssertionCredential(credential) {
+        const response = credential.response;
+        return {
+          id: credential.id,
+          type: credential.type,
+          rawId: bufferToBase64url(credential.rawId),
+          response: {
+            clientDataJSON: bufferToBase64url(response.clientDataJSON),
+            authenticatorData: bufferToBase64url(response.authenticatorData),
+            signature: bufferToBase64url(response.signature),
+            userHandle: response.userHandle
+              ? bufferToBase64url(response.userHandle)
+              : null,
+          },
+        };
+      }
+
+      window.webauthnSupported = () => !!window.PublicKeyCredential;
+
+      window.webauthnCreate = async (options) => {
+        const credential = await navigator.credentials.create({
+          publicKey: decodeCreationOptions(options),
+        });
+        return encodeCreationCredential(credential);
+      };
+
+      window.webauthnGet = async (options) => {
+        const credential = await navigator.credentials.get({
+          publicKey: decodeRequestOptions(options),
+        });
+        return encodeAssertionCredential(credential);
+      };
+    </script>
+  </body>
+</html>
