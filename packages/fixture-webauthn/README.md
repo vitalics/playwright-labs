@@ -68,6 +68,7 @@ Factory for a controller bound to any `Page` (e.g. a popup opened during the flo
 | `disable()` | Disables the domain and forgets every authenticator created on this session. Idempotent. |
 | `isEnabled` | `boolean` getter — whether `enable()` has been called. |
 | `authenticators` | `VirtualAuthenticator[]` getter — every authenticator added and not yet removed. |
+| `[Symbol.iterator]` | `webauthn` itself is iterable over the same authenticators as `.authenticators` — `for (const authenticator of webauthn)` or `[...webauthn]` both work. |
 | `addVirtualAuthenticator(options)` | Creates a virtual authenticator. Returns a `VirtualAuthenticator`. Throws if `enable()` wasn't called first. |
 | `removeVirtualAuthenticator(idOrAuthenticator)` | Removes an authenticator and every credential on it. |
 | `waitForCredentialAdded(options?)` | Resolves on the next `navigator.credentials.create()` completed by any authenticator. |
@@ -75,6 +76,13 @@ Factory for a controller bound to any `Page` (e.g. a popup opened during the flo
 | `waitForCredentialUpdated(options?)` | Resolves when a credential is updated, e.g. via `PublicKeyCredential.signalCurrentUserDetails()`. |
 | `waitForCredentialDeleted(options?)` | Resolves when a credential is deleted, e.g. via `PublicKeyCredential.signalUnknownCredential()`. |
 | `dispose()` | Detaches the underlying CDP session. Called automatically after each test; also available via `Symbol.asyncDispose`. |
+
+```ts
+// Equivalent to iterating webauthn.authenticators
+for (const authenticator of webauthn) {
+  await expect(authenticator).toHaveCredentials(1);
+}
+```
 
 Every `waitForCredential*` method accepts `{ authenticatorId?, timeoutMs? }` (`timeoutMs` defaults to `30_000`) and rejects on timeout.
 

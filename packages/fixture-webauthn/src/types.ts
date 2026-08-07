@@ -17,11 +17,7 @@ export type Ctap2Version = "ctap2_0" | "ctap2_1";
 
 /** Transport advertised by the virtual authenticator. */
 export type AuthenticatorTransport =
-  | "usb"
-  | "nfc"
-  | "ble"
-  | "cable"
-  | "internal";
+  "usb" | "nfc" | "ble" | "cable" | "internal";
 
 /** Options passed to {@link WebAuthn.addVirtualAuthenticator}. */
 export interface VirtualAuthenticatorOptions {

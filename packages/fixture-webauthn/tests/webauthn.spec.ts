@@ -156,6 +156,77 @@ test.describe("WebAuthn", () => {
     });
   });
 
+  test.describe("[Symbol.iterator]", () => {
+    test("is empty when there are no authenticators", () => {
+      const webauthn = new WebAuthn(createFakeSession());
+
+      expect([...webauthn]).toEqual([]);
+    });
+
+    test("yields the same authenticators as .authenticators, in the same order", async () => {
+      const session = createFakeSession();
+      session.onSend("WebAuthn.enable", () => ({}));
+      let nextId = 1;
+      session.onSend("WebAuthn.addVirtualAuthenticator", () => ({
+        authenticatorId: `auth-${nextId++}`,
+      }));
+      const webauthn = new WebAuthn(session);
+      await webauthn.enable();
+
+      const a = await webauthn.addVirtualAuthenticator({
+        protocol: "ctap2",
+        transport: "internal",
+      });
+      const b = await webauthn.addVirtualAuthenticator({
+        protocol: "ctap2",
+        transport: "internal",
+      });
+
+      expect([...webauthn]).toEqual([a, b]);
+      expect([...webauthn]).toEqual(webauthn.authenticators);
+    });
+
+    test("supports for...of", async () => {
+      const session = createFakeSession();
+      session.onSend("WebAuthn.enable", () => ({}));
+      session.onSend("WebAuthn.addVirtualAuthenticator", () => ({
+        authenticatorId: "auth-1",
+      }));
+      const webauthn = new WebAuthn(session);
+      await webauthn.enable();
+      const authenticator = await webauthn.addVirtualAuthenticator({
+        protocol: "ctap2",
+        transport: "internal",
+      });
+
+      const seen: VirtualAuthenticator[] = [];
+      for (const item of webauthn) {
+        seen.push(item);
+      }
+
+      expect(seen).toEqual([authenticator]);
+    });
+
+    test("no longer yields an authenticator once it's removed", async () => {
+      const session = createFakeSession();
+      session.onSend("WebAuthn.enable", () => ({}));
+      session.onSend("WebAuthn.addVirtualAuthenticator", () => ({
+        authenticatorId: "auth-1",
+      }));
+      session.onSend("WebAuthn.removeVirtualAuthenticator", () => ({}));
+      const webauthn = new WebAuthn(session);
+      await webauthn.enable();
+      const authenticator = await webauthn.addVirtualAuthenticator({
+        protocol: "ctap2",
+        transport: "internal",
+      });
+
+      await authenticator.remove();
+
+      expect([...webauthn]).toEqual([]);
+    });
+  });
+
   test.describe("waitForCredential*()", () => {
     test("waitForCredentialAdded() resolves with the matching event payload", async () => {
       const session = createFakeSession();

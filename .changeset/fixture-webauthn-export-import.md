@@ -11,3 +11,5 @@ Both methods accept an optional `CredentialFilter` (`{ credentialId?, rpId?, use
 `importCredentials()` also now accepts a `Buffer` directly — e.g. `fs.readFile(path)` with no encoding — no need to add `'utf8'` yourself.
 
 Also adds matchers: `toMatchCredential(filter)` for asserting a credential matching a `CredentialFilter` exists on an authenticator, and `toBeSignCountLessThan`/`toBeSignCountLessThanOrEqual`/`toBeSignCountGreaterThan`/`toBeSignCountGreaterThanOrEqual` for asserting on a specific `Credential`'s usage count directly.
+
+`WebAuthn` is now iterable — `for (const authenticator of webauthn)` and `[...webauthn]` both yield the same authenticators as `webauthn.authenticators`.
