@@ -43,6 +43,20 @@ test.describe("webauthn fixture", () => {
     await otherPage.close();
   });
 
+  test("useWebAuthn() and its matchers also accept a Frame", async ({
+    useWebAuthn,
+    page,
+  }) => {
+    const frame = page.mainFrame();
+    const webauthn = await useWebAuthn(frame);
+
+    expect(frame).not.toBeWebAuthnEnabled();
+
+    await webauthn.enable();
+
+    expect(frame).toBeWebAuthnEnabled();
+  });
+
   test("useWebAuthn() creates independent instances", async ({
     useWebAuthn,
     page,

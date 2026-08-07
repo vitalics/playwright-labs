@@ -72,7 +72,7 @@ A ready-to-use controller bound to the test's `page`.
 
 ### `useWebAuthn(page?): Promise<WebAuthn>`
 
-Factory for a controller bound to any `Page` (e.g. a popup opened during the flow). Every `WebAuthn` created this way — including the default `webauthn` fixture — is disposed automatically after the test, even on failure.
+Factory for a controller bound to any `Page` or `Frame` (e.g. a popup, or an iframe hosting the passkey ceremony). Every `WebAuthn` created this way — including the default `webauthn` fixture — is disposed automatically after the test, even on failure.
 
 ## API
 
@@ -208,7 +208,7 @@ The export carries the credential's private key — treat the file like any othe
 | --- | --- |
 | `expect(webauthn).toBeWebAuthnEnabled()` | `webauthn.enable()` has been called |
 | `expect(webauthn).toHaveVirtualAuthenticators(count)` | `webauthn.authenticators.length === count` |
-| `expect(page).toBeWebAuthnEnabled()` / `toHaveVirtualAuthenticators(count)` | Same two checks, but takes the `Page` a `WebAuthn` was created for (via `useWebAuthn(page)`/the `webauthn` fixture) instead of the `WebAuthn` instance itself. Throws a clear error if no `WebAuthn` was ever created for that page. If `useWebAuthn(page)` was called more than once for the same page, resolves to the most recently created one. |
+| `expect(page).toBeWebAuthnEnabled()` / `toHaveVirtualAuthenticators(count)` | Same two checks, but takes the `Page`/`Frame` a `WebAuthn` was created for (via `useWebAuthn(page)`/the `webauthn` fixture) instead of the `WebAuthn` instance itself. Throws a clear error if no `WebAuthn` was ever created for it. If `useWebAuthn()` was called more than once for the same `Page`/`Frame`, resolves to the most recently created one. |
 | `await expect(authenticator).toHaveCredentials(count)` | the authenticator has exactly `count` stored credentials |
 | `await expect(authenticator).toHaveCredential(credentialId)` | the authenticator has a credential with that id |
 | `await expect(authenticator).toMatchCredential(filter)` | the authenticator has a credential matching every given field, e.g. `{ userName: 'dave@example.com' }` |
