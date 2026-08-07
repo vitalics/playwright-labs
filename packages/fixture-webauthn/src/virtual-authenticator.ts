@@ -1,11 +1,38 @@
 import type { CDPSession } from "@playwright/test";
 
+import { isCredential } from "./types.js";
 import type {
   Credential,
   CredentialExport,
+  CredentialFilter,
   CredentialProperties,
   ResponseOverrideBits,
 } from "./types.js";
+
+export function matchesCredentialFilter(
+  credential: Credential,
+  filter: CredentialFilter,
+): boolean {
+  if (filter.credentialId !== undefined) {
+    if (credential.credentialId !== filter.credentialId) return false;
+  }
+  if (filter.rpId !== undefined) {
+    if (credential.rpId !== filter.rpId) return false;
+  }
+  if (filter.userName !== undefined) {
+    if (credential.userName !== filter.userName) return false;
+  }
+  if (filter.userDisplayName !== undefined) {
+    if (credential.userDisplayName !== filter.userDisplayName) return false;
+  }
+  if (filter.signCountMin !== undefined) {
+    if (credential.signCount < filter.signCountMin) return false;
+  }
+  if (filter.signCountMax !== undefined) {
+    if (credential.signCount > filter.signCountMax) return false;
+  }
+  return true;
+}
 
 const CREDENTIAL_EXPORT_VERSION = 1;
 
@@ -72,20 +99,30 @@ export class VirtualAuthenticator {
   }
 
   /**
-   * Exports every credential on this authenticator — including private
-   * keys — as a JSON-serializable snapshot. Write it to disk (or a
-   * database, or Playwright's own `storageState`) to seed a passkey into a
-   * later run via {@link importCredentials}, instead of repeating the
+   * Exports credentials on this authenticator — including private keys —
+   * as a JSON-serializable snapshot. Write it to disk (or a database, or
+   * Playwright's own `storageState`) to seed a passkey into a later run
+   * via {@link importCredentials}, instead of repeating the
    * `navigator.credentials.create()` ceremony every time.
+   *
+   * @param filter - Only export credentials matching every given field —
+   * e.g. `{ userName: 'dave@example.com' }` to export just Dave's passkey
+   * out of an authenticator holding several users'. Omit to export all of
+   * them.
    *
    * @example
    * ```ts
-   * const snapshot = await authenticator.exportCredentials();
-   * await fs.writeFile('passkey.json', JSON.stringify(snapshot));
+   * const snapshot = await authenticator.exportCredentials({ userName: 'dave@example.com' });
+   * await fs.writeFile('Dave-localhost.json', JSON.stringify(snapshot));
    * ```
    */
-  async exportCredentials(): Promise<CredentialExport> {
-    const credentials = await this.getCredentials();
+  async exportCredentials(filter?: CredentialFilter): Promise<CredentialExport> {
+    let credentials = await this.getCredentials();
+    if (filter) {
+      credentials = credentials.filter((credential) =>
+        matchesCredentialFilter(credential, filter),
+      );
+    }
     return { version: CREDENTIAL_EXPORT_VERSION, credentials };
   }
 
@@ -94,13 +131,21 @@ export class VirtualAuthenticator {
    * this authenticator, without going through a `navigator.credentials.create()`
    * ceremony. Accepts the export object itself or its `JSON.stringify`'d form.
    *
+   * @param filter - Only import credentials matching every given field —
+   * useful when `data` is a shared snapshot holding several users' passkeys
+   * and this authenticator should only get one of them. Omit to import all
+   * of them.
+   *
    * @example
    * ```ts
    * const snapshot = JSON.parse(await fs.readFile('passkey.json', 'utf8'));
-   * await authenticator.importCredentials(snapshot);
+   * await authenticator.importCredentials(snapshot, { userName: 'dave@example.com' });
    * ```
    */
-  async importCredentials(data: CredentialExport | string): Promise<void> {
+  async importCredentials(
+    data: CredentialExport | string,
+    filter?: CredentialFilter,
+  ): Promise<void> {
     const snapshot: CredentialExport =
       typeof data === "string" ? JSON.parse(data) : data;
     if (snapshot.version !== CREDENTIAL_EXPORT_VERSION) {
@@ -108,8 +153,21 @@ export class VirtualAuthenticator {
         `Unsupported credential export version: ${snapshot.version}. Expected ${CREDENTIAL_EXPORT_VERSION}.`,
       );
     }
+    if (
+      !Array.isArray(snapshot.credentials) ||
+      !snapshot.credentials.every(isCredential)
+    ) {
+      throw new Error(
+        "Malformed credential export: `credentials` must be an array of Credential objects.",
+      );
+    }
+    const credentials = filter
+      ? snapshot.credentials.filter((credential) =>
+          matchesCredentialFilter(credential, filter),
+        )
+      : snapshot.credentials;
     await Promise.all(
-      snapshot.credentials.map((credential) => this.addCredential(credential)),
+      credentials.map((credential) => this.addCredential(credential)),
     );
   }
 

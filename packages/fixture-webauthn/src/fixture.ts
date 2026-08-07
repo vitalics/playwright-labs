@@ -5,7 +5,9 @@ import {
 } from "@playwright/test";
 
 import { WebAuthn } from "./webauthn.js";
+import { matchesCredentialFilter } from "./virtual-authenticator.js";
 import type { VirtualAuthenticator } from "./virtual-authenticator.js";
+import type { Credential, CredentialFilter } from "./types.js";
 
 /**
  * Creates a {@link WebAuthn} controller bound to a page's CDP session.
@@ -161,6 +163,100 @@ export const expect = baseExpect.extend({
         pass
           ? `Expected authenticator "${received.id}" not to have credential ${this.utils.printExpected(credentialId)}, but it did`
           : `Expected authenticator "${received.id}" to have credential ${this.utils.printExpected(credentialId)}, got ${this.utils.printReceived(ids)}`,
+    };
+  },
+
+  /**
+   * Asserts that a `VirtualAuthenticator` holds at least one credential
+   * matching every given field — a partial match, unlike `toHaveCredential`'s
+   * exact id check. Useful once an authenticator holds several users'
+   * passkeys.
+   *
+   * @example
+   * ```ts
+   * await expect(authenticator).toMatchCredential({ userName: 'dave@example.com' });
+   * ```
+   */
+  async toMatchCredential(
+    received: VirtualAuthenticator,
+    filter: CredentialFilter,
+  ) {
+    const credentials = await received.getCredentials();
+    const pass = credentials.some((credential) =>
+      matchesCredentialFilter(credential, filter),
+    );
+    return {
+      pass,
+      expected: filter,
+      actual: credentials,
+      message: () =>
+        pass
+          ? `Expected authenticator "${received.id}" not to have a credential matching ${this.utils.printExpected(filter)}, but it did`
+          : `Expected authenticator "${received.id}" to have a credential matching ${this.utils.printExpected(filter)}, got ${this.utils.printReceived(credentials)}`,
+    };
+  },
+
+  /**
+   * Asserts that a `Credential`'s `signCount` is strictly less than the
+   * given value — e.g. to check a passkey has never been asserted yet
+   * (`toBeSignCountLessThan(1)`).
+   */
+  toBeSignCountLessThan(received: Credential, count: number) {
+    const pass = received.signCount < count;
+    return {
+      pass,
+      expected: count,
+      actual: received.signCount,
+      message: () =>
+        pass
+          ? `Expected credential signCount not to be less than ${this.utils.printExpected(count)}, got ${this.utils.printReceived(received.signCount)}`
+          : `Expected credential signCount to be less than ${this.utils.printExpected(count)}, got ${this.utils.printReceived(received.signCount)}`,
+    };
+  },
+
+  /** Asserts that a `Credential`'s `signCount` is less than or equal to the given value. */
+  toBeSignCountLessThanOrEqual(received: Credential, count: number) {
+    const pass = received.signCount <= count;
+    return {
+      pass,
+      expected: count,
+      actual: received.signCount,
+      message: () =>
+        pass
+          ? `Expected credential signCount not to be less than or equal to ${this.utils.printExpected(count)}, got ${this.utils.printReceived(received.signCount)}`
+          : `Expected credential signCount to be less than or equal to ${this.utils.printExpected(count)}, got ${this.utils.printReceived(received.signCount)}`,
+    };
+  },
+
+  /**
+   * Asserts that a `Credential`'s `signCount` is strictly greater than the
+   * given value — e.g. to check a passkey has actually been asserted
+   * (`toBeSignCountGreaterThan(0)`).
+   */
+  toBeSignCountGreaterThan(received: Credential, count: number) {
+    const pass = received.signCount > count;
+    return {
+      pass,
+      expected: count,
+      actual: received.signCount,
+      message: () =>
+        pass
+          ? `Expected credential signCount not to be greater than ${this.utils.printExpected(count)}, got ${this.utils.printReceived(received.signCount)}`
+          : `Expected credential signCount to be greater than ${this.utils.printExpected(count)}, got ${this.utils.printReceived(received.signCount)}`,
+    };
+  },
+
+  /** Asserts that a `Credential`'s `signCount` is greater than or equal to the given value. */
+  toBeSignCountGreaterThanOrEqual(received: Credential, count: number) {
+    const pass = received.signCount >= count;
+    return {
+      pass,
+      expected: count,
+      actual: received.signCount,
+      message: () =>
+        pass
+          ? `Expected credential signCount not to be greater than or equal to ${this.utils.printExpected(count)}, got ${this.utils.printReceived(received.signCount)}`
+          : `Expected credential signCount to be greater than or equal to ${this.utils.printExpected(count)}, got ${this.utils.printReceived(received.signCount)}`,
     };
   },
 });

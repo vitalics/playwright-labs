@@ -97,6 +97,25 @@ export interface Credential {
   userDisplayName?: string;
 }
 
+/**
+ * Structural check for whether `value` looks like a {@link Credential} —
+ * has the required fields, with the right types. Unlike a `Symbol` brand,
+ * this survives `JSON.stringify`/`JSON.parse`, so it works on data loaded
+ * from a file — used by {@link VirtualAuthenticator.importCredentials} to
+ * reject a malformed/corrupted snapshot with a clear error instead of
+ * forwarding garbage to the browser.
+ */
+export function isCredential(value: unknown): value is Credential {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.credentialId === "string" &&
+    typeof candidate.isResidentCredential === "boolean" &&
+    typeof candidate.privateKey === "string" &&
+    typeof candidate.signCount === "number"
+  );
+}
+
 /** Options accepted by {@link VirtualAuthenticator.setCredentialProperties}. */
 export interface CredentialProperties {
   backupEligibility?: boolean;
@@ -171,4 +190,22 @@ export interface WaitForEventOptions {
 export interface CredentialExport {
   version: 1;
   credentials: Credential[];
+}
+
+/**
+ * Narrows {@link VirtualAuthenticator.exportCredentials} /
+ * {@link VirtualAuthenticator.importCredentials} to credentials matching
+ * every given field — e.g. `{ userName: 'dave@example.com', rpId: 'localhost' }`
+ * to export just Dave's `localhost` passkey out of an authenticator holding
+ * several users' and/or several relying parties' credentials.
+ */
+export interface CredentialFilter {
+  credentialId?: string;
+  rpId?: string;
+  userName?: string;
+  userDisplayName?: string;
+  /** Only matches credentials with `signCount >=` this value. */
+  signCountMin?: number;
+  /** Only matches credentials with `signCount <=` this value. */
+  signCountMax?: number;
 }

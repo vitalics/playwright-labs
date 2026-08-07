@@ -218,6 +218,23 @@ test.describe("VirtualAuthenticator", () => {
       ).rejects.toThrow(/Unsupported credential export version: 99/);
     });
 
+    test("importCredentials() rejects a malformed snapshot instead of forwarding garbage", async () => {
+      const { authenticator } = setup();
+
+      await expect(
+        authenticator.importCredentials({
+          version: 1,
+          credentials: [{ credentialId: "c1" } as never],
+        }),
+      ).rejects.toThrow(/Malformed credential export/);
+
+      await expect(
+        authenticator.importCredentials(
+          JSON.stringify({ version: 1, credentials: "not-an-array" }),
+        ),
+      ).rejects.toThrow(/Malformed credential export/);
+    });
+
     test("round trip: export from one authenticator, import into another", async () => {
       const sourceSession = createFakeSession();
       sourceSession.onSend("WebAuthn.getCredentials", () => ({
@@ -237,6 +254,76 @@ test.describe("VirtualAuthenticator", () => {
           params: { authenticatorId: "auth-2", credential },
         },
       ]);
+    });
+
+    const dave = {
+      credentialId: "c-dave",
+      isResidentCredential: true,
+      privateKey: "key-dave",
+      rpId: "localhost",
+      signCount: 0,
+      userName: "dave@example.com",
+    };
+    const carol = {
+      credentialId: "c-carol",
+      isResidentCredential: true,
+      privateKey: "key-carol",
+      rpId: "example.com",
+      signCount: 5,
+      userName: "carol@example.com",
+    };
+
+    test("exportCredentials(filter) exports only matching credentials", async () => {
+      const { session, authenticator } = setup();
+      session.onSend("WebAuthn.getCredentials", () => ({
+        credentials: [dave, carol],
+      }));
+
+      await expect(
+        authenticator.exportCredentials({ userName: "dave@example.com" }),
+      ).resolves.toEqual({ version: 1, credentials: [dave] });
+    });
+
+    test("importCredentials(data, filter) only seeds matching credentials from a shared snapshot", async () => {
+      const { session, authenticator } = setup();
+      session.onSend("WebAuthn.addCredential", () => ({}));
+
+      await authenticator.importCredentials(
+        { version: 1, credentials: [dave, carol] },
+        { userName: "carol@example.com" },
+      );
+
+      expect(session.sentCommands).toEqual([
+        {
+          method: "WebAuthn.addCredential",
+          params: { authenticatorId: "auth-1", credential: carol },
+        },
+      ]);
+    });
+
+    test("exportCredentials(filter) filters by rpId", async () => {
+      const { session, authenticator } = setup();
+      session.onSend("WebAuthn.getCredentials", () => ({
+        credentials: [dave, carol],
+      }));
+
+      await expect(
+        authenticator.exportCredentials({ rpId: "example.com" }),
+      ).resolves.toEqual({ version: 1, credentials: [carol] });
+    });
+
+    test("exportCredentials(filter) filters by signCountMin/signCountMax", async () => {
+      const { session, authenticator } = setup();
+      session.onSend("WebAuthn.getCredentials", () => ({
+        credentials: [dave, carol],
+      }));
+
+      await expect(
+        authenticator.exportCredentials({ signCountMin: 1 }),
+      ).resolves.toEqual({ version: 1, credentials: [carol] });
+      await expect(
+        authenticator.exportCredentials({ signCountMax: 0 }),
+      ).resolves.toEqual({ version: 1, credentials: [dave] });
     });
   });
 

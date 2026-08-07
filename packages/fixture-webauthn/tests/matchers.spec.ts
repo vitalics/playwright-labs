@@ -71,4 +71,53 @@ baseTest.describe("custom matchers", () => {
       await expect(authenticator).not.toHaveCredential("c3");
     });
   });
+
+  baseTest.describe("toMatchCredential", () => {
+    baseTest("passes when a credential matches every given field", async () => {
+      const session = createFakeSession();
+      session.onSend("WebAuthn.getCredentials", () => ({
+        credentials: [
+          { credentialId: "c-dave", userName: "dave@example.com" },
+          { credentialId: "c-carol", userName: "carol@example.com" },
+        ],
+      }));
+      const authenticator = new VirtualAuthenticator(session, "auth-1", async () => {});
+
+      await expect(authenticator).toMatchCredential({
+        userName: "dave@example.com",
+      });
+      await expect(authenticator).not.toMatchCredential({
+        userName: "eve@example.com",
+      });
+    });
+  });
+
+  baseTest.describe("toBeSignCount*", () => {
+    const credential = {
+      credentialId: "c1",
+      isResidentCredential: true,
+      privateKey: "key",
+      signCount: 5,
+    };
+
+    baseTest("toBeSignCountLessThan", () => {
+      expect(credential).toBeSignCountLessThan(6);
+      expect(credential).not.toBeSignCountLessThan(5);
+    });
+
+    baseTest("toBeSignCountLessThanOrEqual", () => {
+      expect(credential).toBeSignCountLessThanOrEqual(5);
+      expect(credential).not.toBeSignCountLessThanOrEqual(4);
+    });
+
+    baseTest("toBeSignCountGreaterThan", () => {
+      expect(credential).toBeSignCountGreaterThan(4);
+      expect(credential).not.toBeSignCountGreaterThan(5);
+    });
+
+    baseTest("toBeSignCountGreaterThanOrEqual", () => {
+      expect(credential).toBeSignCountGreaterThanOrEqual(5);
+      expect(credential).not.toBeSignCountGreaterThanOrEqual(6);
+    });
+  });
 });

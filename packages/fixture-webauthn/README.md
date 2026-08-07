@@ -106,8 +106,8 @@ Every `waitForCredential*` method accepts `{ authenticatorId?, timeoutMs? }` (`t
 | `setAutomaticPresenceSimulation(enabled)` | Flips whether user-presence tests resolve immediately. |
 | `setCredentialProperties(credentialId, props)` | Updates `backupEligibility`/`backupState` on a stored credential. |
 | `setResponseOverrideBits(overrides)` | Forces the next assertion's response to look bogus (`isBogusSignature`/`isBadUV`/`isBadUP`) — for testing relying-party validation. |
-| `exportCredentials()` | Returns every credential on this authenticator — including private keys — as a JSON-serializable `{ version, credentials }` snapshot. |
-| `importCredentials(data)` | Seeds credentials from a snapshot produced by `exportCredentials()` (object or its `JSON.stringify`'d string) onto this authenticator. |
+| `exportCredentials(filter?)` | Returns credentials on this authenticator — including private keys — as a JSON-serializable `{ version, credentials }` snapshot. `filter` (e.g. `{ userName }`) narrows it to matching credentials; omit to export all of them. |
+| `importCredentials(data, filter?)` | Seeds credentials from a snapshot produced by `exportCredentials()` (object or its `JSON.stringify`'d string) onto this authenticator. `filter` narrows which credentials in `data` get imported. Throws on an unrecognized export `version` or if `data.credentials` doesn't structurally look like `Credential[]` (see `isCredential`) — a malformed/corrupted file fails loudly instead of forwarding garbage to the browser. |
 | `remove()` | Removes this authenticator. Also available via `Symbol.asyncDispose`. |
 
 ### Persisting a passkey across test runs
@@ -126,7 +126,8 @@ const authenticator = await webauthn.addVirtualAuthenticator({
   isUserVerified: true,
 });
 // ... perform navigator.credentials.create() on the page ...
-await fs.writeFile("passkey.json", JSON.stringify(await authenticator.exportCredentials()));
+const snapshot = await authenticator.exportCredentials({ userName: "dave@example.com" });
+await fs.writeFile("Dave-localhost.json", JSON.stringify(snapshot));
 ```
 
 ```ts
@@ -138,9 +139,25 @@ const authenticator = await webauthn.addVirtualAuthenticator({
   hasUserVerification: true,
   isUserVerified: true,
 });
-await authenticator.importCredentials(await fs.readFile("passkey.json", "utf8"));
+await authenticator.importCredentials(await fs.readFile("Dave-localhost.json", "utf8"));
 // ... navigator.credentials.get() on the page now succeeds with the imported passkey ...
 ```
+
+`filter` also works against a snapshot holding several users — say, one `all-users.json` file the whole suite shares — so a given test can import just the passkey it needs: `authenticator.importCredentials(sharedSnapshot, { userName: "carol@example.com" })`.
+
+`importCredentials()` validates every entry with the exported `isCredential(value): value is Credential` helper before seeding anything — a structural check (right fields, right types) that, unlike a `Symbol` brand, survives `JSON.stringify`/`JSON.parse`, so it still works on data you just loaded from a file. Use it yourself if you're reading/merging snapshot files by hand.
+
+`CredentialFilter` fields, and when to reach for each:
+
+| Field | Use when | Notes |
+| --- | --- | --- |
+| `userName` | Pulling one person's passkey out of a shared/multi-user snapshot or authenticator (`{ userName: 'dave@example.com' }`) | The most common filter — matches what you registered the credential with |
+| `rpId` | The same authenticator (or snapshot) holds credentials for more than one site/origin | Rare inside a single test, common if you reuse one authenticator or one snapshot file across suites |
+| `credentialId` | You already have the exact id (e.g. from a `credentialAdded` event or an earlier `getCredentials()` call) and want that one credential, no ambiguity | Most precise, but you need the id up front |
+| `userDisplayName` | `userName` isn't unique/stable in your test data but `userDisplayName` is (or vice versa) | Same matching behaviour as `userName`, pick whichever field your test setup actually varies |
+| `signCountMin` / `signCountMax` | Selecting a *subset of credentials* by usage while exporting/importing, e.g. "only credentials asserted at least once" (`signCountMin: 1`) or "never used" (`signCountMax: 0`) | `signCount` increments on every real assertion — don't use it to *identify* a specific user's credential, it changes every time that credential is used. Asserting on one known credential's `signCount` directly? Use the `toBeSignCount*` matchers below instead. |
+
+Combine fields for an AND match, e.g. `{ userName: 'dave@example.com', rpId: 'localhost' }` when the same user has passkeys for multiple sites.
 
 The export carries the credential's private key — treat the file like any other secret (e.g. a storage state file): keep it out of version control and scope it to trusted CI storage.
 
@@ -152,6 +169,11 @@ The export carries the credential's private key — treat the file like any othe
 | `expect(webauthn).toHaveVirtualAuthenticators(count)` | `webauthn.authenticators.length === count` |
 | `await expect(authenticator).toHaveCredentials(count)` | the authenticator has exactly `count` stored credentials |
 | `await expect(authenticator).toHaveCredential(credentialId)` | the authenticator has a credential with that id |
+| `await expect(authenticator).toMatchCredential(filter)` | the authenticator has a credential matching every given field, e.g. `{ userName: 'dave@example.com' }` |
+| `expect(credential).toBeSignCountLessThan(n)` / `LessThanOrEqual` | `credential.signCount` compares as named against `n` |
+| `expect(credential).toBeSignCountGreaterThan(n)` / `GreaterThanOrEqual` | `credential.signCount` compares as named against `n` |
+
+The last four take a plain `Credential` (e.g. from `getCredentials()`), not a `VirtualAuthenticator` — handy for asserting a specific passkey was actually used: `expect(credential).toBeSignCountGreaterThan(0)`.
 
 All support `.not`.
 
