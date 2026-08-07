@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import * as fs from "node:fs/promises";
 
 import { expect, test } from "../src/fixture.js";
 
@@ -145,6 +146,82 @@ test.describe("register + login with a virtual passkey", () => {
       isUserVerified: true,
     });
     await restored.importCredentials(JSON.parse(JSON.stringify(exported)));
+    await expect(restored).toHaveCredentials(1);
+
+    const [assertedEvent, assertion] = await Promise.all([
+      webauthn.waitForCredentialAsserted(),
+      page.evaluate(
+        (options) => window.webauthnGet(options),
+        {
+          challenge: randomBase64url(),
+          rpId: "localhost",
+          allowCredentials: [{ type: "public-key", id: credential.rawId }],
+          userVerification: "required",
+        },
+      ),
+    ]);
+
+    expect(assertion.id).toBe(credential.id);
+    expect(assertedEvent.authenticatorId).toBe(restored.id);
+  });
+
+  test("persists a passkey to a real file and imports it back in a later run", async ({
+    page,
+    webauthn,
+  }, testInfo) => {
+    const passkeyFile = testInfo.outputPath("passkey.json");
+
+    await webauthn.enable();
+    const original = await webauthn.addVirtualAuthenticator({
+      protocol: "ctap2",
+      transport: "internal",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+    });
+
+    await page.goto("/");
+    await page.waitForFunction(() => typeof window.webauthnCreate === "function");
+
+    const [, credential] = await Promise.all([
+      webauthn.waitForCredentialAdded(),
+      page.evaluate(
+        (options) => window.webauthnCreate(options),
+        {
+          challenge: randomBase64url(),
+          rp: { name: "fixture-webauthn demo", id: "localhost" },
+          user: {
+            id: randomBase64url(16),
+            name: "dave@example.com",
+            displayName: "Dave",
+          },
+          pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+          authenticatorSelection: {
+            residentKey: "required",
+            userVerification: "required",
+          },
+          attestation: "none",
+        },
+      ),
+    ]);
+
+    // Write the passkey to a real file, as a test suite would between runs.
+    await fs.writeFile(
+      passkeyFile,
+      JSON.stringify(await original.exportCredentials()),
+    );
+    await original.remove();
+
+    // A later run: a fresh authenticator reads the same file back and signs in
+    // with it — no navigator.credentials.create() this time.
+    const restored = await webauthn.addVirtualAuthenticator({
+      protocol: "ctap2",
+      transport: "internal",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+    });
+    await restored.importCredentials(await fs.readFile(passkeyFile, "utf8"));
     await expect(restored).toHaveCredentials(1);
 
     const [assertedEvent, assertion] = await Promise.all([
