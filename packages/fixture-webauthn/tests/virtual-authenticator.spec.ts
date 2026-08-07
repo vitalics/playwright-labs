@@ -154,6 +154,92 @@ test.describe("VirtualAuthenticator", () => {
     ]);
   });
 
+  test.describe("exportCredentials() / importCredentials()", () => {
+    const credential = {
+      credentialId: "c1",
+      isResidentCredential: true,
+      privateKey: "key",
+      signCount: 0,
+    };
+
+    test("exportCredentials() wraps getCredentials() with a version tag", async () => {
+      const { session, authenticator } = setup();
+      session.onSend("WebAuthn.getCredentials", () => ({
+        credentials: [credential],
+      }));
+
+      await expect(authenticator.exportCredentials()).resolves.toEqual({
+        version: 1,
+        credentials: [credential],
+      });
+    });
+
+    test("importCredentials() accepts an export object and adds each credential", async () => {
+      const { session, authenticator } = setup();
+      session.onSend("WebAuthn.addCredential", () => ({}));
+
+      await authenticator.importCredentials({
+        version: 1,
+        credentials: [credential],
+      });
+
+      expect(session.sentCommands).toEqual([
+        {
+          method: "WebAuthn.addCredential",
+          params: { authenticatorId: "auth-1", credential },
+        },
+      ]);
+    });
+
+    test("importCredentials() accepts the JSON.stringify'd form", async () => {
+      const { session, authenticator } = setup();
+      session.onSend("WebAuthn.addCredential", () => ({}));
+
+      await authenticator.importCredentials(
+        JSON.stringify({ version: 1, credentials: [credential] }),
+      );
+
+      expect(session.sentCommands).toEqual([
+        {
+          method: "WebAuthn.addCredential",
+          params: { authenticatorId: "auth-1", credential },
+        },
+      ]);
+    });
+
+    test("importCredentials() rejects an unknown export version", async () => {
+      const { authenticator } = setup();
+
+      await expect(
+        authenticator.importCredentials({
+          version: 99 as never,
+          credentials: [credential],
+        }),
+      ).rejects.toThrow(/Unsupported credential export version: 99/);
+    });
+
+    test("round trip: export from one authenticator, import into another", async () => {
+      const sourceSession = createFakeSession();
+      sourceSession.onSend("WebAuthn.getCredentials", () => ({
+        credentials: [credential],
+      }));
+      const source = new VirtualAuthenticator(sourceSession, "auth-1", async () => {});
+
+      const targetSession = createFakeSession();
+      targetSession.onSend("WebAuthn.addCredential", () => ({}));
+      const target = new VirtualAuthenticator(targetSession, "auth-2", async () => {});
+
+      await target.importCredentials(await source.exportCredentials());
+
+      expect(targetSession.sentCommands).toEqual([
+        {
+          method: "WebAuthn.addCredential",
+          params: { authenticatorId: "auth-2", credential },
+        },
+      ]);
+    });
+  });
+
   test.describe("remove()", () => {
     test("delegates to the onRemove callback", async () => {
       const session = createFakeSession();

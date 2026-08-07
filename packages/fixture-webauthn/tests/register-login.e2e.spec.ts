@@ -94,6 +94,76 @@ test.describe("register + login with a virtual passkey", () => {
     expect(assertedEvent.credential.signCount).toBeGreaterThan(0);
   });
 
+  test("export a credential and re-import it into a fresh authenticator, then sign in with it", async ({
+    page,
+    webauthn,
+  }) => {
+    await webauthn.enable();
+    const original = await webauthn.addVirtualAuthenticator({
+      protocol: "ctap2",
+      transport: "internal",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+    });
+
+    await page.goto("/");
+    await page.waitForFunction(() => typeof window.webauthnCreate === "function");
+
+    const [, credential] = await Promise.all([
+      webauthn.waitForCredentialAdded(),
+      page.evaluate(
+        (options) => window.webauthnCreate(options),
+        {
+          challenge: randomBase64url(),
+          rp: { name: "fixture-webauthn demo", id: "localhost" },
+          user: {
+            id: randomBase64url(16),
+            name: "carol@example.com",
+            displayName: "Carol",
+          },
+          pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+          authenticatorSelection: {
+            residentKey: "required",
+            userVerification: "required",
+          },
+          attestation: "none",
+        },
+      ),
+    ]);
+
+    // Simulate persisting the passkey between test runs.
+    const exported = await original.exportCredentials();
+    await original.remove();
+
+    // A brand new authenticator — as if this were a fresh run/machine.
+    const restored = await webauthn.addVirtualAuthenticator({
+      protocol: "ctap2",
+      transport: "internal",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+    });
+    await restored.importCredentials(JSON.parse(JSON.stringify(exported)));
+    await expect(restored).toHaveCredentials(1);
+
+    const [assertedEvent, assertion] = await Promise.all([
+      webauthn.waitForCredentialAsserted(),
+      page.evaluate(
+        (options) => window.webauthnGet(options),
+        {
+          challenge: randomBase64url(),
+          rpId: "localhost",
+          allowCredentials: [{ type: "public-key", id: credential.rawId }],
+          userVerification: "required",
+        },
+      ),
+    ]);
+
+    expect(assertion.id).toBe(credential.id);
+    expect(assertedEvent.authenticatorId).toBe(restored.id);
+  });
+
   test("registration rejects when the (simulated) user never confirms presence", async ({
     page,
     webauthn,

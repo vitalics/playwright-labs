@@ -106,7 +106,43 @@ Every `waitForCredential*` method accepts `{ authenticatorId?, timeoutMs? }` (`t
 | `setAutomaticPresenceSimulation(enabled)` | Flips whether user-presence tests resolve immediately. |
 | `setCredentialProperties(credentialId, props)` | Updates `backupEligibility`/`backupState` on a stored credential. |
 | `setResponseOverrideBits(overrides)` | Forces the next assertion's response to look bogus (`isBogusSignature`/`isBadUV`/`isBadUP`) — for testing relying-party validation. |
+| `exportCredentials()` | Returns every credential on this authenticator — including private keys — as a JSON-serializable `{ version, credentials }` snapshot. |
+| `importCredentials(data)` | Seeds credentials from a snapshot produced by `exportCredentials()` (object or its `JSON.stringify`'d string) onto this authenticator. |
 | `remove()` | Removes this authenticator. Also available via `Symbol.asyncDispose`. |
+
+### Persisting a passkey across test runs
+
+`exportCredentials()`/`importCredentials()` let you register a passkey once and reuse it, instead of repeating the `navigator.credentials.create()` ceremony in every test — the same idea as Playwright's own `storageState`, but for the authenticator's credentials.
+
+```ts
+import * as fs from "node:fs/promises";
+
+// One-off setup: register, then save the passkey.
+const authenticator = await webauthn.addVirtualAuthenticator({
+  protocol: "ctap2",
+  transport: "internal",
+  hasResidentKey: true,
+  hasUserVerification: true,
+  isUserVerified: true,
+});
+// ... perform navigator.credentials.create() on the page ...
+await fs.writeFile("passkey.json", JSON.stringify(await authenticator.exportCredentials()));
+```
+
+```ts
+// Later runs: seed the same passkey onto a fresh authenticator, skip registration.
+const authenticator = await webauthn.addVirtualAuthenticator({
+  protocol: "ctap2",
+  transport: "internal",
+  hasResidentKey: true,
+  hasUserVerification: true,
+  isUserVerified: true,
+});
+await authenticator.importCredentials(await fs.readFile("passkey.json", "utf8"));
+// ... navigator.credentials.get() on the page now succeeds with the imported passkey ...
+```
+
+The export carries the credential's private key — treat the file like any other secret (e.g. a storage state file): keep it out of version control and scope it to trusted CI storage.
 
 ### Matchers
 

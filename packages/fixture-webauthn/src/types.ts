@@ -161,3 +161,14 @@ export interface WaitForEventOptions {
   /** Milliseconds to wait before rejecting. Defaults to `30_000`. */
   timeoutMs?: number;
 }
+
+/**
+ * JSON-serializable snapshot produced by {@link VirtualAuthenticator.exportCredentials}
+ * and consumed by {@link VirtualAuthenticator.importCredentials}. Carries the
+ * credentials' private keys, so treat it like any other secret (e.g. a
+ * storage state file) — anyone with it can assert as that user.
+ */
+export interface CredentialExport {
+  version: 1;
+  credentials: Credential[];
+}

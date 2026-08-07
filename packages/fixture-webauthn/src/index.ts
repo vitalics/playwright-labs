@@ -8,6 +8,7 @@ export type {
   CredentialAddedEvent,
   CredentialAssertedEvent,
   CredentialDeletedEvent,
+  CredentialExport,
   CredentialProperties,
   CredentialUpdatedEvent,
   Ctap2Version,

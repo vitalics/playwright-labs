@@ -2,9 +2,12 @@ import type { CDPSession } from "@playwright/test";
 
 import type {
   Credential,
+  CredentialExport,
   CredentialProperties,
   ResponseOverrideBits,
 } from "./types.js";
+
+const CREDENTIAL_EXPORT_VERSION = 1;
 
 /**
  * A single virtual FIDO2/U2F authenticator created via
@@ -66,6 +69,48 @@ export class VirtualAuthenticator {
     await this.#session.send("WebAuthn.clearCredentials", {
       authenticatorId: this.id,
     });
+  }
+
+  /**
+   * Exports every credential on this authenticator — including private
+   * keys — as a JSON-serializable snapshot. Write it to disk (or a
+   * database, or Playwright's own `storageState`) to seed a passkey into a
+   * later run via {@link importCredentials}, instead of repeating the
+   * `navigator.credentials.create()` ceremony every time.
+   *
+   * @example
+   * ```ts
+   * const snapshot = await authenticator.exportCredentials();
+   * await fs.writeFile('passkey.json', JSON.stringify(snapshot));
+   * ```
+   */
+  async exportCredentials(): Promise<CredentialExport> {
+    const credentials = await this.getCredentials();
+    return { version: CREDENTIAL_EXPORT_VERSION, credentials };
+  }
+
+  /**
+   * Seeds credentials previously produced by {@link exportCredentials} onto
+   * this authenticator, without going through a `navigator.credentials.create()`
+   * ceremony. Accepts the export object itself or its `JSON.stringify`'d form.
+   *
+   * @example
+   * ```ts
+   * const snapshot = JSON.parse(await fs.readFile('passkey.json', 'utf8'));
+   * await authenticator.importCredentials(snapshot);
+   * ```
+   */
+  async importCredentials(data: CredentialExport | string): Promise<void> {
+    const snapshot: CredentialExport =
+      typeof data === "string" ? JSON.parse(data) : data;
+    if (snapshot.version !== CREDENTIAL_EXPORT_VERSION) {
+      throw new Error(
+        `Unsupported credential export version: ${snapshot.version}. Expected ${CREDENTIAL_EXPORT_VERSION}.`,
+      );
+    }
+    await Promise.all(
+      snapshot.credentials.map((credential) => this.addCredential(credential)),
+    );
   }
 
   /** Sets whether user verification (biometrics/PIN) succeeds for this authenticator. */
