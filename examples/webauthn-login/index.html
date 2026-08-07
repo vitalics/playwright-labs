@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Passkey login example</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 360px;
+        margin: 60px auto;
+      }
+      input,
+      button {
+        display: block;
+        width: 100%;
+        margin: 8px 0;
+        padding: 10px 12px;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+      button {
+        cursor: pointer;
+      }
+      #status {
+        margin-top: 16px;
+        font-weight: bold;
+      }
+      #status[data-state="ok"] {
+        color: green;
+      }
+      #status[data-state="error"] {
+        color: crimson;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Passkey login</h1>
+    <input id="username" placeholder="Username" aria-label="Username" />
+    <button id="register">Register passkey</button>
+    <button id="signin">Sign in with passkey</button>
+    <div id="status" role="status"></div>
+
+    <script type="module">
+      // In-memory stand-in for a real backend's user/credential table. A
+      // real relying party would send `credential`/`assertion` to a server
+      // to store and cryptographically verify — see
+      // https://www.w3.org/TR/webauthn-3/#sctn-verifying-assertion.
+      const users = new Map();
+
+      function setStatus(text, isError = false) {
+        const el = document.getElementById("status");
+        el.textContent = text;
+        el.dataset.state = isError ? "error" : "ok";
+      }
+
+      function usernameInput() {
+        return document.getElementById("username").value.trim();
+      }
+
+      document.getElementById("register").addEventListener("click", async () => {
+        const username = usernameInput();
+        if (!username) {
+          setStatus("Enter a username first", true);
+          return;
+        }
+        try {
+          const credential = await navigator.credentials.create({
+            publicKey: {
+              challenge: crypto.getRandomValues(new Uint8Array(32)),
+              rp: { name: "Passkey login example", id: "localhost" },
+              user: {
+                id: crypto.getRandomValues(new Uint8Array(16)),
+                name: username,
+                displayName: username,
+              },
+              pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+              authenticatorSelection: {
+                residentKey: "required",
+                userVerification: "required",
+              },
+              attestation: "none",
+            },
+          });
+          users.set(username, { credentialId: credential.rawId });
+          setStatus(`Registered a passkey for "${username}"`);
+        } catch (error) {
+          setStatus(`Registration failed: ${error.message}`, true);
+        }
+      });
+
+      document.getElementById("signin").addEventListener("click", async () => {
+        const username = usernameInput();
+        const record = users.get(username);
+        if (!record) {
+          setStatus(`No passkey found for "${username}"`, true);
+          return;
+        }
+        try {
+          await navigator.credentials.get({
+            publicKey: {
+              challenge: crypto.getRandomValues(new Uint8Array(32)),
+              rpId: "localhost",
+              allowCredentials: [
+                { type: "public-key", id: record.credentialId },
+              ],
+              userVerification: "required",
+            },
+          });
+          setStatus(`Welcome back, ${username}!`);
+        } catch (error) {
+          setStatus(`Sign-in failed: ${error.message}`, true);
+        }
+      });
+    </script>
+  </body>
+</html>

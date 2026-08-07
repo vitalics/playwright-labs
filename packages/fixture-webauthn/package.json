@@ -1,0 +1,66 @@
+{
+  "name": "@playwright-labs/fixture-webauthn",
+  "version": "0.1.0",
+  "description": "WebAuthn/passkey fixture for Playwright — drive a virtual FIDO2/U2F authenticator over the Chrome DevTools Protocol, no real security key needed",
+  "main": "dist/index.cjs",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "ci:pretest": "playwright install chromium",
+    "package:pack": "pnpm exec npm pack",
+    "package:pack:dry-run": "pnpm package:pack --dry-run",
+    "dev": "vite"
+  },
+  "keywords": [
+    "playwright",
+    "fixture",
+    "webauthn",
+    "passkey",
+    "fido2",
+    "u2f",
+    "authenticator",
+    "cdp",
+    "automation",
+    "testing",
+    "playwright-labs"
+  ],
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "author": "Vitali Haradkou <vitalicset@yandex.ru>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitalics/playwright-labs.git",
+    "directory": "packages/fixture-webauthn"
+  },
+  "packageManager": "pnpm@10.29.2",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.57.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0",
+    "vite": "8.1.5"
+  }
+}

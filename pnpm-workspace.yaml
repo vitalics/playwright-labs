@@ -6,6 +6,7 @@ packages:
   - examples/sql
   - examples/ghost-cursor
   - examples/s3-stack
+  - examples/webauthn-login
   - '!packages/playwright-best-practices'
   - '!packages/playwright-best-practices-build'
 
