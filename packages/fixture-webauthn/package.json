@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/fixture-webauthn",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "WebAuthn/passkey fixture for Playwright — drive a virtual FIDO2/U2F authenticator over the Chrome DevTools Protocol, no real security key needed",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
