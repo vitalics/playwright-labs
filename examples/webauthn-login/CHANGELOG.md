@@ -1,5 +1,12 @@
 # webauthn-login-example
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [65be558]
+  - @playwright-labs/fixture-webauthn@1.1.2
+
 ## 0.0.4
 
 ### Patch Changes

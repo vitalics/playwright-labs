@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/fixture-gmail",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Gmail fixture integration for Playwright/test — find, read and send emails via the Gmail API",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",

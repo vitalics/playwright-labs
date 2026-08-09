@@ -1,5 +1,13 @@
 # @playwright-labs/reporter-email
 
+## 1.1.7
+
+### Patch Changes
+
+- 65be558: Internal refactor: the string HTML primitives (`h`, `fragment`, `h1`–`h6`, `table`, `div`, `img`, ...) now come from `@playwright-labs/email-core` instead of a local copy — same named exports, same output (including the `IS_DEBUG` newline behavior). Also drops a leftover demo snippet that ran `console.log` on import.
+- Updated dependencies [65be558]
+  - @playwright-labs/email-core@1.0.0
+
 ## 1.1.6
 
 ### Patch Changes
