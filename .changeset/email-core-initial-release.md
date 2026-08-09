@@ -1,5 +1,5 @@
 ---
-"@playwright-labs/email-core": minor
+"@playwright-labs/email-core": major
 ---
 
 Initial release. Shared email primitives extracted from `@playwright-labs/fixture-gmail` / `@playwright-labs/fixture-mailpit` into their own dependency-free package (no `@playwright/test` peer dependency):
