@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/email-core",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Shared email primitives and provider clients (Gmail, Mailpit) for @playwright-labs email fixtures — EmailProvider base class, common types and HTML body builders",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",

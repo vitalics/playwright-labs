@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/webauthn",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Module to work with webauthn - FIDO2 passcode keys & authorization",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
