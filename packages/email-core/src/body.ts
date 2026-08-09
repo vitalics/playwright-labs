@@ -13,9 +13,11 @@
  *     h2("123456"),
  *   ),
  * );
- * await gmail.sendEmail({ to: "user@example.com", subject: "Code", body });
+ * await mailpit.sendEmail({ to: "user@example.com", subject: "Code", body });
  * ```
  */
+
+const IS_DEBUG = Boolean(process.env.IS_DEBUG);
 
 /**
  * Function to create HTML elements
@@ -24,6 +26,10 @@
  * @param attributes - The attributes of the HTML element
  * @param selfClosing - Whether the HTML element is self-closing
  * @returns The HTML element as a string
+ *
+ * When the `IS_DEBUG` env variable is set, a newline is appended after every
+ * element to make the generated markup readable in logs.
+ *
  * @example
  * h("div", ["Hello, world!"], { id: "my-div" }); // <div id="my-div">Hello, world!</div>
  * h("head", "<title>My Title</title>"); // <head><title>My Title</title></head>
@@ -45,9 +51,10 @@ export function h(
   } else {
     remappedChildren = children.toString().trim();
   }
+  const newline = IS_DEBUG ? "\n" : "";
   return selfClosing
-    ? `<${tag}${attrs}/>`
-    : `<${tag}${attrs}>${remappedChildren}</${tag}>`;
+    ? `<${tag}${attrs}/>${newline}`
+    : `<${tag}${attrs}>${remappedChildren}</${tag}>${newline}`;
 }
 
 function makeElement(tag: string) {
