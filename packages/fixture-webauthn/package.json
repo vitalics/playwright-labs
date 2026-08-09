@@ -54,6 +54,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "dependencies": {
+    "@playwright-labs/webauthn": "workspace:*"
+  },
   "peerDependencies": {
     "@playwright/test": ">=1.57.0"
   },

@@ -1,8 +1,7 @@
 import { test as baseTest } from "@playwright/test";
 
 import { expect } from "../src/fixture.js";
-import { WebAuthn } from "../src/webauthn.js";
-import { VirtualAuthenticator } from "../src/virtual-authenticator.js";
+import { WebAuthn, VirtualAuthenticator } from "@playwright-labs/webauthn";
 import { createFakeSession } from "./helpers/fake-cdp-session.js";
 
 baseTest.describe("custom matchers", () => {
