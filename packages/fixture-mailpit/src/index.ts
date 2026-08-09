@@ -37,9 +37,9 @@ export {
 export { expect, type Fixture, test } from "./fixture";
 export {
   type Email,
-  Gmail,
-  type GmailAttachment,
-  type GmailOptions,
+  Mailpit,
+  type MailpitAttachment,
+  type MailpitOptions,
   type SendEmailOptions,
   type SendEmailResult,
-} from "@playwright-labs/email-core/providers/gmail";
+} from "@playwright-labs/email-core/providers/mailpit";

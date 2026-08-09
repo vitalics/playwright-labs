@@ -74,11 +74,32 @@ Searches the mailbox and returns matching emails (newest first) or `null` when n
 | `unread`  | `boolean`           | Adds `is:unread` to the query                                                |
 | `limit`   | `number`            | Max messages to inspect (default `10`)                                       |
 
-`Email` contains `id`, `threadId`, `subject`, `from`, `to`, `date` and `snippet`.
+`Email` contains `id`, `threadId`, `subject`, `from`, `to`, `date` and `snippet` — plus bound body readers: `email.readAsString()`, `email.readAsBytes()` and `email.readAsStream()`.
 
 ### `readEmail(emailId, options?): Promise<string>`
 
 Returns the decoded body of a message. HTML is preferred by default; pass `{ format: "text" }` for plain text. Falls back to the other format when the preferred part is absent.
+
+### `waitForEmail(options?): Promise<Email>`
+
+Polls `findEmail` until at least one email matches and returns the newest one. Accepts all `findEmail` options plus `timeout` (default `30000` ms) and `interval` (default `1000` ms). Throws when nothing matches within the timeout.
+
+```ts
+const email = await gmail.waitForEmail({ to: user.email, subject: /verify/i });
+```
+
+### `getEmailLinks(emailId): Promise<string[]>`
+
+Reads the email's HTML body and returns all unique `href` values — handy for confirmation/reset links:
+
+```ts
+const [confirmUrl] = await gmail.getEmailLinks(email.id);
+await page.goto(confirmUrl!);
+```
+
+### `markAsRead(emailId): Promise<void>`
+
+Marks a message as read (removes the `UNREAD` label via `users.messages.modify`). Requires the `gmail.modify` scope.
 
 ### `sendEmail(options): Promise<{ id, threadId }>`
 

@@ -1,0 +1,64 @@
+{
+  "name": "@playwright-labs/email-core",
+  "version": "0.0.0",
+  "description": "Shared email primitives and provider clients (Gmail, Mailpit) for @playwright-labs email fixtures — EmailProvider base class, common types and HTML body builders",
+  "main": "dist/index.cjs",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "build": "tsup",
+    "package:pack": "pnpm exec npm pack",
+    "package:pack:dry-run": "pnpm package:pack --dry-run"
+  },
+  "keywords": [
+    "playwright",
+    "email",
+    "smtp",
+    "automation",
+    "testing",
+    "playwright-labs"
+  ],
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./providers/gmail": {
+      "import": {
+        "types": "./dist/providers/gmail.d.ts",
+        "default": "./dist/providers/gmail.mjs"
+      },
+      "require": {
+        "types": "./dist/providers/gmail.d.cts",
+        "default": "./dist/providers/gmail.cjs"
+      }
+    },
+    "./providers/mailpit": {
+      "import": {
+        "types": "./dist/providers/mailpit.d.ts",
+        "default": "./dist/providers/mailpit.mjs"
+      },
+      "require": {
+        "types": "./dist/providers/mailpit.d.cts",
+        "default": "./dist/providers/mailpit.cjs"
+      }
+    }
+  },
+  "author": "Vitali Haradkou <vitalicset@yandex.ru>",
+  "license": "MIT",
+  "packageManager": "pnpm@10.29.2",
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "@types/nodemailer": "7.0.9"
+  },
+  "dependencies": {
+    "nodemailer": "9.0.1"
+  }
+}

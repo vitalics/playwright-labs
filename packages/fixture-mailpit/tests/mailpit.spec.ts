@@ -1,11 +1,11 @@
-import { Gmail } from "@playwright-labs/email-core/providers/gmail";
+import { Mailpit } from "@playwright-labs/email-core/providers/mailpit";
 import { expect, test } from "../src/fixture";
 
 const ENV_KEYS = [
-  "GMAIL_CLIENT_ID",
-  "GMAIL_CLIENT_SECRET",
-  "GMAIL_REFRESH_TOKEN",
-  "GMAIL_ACCESS_TOKEN",
+  "MAILPIT_API_URL",
+  "MAILPIT_USERNAME",
+  "MAILPIT_PASSWORD",
+  "MAILPIT_FROM",
 ] as const;
 
 const originalFetch = globalThis.fetch;
@@ -43,22 +43,18 @@ test.describe("fixture", () => {
   // the fixture is constructed after beforeEach hooks, so the env
   // variable has to be restored here (the outer beforeEach clears it)
   test.beforeEach(() => {
-    process.env.GMAIL_ACCESS_TOKEN = "env-token";
+    process.env.MAILPIT_API_URL = "http://env-mailpit:8025";
   });
 
-  test("gmail fixture creates a client from env variables", async ({ gmail }) => {
-    expect(gmail).toBeInstanceOf(Gmail);
-    await gmail.findEmail();
-    expect(
-      (calls[0]?.init?.headers as Record<string, string>).authorization,
-    ).toBe("Bearer env-token");
+  test("mailpit fixture creates a client from env variables", async ({ mailpit }) => {
+    expect(mailpit).toBeInstanceOf(Mailpit);
+    await mailpit.findEmail();
+    expect(calls[0]?.url).toMatch(/^http:\/\/env-mailpit:8025\//);
   });
 
-  test("useGmail accepts custom options", async ({ useGmail }) => {
-    const gmail = useGmail({ accessToken: "custom-token" });
-    await gmail.findEmail();
-    expect(
-      (calls[0]?.init?.headers as Record<string, string>).authorization,
-    ).toBe("Bearer custom-token");
+  test("useMailpit accepts custom options", async ({ useMailpit }) => {
+    const mailpit = useMailpit({ baseUrl: "http://custom:8025" });
+    await mailpit.findEmail();
+    expect(calls[0]?.url).toMatch(/^http:\/\/custom:8025\//);
   });
 });

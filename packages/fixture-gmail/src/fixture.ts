@@ -1,5 +1,5 @@
 import { test as baseTest, expect as baseExpect } from "@playwright/test";
-import { Gmail, type GmailOptions } from "./gmail";
+import { Gmail, type GmailOptions } from "@playwright-labs/email-core/providers/gmail";
 
 export type Fixture = {
   /**
