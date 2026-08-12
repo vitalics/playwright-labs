@@ -174,8 +174,8 @@ export class NetworkAPI {
 
   /** Restores normal networking (no throttling, online). */
   async stop(): Promise<void> {
-    if (!this.#enabled) await this.session.send("Network.enable");
-    if (this.#current === null) return; // idempotent
+    if (this.#current === null) return; // idempotent, no CDP calls before start
+    // Network domain is already enabled — start() ran before us
     await this.session.send("Network.emulateNetworkConditions", NO_THROTTLING);
     this.#current = null;
   }
