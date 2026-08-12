@@ -1,4 +1,9 @@
-export { test, expect, type Fixture } from "./fixture";
+export {
+  test,
+  expect,
+  type Fixture,
+  type FixtureOptions,
+} from "./fixture";
 
 export {
   NETWORK_PRESETS,
