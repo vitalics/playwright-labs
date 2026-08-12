@@ -145,11 +145,12 @@ export class NetworkAPI {
   }
 
   /**
-   * Applies a condition (preset name or object) and returns the resolved
+   * Applies a condition (preset name or object, possibly partial — omitted
+   * fields mean "no restriction") and returns the resolved
    * {@link NetworkCondition}.
    */
   async start(
-    condition: NetworkCondition | NetworkPreset,
+    condition: Partial<NetworkCondition> | NetworkPreset,
   ): Promise<NetworkCondition> {
     let resolved: NetworkCondition;
     if (typeof condition === "string") {

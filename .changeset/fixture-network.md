@@ -7,7 +7,8 @@ Initial release — network throttling fixtures for Playwright with custom match
 **Fixtures**
 
 - `network` — ready-made `NetworkAPI` for the default page
-- `useNetwork(page?)` — factory for extra pages/frames; every handle is stopped automatically on test end
+- `useNetwork(page?)` — factory for extra pages/frames; every handle is stopped automatically on test end; repeated calls for the same page return the same handle
+- `networkPreset` option — apply a preset or partial condition to every test via `test.use({ networkPreset: "Regular3G" })` or a project's `use` block; `null` (default) applies nothing
 - non-Chromium browsers get a descriptive error instead of a cryptic CDP failure
 - the full network-core API is re-exported (`NETWORK_PRESETS`, `createNetworkCondition`, `kbps`/`mbps`, ...)
 

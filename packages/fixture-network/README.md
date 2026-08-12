@@ -39,7 +39,37 @@ test('offline banner', async ({ page, network }) => {
 | `network` | `NetworkAPI` | ready-made handle for the default page |
 | `useNetwork` | `(page?: Page \| Frame) => Promise<NetworkAPI>` | factory for extra pages/frames |
 
-Every handle is stopped automatically on test end — no manual cleanup.
+Every handle is stopped automatically on test end — no manual cleanup. Repeated `useNetwork` calls for the same page return the same handle.
+
+### `networkPreset` option
+
+Apply a condition to every test in a file, describe block, or project via [fixture options](https://playwright.dev/docs/test-fixtures#fixtures-options) — no `network.start()` boilerplate:
+
+```ts
+test.describe('slow network', () => {
+  test.use({ networkPreset: 'Regular3G' });
+
+  test('dashboard still renders', async ({ page }) => {
+    await page.goto('/dashboard'); // already throttled
+  });
+
+  test('may be overridden per test', async ({ page, network }) => {
+    await network.start('Offline');
+  });
+});
+```
+
+Accepts a preset name or a partial condition (`test.use({ networkPreset: { latency: 800 } })`). Works in the `use` block of `playwright.config.ts` too:
+
+```ts
+export default defineConfig<FixtureOptions>({
+  projects: [
+    { name: 'slow-3g', use: { networkPreset: 'Regular3G' } },
+  ],
+});
+```
+
+Default is `null` — nothing is applied.
 
 `NetworkAPI`: `start(preset | condition)` (returns the resolved frozen condition), `stop()`, `condition`, `started`. Presets: `GPRS`, `Regular2G`, `Good2G`, `Regular3G`, `Good3G`, `Regular4G`, `DSL`, `WiFi`, `Offline`, `NoThrottling`. Custom conditions via `createNetworkCondition` + `kbps`/`mbps` (re-exported from network-core).
 

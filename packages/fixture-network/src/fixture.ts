@@ -58,6 +58,26 @@ function isThrottled(condition: NetworkCondition): boolean {
   );
 }
 
+export type FixtureOptions = {
+  /**
+   * Network condition applied automatically before each test — a preset
+   * name or a partial condition. `null` (the default) applies nothing.
+   * Configurable via `test.use` or the `use` block of the Playwright config.
+   *
+   * @example
+   * ```ts
+   * test.describe('slow network', () => {
+   *   test.use({ networkPreset: 'Regular3G' });
+   *
+   *   test('dashboard still renders', async ({ page }) => {
+   *     await page.goto('/dashboard'); // already throttled
+   *   });
+   * });
+   * ```
+   */
+  networkPreset: NetworkPreset | Partial<NetworkCondition> | null;
+};
+
 export type Fixture = {
   /**
    * Factory for {@link NetworkAPI} handles. Call with a specific page/frame
@@ -80,11 +100,18 @@ export type Fixture = {
   network: NetworkAPI;
 };
 
-export const test = baseTest.extend<Fixture>({
+export const test = baseTest.extend<
+  Fixture & FixtureOptions & { _applyNetworkPreset: void }
+>({
+  networkPreset: [null, { option: true }],
+
   useNetwork: async ({ page, context }, use) => {
-    const created: NetworkAPI[] = [];
+    const handles = new Map<Page | Frame, NetworkAPI>();
 
     const useNetwork: UseNetwork = async (target = page) => {
+      const existing = handles.get(target);
+      if (existing) return existing;
+
       let session: CDPSession;
       try {
         session = await context.newCDPSession(target);
@@ -97,7 +124,7 @@ export const test = baseTest.extend<Fixture>({
         );
       }
       const network = new NetworkAPI(session as never);
-      created.push(network);
+      handles.set(target, network);
       pageToNetwork.set(target, network);
       return network;
     };
@@ -105,12 +132,25 @@ export const test = baseTest.extend<Fixture>({
     await use(useNetwork);
 
     // restore normal networking for every handle created during the test
-    await Promise.all(created.map((network) => network.stop()));
+    await Promise.all([...handles.values()].map((network) => network.stop()));
   },
 
   network: async ({ useNetwork }, use) => {
     await use(await useNetwork());
   },
+
+  // applies the `networkPreset` option before every test, even when the
+  // test requests neither `network` nor `useNetwork`
+  _applyNetworkPreset: [
+    async ({ networkPreset, useNetwork }, use) => {
+      if (networkPreset !== null) {
+        const network = await useNetwork();
+        await network.start(networkPreset);
+      }
+      await use();
+    },
+    { auto: true },
+  ],
 });
 
 export const expect = baseExpect.extend({

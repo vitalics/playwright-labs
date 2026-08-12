@@ -131,6 +131,21 @@ test.describe("NetworkAPI", () => {
     expect(sent.at(-1)?.params).toEqual(applied);
   });
 
+  test("start accepts a partial condition", async () => {
+    const { session, sent } = fakeSession();
+    const api = new NetworkAPI(session);
+
+    const applied = await api.start({ latency: 800 });
+
+    expect(applied).toEqual({
+      offline: false,
+      downloadThroughput: -1,
+      uploadThroughput: -1,
+      latency: 800,
+    });
+    expect(sent.at(-1)?.params).toEqual(applied);
+  });
+
   test("unknown preset name throws with the list of known ones", async () => {
     const { session } = fakeSession();
     const api = new NetworkAPI(session);

@@ -122,6 +122,61 @@ test.describe("matchers", () => {
   });
 });
 
+test.describe("networkPreset option", () => {
+  test.use({ networkPreset: "Regular3G" });
+
+  test("network fixture arrives pre-started", async ({ network }) => {
+    expect(network).toBeNetworkStarted();
+    expect(network).toHaveNetworkCondition("Regular3G");
+  });
+
+  test("applies without requesting the network fixture", async ({ page }) => {
+    // the auto fixture created the handle — matchers resolve it via the page
+    expect(page).toHaveNetworkCondition("Regular3G");
+  });
+
+  test("start overrides the preset within a test", async ({ network }) => {
+    await network.start("WiFi");
+    expect(network).toHaveNetworkCondition("WiFi");
+  });
+
+  test("useNetwork returns the same pre-started handle", async ({
+    network,
+    useNetwork,
+  }) => {
+    expect(await useNetwork()).toBe(network);
+  });
+});
+
+test.describe("networkPreset with a partial condition", () => {
+  test.use({ networkPreset: { latency: 800 } });
+
+  test("partial condition is resolved and applied", async ({ network }) => {
+    expect(network).toHaveNetworkCondition({ latency: 800, offline: false });
+  });
+});
+
+test.describe("networkPreset Offline", () => {
+  test.use({ networkPreset: "Offline" });
+
+  test("page starts offline", async ({ page }) => {
+    // no goto: Chromium re-delivers the onLine notification only to documents
+    // that existed when the condition was applied; emulation itself survives
+    // navigations (see the fetch assertion below)
+    expect(await page.evaluate(() => navigator.onLine)).toBe(false);
+    expect(page).toBeNetworkOffline();
+
+    await page.goto("about:blank");
+    const failed = await page.evaluate(() =>
+      fetch("http://example.com/").then(
+        () => false,
+        () => true,
+      ),
+    );
+    expect(failed).toBe(true);
+  });
+});
+
 test.describe("presets sanity", () => {
   test("NoThrottling preset equals NO_THROTTLING constant", () => {
     expect(NETWORK_PRESETS.NoThrottling).toEqual(NO_THROTTLING);
