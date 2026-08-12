@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/fixture-network",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Network throttling fixtures for Playwright — useNetwork()/network handles with presets (2G/3G/4G/offline) and custom expect matchers",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",

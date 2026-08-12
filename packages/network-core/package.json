@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/network-core",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Network condition emulation over CDP — presets (2G/3G/4G/DSL/WiFi/offline), condition factory, NetworkAPI with async-dispose",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
