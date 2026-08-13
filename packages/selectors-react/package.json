@@ -40,7 +40,8 @@
     }
   },
   "dependencies": {
-    "@playwright-labs/selectors-core": "workspace:*"
+    "@playwright-labs/selectors-core": "workspace:*",
+    "@playwright-labs/locators-extra": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "1.57.0"

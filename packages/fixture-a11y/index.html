@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>A11y Fixture Example</title>
+    </head>
+    <body>
+        <main id="good">
+            <h1>Accessible zone</h1>
+            <label for="name">Name</label>
+            <input id="name" type="text" />
+            <img
+                src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+                alt="One transparent pixel"
+            />
+        </main>
+        <section id="bad">
+            <!-- image-alt violation -->
+            <img
+                id="no-alt"
+                src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+            />
+            <!-- label violation -->
+            <input id="no-label" type="text" />
+        </section>
+    </body>
+</html>
