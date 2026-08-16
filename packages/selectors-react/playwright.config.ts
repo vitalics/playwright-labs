@@ -22,7 +22,7 @@ export default defineConfig({
   webServer: process.env.CI
     ? undefined
     : {
-        command: "pnpm --dir ./examples run dev",
+        command: "pnpm --dir ../../examples/selectors-react run dev",
         url: "http://localhost:5173",
         reuseExistingServer: true,
         timeout: 120_000,

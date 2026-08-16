@@ -11,14 +11,14 @@ export default defineConfig({
     {
       name: "e2e",
       testMatch: "*.e2e.test.ts",
-      use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:5173" },
+      use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:5172" },
     },
   ],
   webServer: process.env.CI
     ? undefined
     : {
-        command: "pnpm --dir ./examples run dev",
-        url: "http://localhost:5173",
+        command: "pnpm --dir ../../examples/selectors-vue run dev",
+        url: "http://localhost:5172",
         reuseExistingServer: true,
         timeout: 120_000,
         stdout: "pipe",

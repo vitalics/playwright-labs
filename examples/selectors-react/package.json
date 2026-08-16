@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "vite --port 5173",
+    "dev": "vite --port 5173 --strictPort",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
