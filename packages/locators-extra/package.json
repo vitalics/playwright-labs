@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/locators-extra",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Extra utilities for Playwright locators — isLocator type guard and selector realization (CSS, XPath, tag)",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
