@@ -1,9 +1,9 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "organization": "vitalics <vitalicset@yandex.ru>",
   "author": "Vitali Haradkou <vitalicset@yandex.ru>",
-  "date": "July 2026",
-  "abstract": "Comprehensive best practices guide for Playwright TypeScript test automation, designed for AI agents and LLMs. Contains 29 rules across 8 categories, prioritized by impact from critical (test stability, execution speed) to incremental (advanced patterns). Covers modular fixture composition with mergeTests/mergeExpects, type-safe environment variables, JSON schema validation for API responses, AbortSignal-based cancellation, Node.js timer control, OOP decorator patterns for large teams, OpenTelemetry integration for test observability (custom and global metrics, distributed traces, Jaeger/Grafana/Prometheus, auto-instrumented step/annotation/run metrics), Prometheus remote-write reporting with custom counters/gauges/histograms, Slack Block Kit notifications, email reporting with React Email templates, framework-aware selectors for Angular/React/Vue, realistic test data with faker, Allure report enrichment, real-service testing with Testcontainers, human-like input simulation, and type-safe SQL with compile-time validated queries. Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated test writing and refactoring.",
+  "date": "August 2026",
+  "abstract": "Comprehensive best practices guide for Playwright TypeScript test automation, designed for AI agents and LLMs. Contains 36 rules across 8 categories, prioritized by impact from critical (test stability, execution speed) to incremental (advanced patterns). Covers modular fixture composition with mergeTests/mergeExpects, type-safe environment variables, JSON schema validation for API responses, AbortSignal-based cancellation, Node.js timer control, OOP decorator patterns for large teams, OpenTelemetry integration for test observability (custom and global metrics, distributed traces, Jaeger/Grafana/Prometheus, auto-instrumented step/annotation/run metrics), a full local observability stack with Docker Compose, Prometheus remote-write reporting with custom counters/gauges/histograms, Slack Block Kit notifications, email reporting with React Email templates, S3 artifact storage and reporting, barcode and QR code generation/decoding in tests, automated accessibility (a11y) checks with axe-core, internationalization (i18n) testing with locale projects, framework-aware selectors for Angular/React/Vue, realistic test data with faker, Allure report enrichment, real-service testing with Testcontainers, human-like input simulation, and type-safe SQL with compile-time validated queries. Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated test writing and refactoring.",
   "references": [
     "https://playwright.dev",
     "https://playwright.dev/docs/best-practices",
@@ -37,6 +37,16 @@
     "https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-ghost-cursor",
     "https://github.com/vitalics/playwright-labs/tree/main/packages/sql-core",
     "https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-sql",
-    "https://github.com/vitalics/playwright-labs/tree/main/packages/ts-plugin-sql"
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/ts-plugin-sql",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-a11y",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/barcode-core",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-barcode",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/qrcode-core",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-qrcode",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/s3-core",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-s3",
+    "https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-s3",
+    "https://github.com/vitalics/playwright-labs/tree/main/examples/otel-stack",
+    "https://github.com/vitalics/playwright-labs/tree/main/examples/grafana-stack"
   ]
 }

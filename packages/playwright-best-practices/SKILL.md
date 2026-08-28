@@ -4,7 +4,7 @@ description: Review code for Playwright Guidelines compliance. Use when asked to
 argument-hint: <file-or-pattern>
 metadata:
   author: vitalics
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # Playwright TypeScript Best Practices — AI Agent Skill
