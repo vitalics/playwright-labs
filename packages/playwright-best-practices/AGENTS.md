@@ -1,12 +1,12 @@
 # Playwright TypeScript Best Practices
 
-**Version:** 1.2.0  
+**Version:** 1.3.0  
 **Organization:** vitalics <vitalicset@yandex.ru>  
-**Date:** July 2026
+**Date:** August 2026
 
 ## Abstract
 
-Comprehensive best practices guide for Playwright TypeScript test automation, designed for AI agents and LLMs. Contains 29 rules across 8 categories, prioritized by impact from critical (test stability, execution speed) to incremental (advanced patterns). Covers modular fixture composition with mergeTests/mergeExpects, type-safe environment variables, JSON schema validation for API responses, AbortSignal-based cancellation, Node.js timer control, OOP decorator patterns for large teams, OpenTelemetry integration for test observability (custom and global metrics, distributed traces, Jaeger/Grafana/Prometheus, auto-instrumented step/annotation/run metrics), Prometheus remote-write reporting with custom counters/gauges/histograms, Slack Block Kit notifications, email reporting with React Email templates, framework-aware selectors for Angular/React/Vue, realistic test data with faker, Allure report enrichment, real-service testing with Testcontainers, human-like input simulation, and type-safe SQL with compile-time validated queries. Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated test writing and refactoring.
+Comprehensive best practices guide for Playwright TypeScript test automation, designed for AI agents and LLMs. Contains 36 rules across 8 categories, prioritized by impact from critical (test stability, execution speed) to incremental (advanced patterns). Covers modular fixture composition with mergeTests/mergeExpects, type-safe environment variables, JSON schema validation for API responses, AbortSignal-based cancellation, Node.js timer control, OOP decorator patterns for large teams, OpenTelemetry integration for test observability (custom and global metrics, distributed traces, Jaeger/Grafana/Prometheus, auto-instrumented step/annotation/run metrics), a full local observability stack with Docker Compose, Prometheus remote-write reporting with custom counters/gauges/histograms, Slack Block Kit notifications, email reporting with React Email templates, S3 artifact storage and reporting, barcode and QR code generation/decoding in tests, automated accessibility (a11y) checks with axe-core, internationalization (i18n) testing with locale projects, framework-aware selectors for Angular/React/Vue, realistic test data with faker, Allure report enrichment, real-service testing with Testcontainers, human-like input simulation, and type-safe SQL with compile-time validated queries. Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated test writing and refactoring.
 
 ---
 
@@ -28,15 +28,19 @@ Comprehensive best practices guide for Playwright TypeScript test automation, de
    - 6.2. [Compose Fixtures with mergeTests and mergeExpects for Modular Test Suites](#6.2-compose-fixtures-with-mergetests-and-mergeexpects-for-modular-test-suites)
    - 6.3. [Control Node.js Timers in Tests with Promise-Based Timer Fixtures](#6.3-control-nodejs-timers-in-tests-with-promise-based-timer-fixtures)
    - 6.4. [Enrich Test Reports with fixture-allure](#6.4-enrich-test-reports-with-fixture-allure)
-   - 6.5. [Generate Realistic Test Data with fixture-faker](#6.5-generate-realistic-test-data-with-fixture-faker)
-   - 6.6. [Instrument Tests with Custom OTel Metrics, Spans, and Distributed Trace Propagation](#6.6-instrument-tests-with-custom-otel-metrics-spans-and-distributed-trace-propagation)
-   - 6.7. [Instrument Tests with Custom Prometheus Counters, Gauges, and Histograms](#6.7-instrument-tests-with-custom-prometheus-counters-gauges-and-histograms)
-   - 6.8. [Manage Environment Variables with Type-Safe Validated Configuration](#6.8-manage-environment-variables-with-type-safe-validated-configuration)
-   - 6.9. [Reuse Global Metrics Across Tests with useGlobalCounter and useGlobalHistogram](#6.9-reuse-global-metrics-across-tests-with-useglobalcounter-and-useglobalhistogram)
-   - 6.10. [Simulate Human-Like Input with ghost-cursor](#6.10-simulate-human-like-input-with-ghost-cursor)
-   - 6.11. [Test Against Real Services with fixture-testcontainers](#6.11-test-against-real-services-with-fixture-testcontainers)
-   - 6.12. [Use Custom Fixtures for Reusable Test Setup and Teardown](#6.12-use-custom-fixtures-for-reusable-test-setup-and-teardown)
-   - 6.13. [Use test.describe for Logical Test Grouping](#6.13-use-testdescribe-for-logical-test-grouping)
+   - 6.5. [Generate and Decode QR Codes in Tests with fixture-qrcode](#6.5-generate-and-decode-qr-codes-in-tests-with-fixture-qrcode)
+   - 6.6. [Generate and Scan Barcodes in Tests with fixture-barcode](#6.6-generate-and-scan-barcodes-in-tests-with-fixture-barcode)
+   - 6.7. [Generate Realistic Test Data with fixture-faker](#6.7-generate-realistic-test-data-with-fixture-faker)
+   - 6.8. [Instrument Tests with Custom OTel Metrics, Spans, and Distributed Trace Propagation](#6.8-instrument-tests-with-custom-otel-metrics-spans-and-distributed-trace-propagation)
+   - 6.9. [Instrument Tests with Custom Prometheus Counters, Gauges, and Histograms](#6.9-instrument-tests-with-custom-prometheus-counters-gauges-and-histograms)
+   - 6.10. [Manage Environment Variables with Type-Safe Validated Configuration](#6.10-manage-environment-variables-with-type-safe-validated-configuration)
+   - 6.11. [Reuse Global Metrics Across Tests with useGlobalCounter and useGlobalHistogram](#6.11-reuse-global-metrics-across-tests-with-useglobalcounter-and-useglobalhistogram)
+   - 6.12. [Run Automated Accessibility Checks with fixture-a11y](#6.12-run-automated-accessibility-checks-with-fixture-a11y)
+   - 6.13. [Simulate Human-Like Input with ghost-cursor](#6.13-simulate-human-like-input-with-ghost-cursor)
+   - 6.14. [Test Against Real Services with fixture-testcontainers](#6.14-test-against-real-services-with-fixture-testcontainers)
+   - 6.15. [Upload Test Artifacts and Data to S3 with fixture-s3](#6.15-upload-test-artifacts-and-data-to-s3-with-fixture-s3)
+   - 6.16. [Use Custom Fixtures for Reusable Test Setup and Teardown](#6.16-use-custom-fixtures-for-reusable-test-setup-and-teardown)
+   - 6.17. [Use test.describe for Logical Test Grouping](#6.17-use-testdescribe-for-logical-test-grouping)
 7. [Debugging & Maintenance](#7-debugging--maintenance) (MEDIUM)
    - 7.1. [Use test.step for Better Test Readability and Debugging](#7.1-use-teststep-for-better-test-readability-and-debugging)
 8. [Advanced Patterns](#8-advanced-patterns) (LOW)
@@ -46,9 +50,12 @@ Comprehensive best practices guide for Playwright TypeScript test automation, de
    - 8.4. [Query Components with Framework-Aware Selectors (angular=, react=, vue=)](#8.4-query-components-with-framework-aware-selectors-angular-react-vue)
    - 8.5. [Send Test Results to Slack with Rich Block Kit Messages via reporter-slack](#8.5-send-test-results-to-slack-with-rich-block-kit-messages-via-reporter-slack)
    - 8.6. [Send Test Run Reports via Email with React Email Templates via reporter-email](#8.6-send-test-run-reports-via-email-with-react-email-templates-via-reporter-email)
-   - 8.7. [Type-Safe SQL in Tests with fixture-sql and ts-plugin-sql](#8.7-type-safe-sql-in-tests-with-fixture-sql-and-ts-plugin-sql)
-   - 8.8. [Use API Mocking for Reliable and Fast Tests](#8.8-use-api-mocking-for-reliable-and-fast-tests)
-   - 8.9. [Validate API Response JSON Schemas with toMatchSchema Custom Matcher](#8.9-validate-api-response-json-schemas-with-tomatchschema-custom-matcher)
+   - 8.7. [Stand Up a Full Local Observability Stack for Tests with Docker Compose, Jaeger, Prometheus, and Grafana](#8.7-stand-up-a-full-local-observability-stack-for-tests-with-docker-compose-jaeger-prometheus-and-grafana)
+   - 8.8. [Test Internationalization with Locale Projects, test.use, and Locale-Agnostic Locators](#8.8-test-internationalization-with-locale-projects-testuse-and-locale-agnostic-locators)
+   - 8.9. [Type-Safe SQL in Tests with fixture-sql and ts-plugin-sql](#8.9-type-safe-sql-in-tests-with-fixture-sql-and-ts-plugin-sql)
+   - 8.10. [Upload Test Results and Artifacts to S3 with reporter-s3](#8.10-upload-test-results-and-artifacts-to-s3-with-reporter-s3)
+   - 8.11. [Use API Mocking for Reliable and Fast Tests](#8.11-use-api-mocking-for-reliable-and-fast-tests)
+   - 8.12. [Validate API Response JSON Schemas with toMatchSchema Custom Matcher](#8.12-validate-api-response-json-schemas-with-tomatchschema-custom-matcher)
 
 ---
 
@@ -2842,7 +2849,571 @@ Reference: [@playwright-labs/fixture-allure](https://github.com/vitalics/playwri
 
 ---
 
-### 6.5. Generate Realistic Test Data with fixture-faker
+### 6.5. Generate and Decode QR Codes in Tests with fixture-qrcode
+
+**Tags:** qrcode, fixtures, custom-matchers, visual-content, assertions  
+**Impact:** MEDIUM (replaces brittle image snapshots of QR codes with deterministic decoded-content assertions and generated QR inputs)
+
+**Impact: MEDIUM (replaces brittle image snapshots of QR codes with deterministic decoded-content assertions and generated QR inputs)**
+
+QR codes show up in real flows — payment pages, 2FA enrollment, ticket downloads, device pairing — and are usually "tested" in one of two bad ways: not at all, or with a screenshot diff that breaks on every rendering nuance (size, margin, error-correction level) while saying nothing about what the code actually encodes. The `@playwright-labs/fixture-qrcode` package provides a `useQRCodeDecode` fixture and a `toHaveQRCode` matcher that screenshot a locator and decode the QR code inside it, so you assert on the encoded content itself. Its companion `@playwright-labs/qrcode-core` provides `QRCodeEncoder`/`QRCodeDecoder` primitives for generating QR inputs (for upload/scan flows) and decoding images outside the browser.
+
+## When to Use
+
+- **Use `toHaveQRCode` when**: A page renders a QR code (payment link, TOTP setup, ticket, pairing code) and you want to assert *what* it encodes — exact string, regex, or just "a decodable QR exists"
+- **Use `useQRCodeDecode` when**: You need the decoded payload as a value — to extract a TOTP secret, parse a URL, or feed the content into a subsequent step
+- **Use `QRCodeEncoder` (qrcode-core) when**: The flow goes the other direction — your app *reads* QR codes (file upload, camera input) and you need to generate a known QR image as test input
+- **Use `QRCodeDecoder` (qrcode-core) when**: Decoding from a buffer, base64 string, stream, or file in Node.js — API responses, downloaded PDFs/PNGs, fixtures on disk
+- **Consider alternatives when**: The QR encodes a large binary payload that never decodes reliably at screenshot resolution — assert the underlying data via API instead
+- **Required for**: Payment/invoice flows, 2FA/TOTP enrollment, ticketing, device pairing, any test that previously snapshotted a QR image
+
+## Guidelines
+
+### Do
+
+- Import `test`/`expect` from `@playwright-labs/fixture-qrcode` (or merge into your shared fixture file) so `toHaveQRCode` is available
+- Locate the element that actually renders the code — the `<img>` or `<canvas>` — not a wrapper with padding; pass `screenshotOptions` (e.g. `scale: 'css'`) when needed
+- Assert the *content*: `toHaveQRCode('https://pay.example.com/inv/42')` or a regex like `/^https:\/\/pay\.example\.com\//`
+- Use `toHaveQRCode()` with no argument when only renderability matters — "the QR is present and decodable"
+- Capture the expected payload in a variable and reuse it in the assertion, so generation and verification never diverge
+- Use `QRCodeEncoder` to generate QR images as inputs for upload/scan tests — `{ type: 'buffer' }` for in-memory, `{ type: 'file', path }` for disk, `{ type: 'base64-prefix' }` for data URLs
+
+### Don't
+
+- Don't assert QR correctness with `toHaveScreenshot()` — it passes/fails on pixels, not content, and breaks on anti-aliasing, size, and margin changes
+- Don't read `img.src` and assert the `alt` or `title` attribute — that tests an attribute string, not the rendered QR
+- Don't assume decode always succeeds — `useQRCodeDecode` resolves `null` when no QR is found; check before dereferencing `.data`
+- Don't screenshot the whole page and decode — cropping noise and scaling reduce decode reliability; screenshot the QR element itself
+- Don't mix `encode(string)` and segment methods on the same `QRCodeEncoder` — using both throws `TypeError`
+
+### Tool Usage Patterns
+
+- **Install**: `pnpm add -D @playwright-labs/fixture-qrcode` (decode side); `pnpm add @playwright-labs/qrcode-core` for standalone encode/decode primitives in Node.js
+- **Fixture**: `useQRCodeDecode(locator, screenshotOptions?)` — screenshots the locator and decodes; resolves with the jsQR result object (`data`, `binaryData`, `location`, ...) or `null`
+- **Matcher**: `toHaveQRCode(expected?, screenshotOptions?)` — no arg: any QR decodes; string: decoded data equals it; `RegExp`: decoded data matches; `.not.toHaveQRCode(...)` for the negated forms. `screenshotOptions` are Playwright `LocatorScreenshotOptions` forwarded to `locator.screenshot()`
+- **Encoder formats** (`QRCodeEncoder` constructor `type`): `base64-prefix` (default data URL), `base64url`, `svg`, `utf8`, `terminal`, `buffer`, `file` (writes PNG to `path`), `stream` (pipes into `writable`)
+- **Segments**: `addStringSegment` / `addNumericSegment` / `addAlphanumericSegment` / `addByteSegment` build smaller mixed-mode QR codes; call `encode()` with no argument to use them
+- **Decoder inputs** (`QRCodeDecoder.decode()`): `Buffer`/`Uint8Array`, data URL, raw base64 string, `Readable` stream, or raw `{ data, width, height }` RGBA pixels; or `{ type: 'file', path }` via constructor
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Decoding works on the element's rendered pixels — a QR scaled down too far, blurred, or with insufficient contrast may fail to decode even though it looks fine to a human
+- The matcher asserts decoded content, not visual placement; layout regressions of the QR block still need a separate visual check if you care
+- `toHaveQRCode` is a locator-based matcher but performs a screenshot-decode cycle, not a pure DOM check — it is slower than `toHaveText` and best used once per QR, not in polling loops
+
+### Edge Cases
+
+1. **QR rendered in a `<canvas>`**: Works the same — the fixture screenshots the element's bounding box regardless of whether it's an `img`, `canvas`, or inline SVG. Locate the canvas directly.
+2. **TOTP / 2FA enrollment**: Decode the otpauth URL with `useQRCodeDecode`, parse the `secret` query param, and generate the TOTP code in the test — no manual authenticator needed.
+3. **No QR present**: `useQRCodeDecode` resolves `null`, and `expect(locator).toHaveQRCode(...)` fails with the decoded value printed as `null` — for "QR should not be shown" use `.not.toHaveQRCode()`.
+4. **Generating input for scan flows**: Encode with `QRCodeEncoder({ type: 'file', path })`, then feed the PNG to `setInputFiles()` for an upload-based scanner.
+
+### What Breaks If Ignored
+
+- **Content bugs shipped silently**: The QR renders beautifully but encodes yesterday's invoice URL — a screenshot diff either passes (looks identical) or fails (font hinting changed) without ever telling you the payload was wrong
+- **Snapshot churn**: Every QR library upgrade or margin tweak invalidates baselines, and reviewers rubber-stamp "update snapshots" without verifying what the code now encodes
+- **Untestable scan flows**: Without generated QR inputs, upload/camera scan features get zero automated coverage
+
+**Incorrect (pixel snapshot of a QR, attribute poking, no content assertion):**
+
+```typescript
+import { test, expect } from "@playwright/test";
+
+test("payment QR", async ({ page }) => {
+  await page.goto("/checkout");
+
+  // ❌ Asserts pixels, not content — breaks on rendering noise,
+  //    and passes even if the QR encodes the wrong URL
+  await expect(page.locator("#payment-qr")).toHaveScreenshot("qr.png");
+
+  // ❌ Tests an attribute string, not the rendered QR code
+  const src = await page.locator("#payment-qr img").getAttribute("src");
+  expect(src).toContain("data:image/png");
+});
+```
+
+**Why this fails:**
+- A visual diff can't distinguish "QR changed because payload changed" from "QR changed because error-correction level changed"
+- Checking `src`/`alt` proves nothing about what the rendered code decodes to
+- Updating baselines becomes a blind ritual that masks real payload regressions
+
+**Correct (decode the locator and assert the encoded content):**
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-qrcode";
+
+test("payment QR encodes the invoice URL", async ({ page, useQRCodeDecode }) => {
+  await page.goto("/checkout");
+
+  const qr = page.locator("#payment-qr img");
+
+  // ✅ Asserts the decoded payload — rendering details don't matter
+  await expect(qr).toHaveQRCode(/^https:\/\/pay\.example\.com\/inv\/\d+$/);
+
+  // ✅ Fixture returns the decoded value for further steps
+  const decoded = await useQRCodeDecode(qr);
+  expect(decoded).not.toBeNull();
+  const invoiceId = new URL(decoded!.data).pathname.split("/").pop();
+  expect(invoiceId).toBe("42");
+});
+```
+
+**Why this works:**
+- The assertion targets the semantic contract ("this QR encodes a pay.example.com invoice URL") instead of pixel state
+- Regex matching tolerates dynamic segments (invoice IDs) while pinning the scheme/host/path
+- `useQRCodeDecode` exposes the raw payload when the test needs to act on it, not just assert it
+
+## Common Mistakes
+
+### Mistake 1: Screenshotting a wrapper instead of the QR element
+
+```typescript
+test("ticket QR", async ({ page }) => {
+  await page.goto("/ticket/123");
+
+  // ❌ Wide wrapper with text and padding — decode is unreliable or fails
+  await expect(page.locator(".ticket-card")).toHaveQRCode("TICKET-123");
+});
+```
+
+**Why this is wrong**: The decoder works on whatever the screenshot contains. Extra content shrinks the QR's relative size and introduces noise, so decodable codes intermittently return `null`.
+
+**How to fix**:
+
+```typescript
+test("ticket QR", async ({ page }) => {
+  await page.goto("/ticket/123");
+
+  // ✅ Locate the img/canvas/svg that renders the code itself
+  await expect(page.locator(".ticket-card canvas")).toHaveQRCode("TICKET-123");
+});
+```
+
+### Mistake 2: Dereferencing the fixture result without a null check
+
+```typescript
+test("pairing code", async ({ page, useQRCodeDecode }) => {
+  await page.goto("/devices/pair");
+
+  const decoded = await useQRCodeDecode(page.locator("#pair-qr img"));
+
+  // ❌ Crashes with TypeError when no QR was found — decode returns null
+  expect(decoded.data).toContain("device:");
+});
+```
+
+**Why this is wrong**: `useQRCodeDecode` resolves `null` when nothing decodes. Dereferencing turns a clean assertion failure into a confusing `TypeError: Cannot read properties of null`.
+
+**How to fix**:
+
+```typescript
+test("pairing code", async ({ page, useQRCodeDecode }) => {
+  await page.goto("/devices/pair");
+
+  // ✅ Prefer the matcher for pure assertions — it handles null internally
+  await expect(page.locator("#pair-qr img")).toHaveQRCode(/device:/);
+
+  // ✅ Or guard explicitly when you need the value
+  const decoded = await useQRCodeDecode(page.locator("#pair-qr img"));
+  expect(decoded).not.toBeNull();
+  expect(decoded!.data).toContain("device:");
+});
+```
+
+### Mistake 3: Asserting presence only, never content
+
+```typescript
+test("invoice QR exists", async ({ page }) => {
+  await page.goto("/invoice/7");
+
+  // ❌ Passes for ANY QR — including one encoding last month's invoice
+  await expect(page.locator("#qr img")).toHaveQRCode();
+});
+```
+
+**Why this is wrong**: A no-argument `toHaveQRCode()` only proves a decodable QR rendered. It catches "QR missing" but never "QR encodes the wrong thing".
+
+**How to fix**:
+
+```typescript
+test("invoice QR encodes this invoice", async ({ page }) => {
+  await page.goto("/invoice/7");
+
+  // ✅ Pin the payload — exact string or regex over the dynamic parts
+  await expect(page.locator("#qr img")).toHaveQRCode(
+    "https://billing.example.com/invoices/7",
+  );
+});
+```
+
+## Advanced Patterns
+
+### Generating QR inputs for scan/upload flows
+
+When the app consumes QR codes rather than producing them, generate known inputs with `qrcode-core`:
+
+```typescript
+import { test, expect } from "@playwright/test";
+import { QRCodeEncoder } from "@playwright-labs/qrcode-core";
+
+test("upload a QR to redeem a coupon", async ({ page }) => {
+  // ✅ Deterministic input image generated in-test
+  const qrPath = test.info().outputPath("coupon-qr.png");
+  await new QRCodeEncoder({ type: "file", path: qrPath }).encode("COUPON-2026-XKCD");
+
+  await page.goto("/redeem");
+  await page.locator("input[type=file]").setInputFiles(qrPath);
+  await expect(page.locator("#redeem-result")).toHaveText("COUPON-2026-XKCD");
+});
+```
+
+Mixed-mode segments produce denser codes when the payload has typed parts:
+
+```typescript
+const dataUrl = await new QRCodeEncoder() // default: base64-prefix data URL
+  .addStringSegment("order:")
+  .addNumericSegment(12345)
+  .encode(); // no argument when segments were added — mixing both throws TypeError
+```
+
+### Round-trip verification
+
+Encode in Node, inject into the page, decode back with the matcher — verifying the full pipeline without a real scanner:
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-qrcode";
+import { QRCodeEncoder } from "@playwright-labs/qrcode-core";
+
+test("rendered QR round-trips", async ({ page }) => {
+  const payload = "https://pay.example.com/inv/99";
+  const dataUrl = await new QRCodeEncoder().encode(payload); // data:image/png;base64,...
+
+  await page.goto("/preview");
+  await page.locator("#qr-slot img").evaluate((img, src) => {
+    (img as HTMLImageElement).src = src;
+  }, dataUrl);
+
+  // ✅ What the page shows decodes back to exactly what was encoded
+  await expect(page.locator("#qr-slot img")).toHaveQRCode(payload);
+});
+```
+
+**When to use this pattern**: Round-trips are for verifying your QR pipeline (encoding params, rendering size, quiet zone). In ordinary app tests, assert the app's own QR against the expected payload directly.
+
+## Integration with Other Best Practices
+
+- **Merge Tests and Expects** (`fixture-merge-tests-expects`): merge `fixture-qrcode`'s `test`/`expect` into your shared fixture file once with `mergeTests`/`mergeExpects`, then import from there in every spec
+- **Generate Realistic Test Data** (`fixture-faker-realistic-data`): combine faker-generated order IDs with a regex `toHaveQRCode` assertion — the captured variable is both the app input and the QR expectation
+- **Web-First Assertions** (`assertion-web-first`): `toHaveQRCode` complements web-first assertions — use it for the QR's content and standard matchers (`toBeVisible`, `toHaveText`) for the surrounding UI
+- **1D barcodes**: the sibling package `@playwright-labs/fixture-barcode` applies the same decode-the-locator pattern to EAN/Code128/UPC barcodes
+
+Reference: [@playwright-labs/fixture-qrcode](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-qrcode)
+
+---
+
+### 6.6. Generate and Scan Barcodes in Tests with fixture-barcode
+
+**Tags:** barcode, fixtures, matchers, visual-content, test-data  
+**Impact:** MEDIUM (turns barcode assertions from visual eyeballing and manual OCR into deterministic, machine-checked decodes of what the page actually renders)
+
+**Impact: MEDIUM (turns barcode assertions from visual eyeballing and manual OCR into deterministic, machine-checked decodes of what the page actually renders)**
+
+Pages that render barcodes — shipping labels, product pages, tickets, invoices, warehouse picking screens — are usually "tested" by asserting that an `<img>` exists or that some SKU text sits next to it. That proves nothing: the image can be blank, truncated, or encode yesterday's order number and every assertion still passes. The `@playwright-labs/fixture-barcode` package (built on `@playwright-labs/barcode-core`) screenshots a locator and decodes the 1D barcode in it (EAN-13, EAN-8, UPC-A/E, Code 39/93/128, Codabar, MSI, Pharmacode, ...), so the test asserts on the *encoded data* the user would scan — not on markup around it. `barcode-core`'s `BarcodeEncoder` closes the loop: generate a valid barcode SVG for seed data or mock responses, render it in the app, then decode it back in the same test.
+
+## When to Use
+
+- **Use `toHaveBarcode(type, expected)` when**: The page renders a barcode whose content is known — an order label, a product EAN, a ticket code — and you want to assert the encoded value directly
+- **Use `toHaveBarcode(type)` (no expected value) when**: The exact value is dynamic but you need to prove the barcode is present and machine-readable — a freshly generated label, a print preview
+- **Use the `useBarcodeDecode` fixture when**: You need the decoded string itself — to feed into a subsequent step, log it, or compare it against an API response rather than a literal
+- **Use `BarcodeEncoder` from `barcode-core` when**: Test setup needs a *valid* barcode image (seed data, mocked API payload, route interception) instead of a broken placeholder — invalid checksums make real decoder libraries reject the image, so a hand-drawn fake won't do
+- **Consider alternatives when**: The code is 2D (QR) — use `@playwright-labs/fixture-qrcode` instead; or the test only checks layout/CSS, where a plain visibility assertion is enough
+- **Required for**: E-commerce product/label flows, ticketing, logistics/warehouse UIs, invoice generation — anywhere a barcode is the actual deliverable of the feature
+
+## Guidelines
+
+### Do
+
+- Assert on the barcode's decoded content, not just the element's existence: `await expect(locator).toHaveBarcode('ean-13', '5901234123457')`
+- Use a regex for partially-known values — `toHaveBarcode('ean-13', /^590/)` for a known manufacturer prefix with a dynamic tail
+- Scope the locator tightly to the barcode image (`page.locator('#label img')`), not the whole card — surrounding text and borders degrade decoding
+- Use `useBarcodeDecode(locator, type)` when the decoded value is needed downstream, e.g. to assert it matches what the backend API returned
+- Generate setup barcodes with `BarcodeEncoder` (`new BarcodeEncoder({ format: 'EAN13' }).encode('5901234123457')`) so seed data and mocks contain *valid* codes
+- Keep track of the two naming schemes: encoder formats are jsbarcode-style (`EAN13`, `CODE128`), decoder/fixture types are kebab-case (`ean-13`, `code-128`)
+- Merge `test`/`expect` into your shared fixture file with `mergeTests`/`mergeExpects` alongside other Playwright-labs packages
+
+### Don't
+
+- Don't assert `toBeVisible()` on a barcode image and call it tested — a blank or mis-encoded image is equally "visible"
+- Don't screenshot the full page and try to decode it — decode from a tight locator screenshot, which is exactly what the fixture and matcher do internally
+- Don't hardcode invalid barcode values in mocks (e.g. an EAN-13 with a wrong checksum digit) — `BarcodeEncoder` rejects invalid values, and real scanner libraries reject them too
+- Don't assume an EAN-13 decode returns 13 digits — the underlying reader drops the leading digit (it's encoded via left-group parity, not bars), so expect the 12-digit tail and compare with a regex or the tail value
+- Don't decode with the wrong barcode type to "see if it works" — the type is required per call; decoding a Code 128 as `ean-13` fails or returns garbage
+- Don't rasterize or OCR barcodes with external tools in tests — decoding the locator screenshot is faster and deterministic
+
+### Tool Usage Patterns
+
+- **Install**: `pnpm add -D @playwright-labs/fixture-barcode` (decoding + matcher); `pnpm add @playwright-labs/barcode-core` when you also need to *generate* barcodes for setup/mocks
+- **Fixture**: `useBarcodeDecode(locator, barcode, screenshotOptions?)` — screenshots the locator and resolves with the decoded string; `screenshotOptions` are Playwright `LocatorScreenshotOptions` forwarded to `locator.screenshot()`
+- **Matcher**: `toHaveBarcode(barcode, expected?, screenshotOptions?)` where `expected` is a string (exact match) or `RegExp`; `.not.toHaveBarcode(...)` for the negated form
+- **Types**: the `Barcode` union (`'ean-13' | 'ean-8' | 'upc-a' | 'upc-e' | 'code-39' | 'code-93' | 'code-2of5' | 'code-128' | 'codabar' | 'msi' | 'pharmacode'`) is exported from both packages
+- **Encoding**: `new BarcodeEncoder({ format: 'EAN13' }).encode(value)` resolves with an SVG string; other output targets: `file` (writes SVG, resolves path), `stream` (pipes into a writable), `imagedata` (raw RGBA pixels — feeds straight into `BarcodeDecoder.decode` with no rasterizer), `buffer`/`uint8array`/`uint8clampedarray`. Plus jsbarcode rendering options: `width`, `height`, `displayValue`, `text`, `fontSize`, `margin`, `background`, `lineColor`, `flat`
+- **Decoding outside Playwright**: `new BarcodeDecoder().decode(type, input)` accepts a `Buffer`/`Uint8Array` (PNG, JPEG), data URL, raw base64 string, `Readable` stream, or raw RGBA pixels `{ data, width, height }`; `new BarcodeDecoder({ type: 'file', path })` decodes a file
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Encoder output is SVG only — rasterizing to PNG requires a canvas implementation and is out of scope. If the app needs a PNG, render the SVG in the page (browsers rasterize it) and decode the locator screenshot
+- The EAN-13 reader does not recover the leading digit — decoded output is the 12-digit tail. Assert with a regex (`/^901234123457$/` won't match a 13-digit expectation) or compare against `expected.slice(1)`
+- `imagedata` encoding ignores text options (`displayValue`, `text`, `fontSize`) since no SVG is produced
+- Decoding depends on render quality — tiny barcodes, heavy compression artifacts, or barcodes overlapped by other elements may fail to decode even though they look fine to a human
+
+### Edge Cases
+
+1. **Dynamic barcode values**: The encoded value isn't known upfront (auto-generated order number). Use `toHaveBarcode('code-128')` to assert readability, or `useBarcodeDecode` and compare the result against the API response that produced it.
+2. **Checksum-invalid seed data**: A mock payload with a made-up EAN-13 (`1234567890123`) breaks real decoders. Generate the value with `BarcodeEncoder` — it rejects invalid checksums, so setup data is valid by construction.
+3. **Barcode inside a larger label**: The label contains text, borders, and logos. Scope the locator to the `<img>`/`<svg>` itself; if that's impossible, pass `screenshotOptions` (e.g. `clip`) to crop the screenshot before decoding.
+4. **Print preview / PDF-ish flows**: If the barcode renders in a canvas or an embedded viewer, locate the rendered element and decode its screenshot the same way — the fixture works on any locator screenshot, not just `<img>` tags.
+5. **Multiple barcodes on one page**: Decode each with its own scoped locator rather than one wide screenshot — one decode per barcode keeps failures attributable.
+
+### What Breaks If Ignored
+
+- **False confidence**: `toBeVisible()` on the barcode image passes while the shipped label encodes the wrong SKU — the bug ships because the test never read the barcode
+- **Silent decode failures**: Asserting a 13-digit EAN-13 string when the decoder returns 12 digits makes every test fail for a tooling reason, misread as an app bug
+- **Mock/app mismatch**: Hand-rolled fake barcodes in mocks pass the (mock-based) test but fail in production against a real scanner library
+- **Flaky wide screenshots**: Decoding a full-page screenshot works locally, then fails on CI where rendering scale differs — tight locator screenshots are resolution-independent in practice
+
+**Incorrect (asserting existence, invalid mock data, wrong EAN-13 expectation):**
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test('shipping label shows barcode', async ({ page }) => {
+  await page.route('**/api/label', (route) =>
+    route.fulfill({
+      // ❌ Made-up EAN-13 with a wrong checksum — real decoders reject it
+      json: { ean: '1234567890123' },
+    }),
+  );
+
+  await page.goto('/orders/42/label');
+
+  // ❌ Only proves an <img> exists — it could be blank or encode anything
+  await expect(page.locator('#label img')).toBeVisible();
+
+  // ❌ Reads the text NEXT to the barcode, not the barcode itself
+  await expect(page.locator('#label .ean-text')).toHaveText('5901234123457');
+});
+
+test('product barcode encodes the EAN', async ({ page }) => {
+  await page.goto('/product/42');
+
+  // ❌ 13-digit expectation — the decoder returns the 12-digit tail
+  const img = page.locator('#product-barcode img');
+  const shot = await img.screenshot();
+  // ... hand-rolled decode with a random library, wrong type assumption ...
+});
+```
+
+**Why this fails:**
+- Visibility and neighboring-text assertions say nothing about the encoded payload
+- Invalid checksum data in the mock makes the fixture (and any real scanner) fail to decode, even though the app code is correct
+- Full-value EAN-13 comparisons fail on the dropped leading digit
+
+**Correct (decode what the page renders, generate valid setup data):**
+
+```typescript
+import { test, expect } from '@playwright-labs/fixture-barcode';
+import { BarcodeEncoder } from '@playwright-labs/barcode-core';
+
+test('shipping label barcode encodes the order EAN', async ({ page }) => {
+  // ✅ Valid barcode in the mock payload — checksum verified by the encoder
+  const ean = '5901234123457';
+  await new BarcodeEncoder({ format: 'EAN13' }).encode(ean); // rejects if invalid
+  await page.route('**/api/label', (route) => route.fulfill({ json: { ean } }));
+
+  await page.goto('/orders/42/label');
+
+  // ✅ Decodes the locator screenshot and compares the payload
+  // (reader drops the leading EAN-13 digit — match the tail)
+  await expect(page.locator('#label img')).toHaveBarcode('ean-13', ean.slice(1));
+});
+
+test('generated ticket barcode is scannable and matches the API', async ({
+  page,
+  useBarcodeDecode,
+}) => {
+  await page.goto('/tickets/new');
+  await page.getByRole('button', { name: 'Generate ticket' }).click();
+
+  const barcode = page.locator('#ticket-barcode img');
+
+  // ✅ Value is dynamic — assert readability, then cross-check with the API
+  await expect(barcode).toHaveBarcode('code-128');
+
+  const decoded = await useBarcodeDecode(barcode, 'code-128');
+  const response = await page.request.get('/api/tickets/latest');
+  expect(decoded).toBe((await response.json()).code);
+});
+```
+
+**Why this works:**
+- Assertions read the actual encoded data — a blank or mis-encoded image fails immediately
+- Mock data is valid by construction, so decode failures mean an app bug, not broken fixtures
+- Dynamic values are handled: regex/readability assertion plus a decode cross-checked against the backend
+
+## Common Mistakes
+
+### Mistake 1: Expecting 13 digits back from an EAN-13 decode
+
+```typescript
+test('product EAN', async ({ page }) => {
+  await page.goto('/product/42');
+  // ❌ Decoder returns the 12-digit tail — this never matches
+  await expect(page.locator('#barcode img')).toHaveBarcode(
+    'ean-13',
+    '5901234123457',
+  );
+});
+```
+
+**Why this is wrong**: The underlying reader does not recover the leading EAN-13 digit (it's encoded via left-group parity, not bars), so the decoded string is 12 digits. Exact-match assertions against the full EAN fail deterministically.
+
+**How to fix**:
+
+```typescript
+test('product EAN', async ({ page }) => {
+  await page.goto('/product/42');
+  const ean = '5901234123457';
+  // ✅ Compare against the 12-digit tail...
+  await expect(page.locator('#barcode img')).toHaveBarcode('ean-13', ean.slice(1));
+  // ✅ ...or use a regex if only a prefix is stable
+  await expect(page.locator('#barcode img')).toHaveBarcode('ean-13', /^901234/);
+});
+```
+
+### Mistake 2: Decoding the whole page instead of a tight locator
+
+```typescript
+test('label barcode', async ({ page, useBarcodeDecode }) => {
+  await page.goto('/orders/42/label');
+  // ❌ Full card: text, borders, logo — decode is flaky or impossible
+  const decoded = await useBarcodeDecode(page.locator('#label-card'), 'ean-13');
+  expect(decoded).toBe('901234123457');
+});
+```
+
+**Why this is wrong**: Barcode readers are sensitive to surrounding content and scale. A wide screenshot with text and graphics around the bars degrades decoding and makes failures environment-dependent.
+
+**How to fix**:
+
+```typescript
+test('label barcode', async ({ page, useBarcodeDecode }) => {
+  await page.goto('/orders/42/label');
+  // ✅ Scope to the barcode element itself; crop further via screenshotOptions if needed
+  const decoded = await useBarcodeDecode(page.locator('#label-card img'), 'ean-13');
+  expect(decoded).toBe('901234123457');
+});
+```
+
+### Mistake 3: Mixing up encoder and decoder format names
+
+```typescript
+import { BarcodeEncoder } from '@playwright-labs/barcode-core';
+import { test } from '@playwright-labs/fixture-barcode';
+
+test('roundtrip', async ({ page }) => {
+  // ❌ 'ean-13' is the DECODER name — the encoder expects jsbarcode format 'EAN13'
+  const svg = await new BarcodeEncoder({ format: 'ean-13' as never }).encode('5901234123457');
+  // ...
+});
+```
+
+**Why this is wrong**: The two libraries use different naming — encoder formats are `EAN13`, `CODE128`, `UPC`, ...; decoder/fixture types are `ean-13`, `code-128`, `upc-a`, .... Passing one scheme to the other throws or fails at runtime.
+
+**How to fix**:
+
+```typescript
+test('roundtrip', async ({ page }) => {
+  // ✅ Encoder: jsbarcode format names
+  const svg = await new BarcodeEncoder({ format: 'EAN13' }).encode('5901234123457');
+  await page.setContent(`<img id="b" src="data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}">`);
+
+  // ✅ Decoder/matcher: kebab-case Barcode union
+  await expect(page.locator('#b')).toHaveBarcode('ean-13', '901234123457');
+});
+```
+
+## Advanced Patterns
+
+### Full roundtrip without a browser rasterizer
+
+`BarcodeEncoder` in `imagedata` mode emits raw RGBA pixels that `BarcodeDecoder` consumes directly — a complete encode → decode verification with no page at all, useful for validating seed-data generators:
+
+```typescript
+import { BarcodeEncoder, BarcodeDecoder } from '@playwright-labs/barcode-core';
+import { test, expect } from '@playwright/test';
+
+test('barcode generator produces scannable codes', async () => {
+  const image = await new BarcodeEncoder({ format: 'CODE128', type: 'imagedata' })
+    .encode('ORDER-12345');
+
+  const decoded = await new BarcodeDecoder().decode('code-128', image);
+  expect(decoded).toBe('ORDER-12345');
+});
+```
+
+### Serving generated barcodes through route interception
+
+Generate the SVG in the test and serve it as the app's barcode image, so the rendered page is exercised end to end:
+
+```typescript
+import { test, expect } from '@playwright-labs/fixture-barcode';
+import { BarcodeEncoder } from '@playwright-labs/barcode-core';
+
+test('label page renders the served barcode', async ({ page }) => {
+  const svg = await new BarcodeEncoder({ format: 'CODE128' }).encode('SHIP-9988');
+
+  await page.route('**/barcode.svg', (route) =>
+    route.fulfill({ contentType: 'image/svg+xml', body: svg }),
+  );
+
+  await page.goto('/orders/42/label');
+  await expect(page.locator('#label img')).toHaveBarcode('code-128', 'SHIP-9988');
+});
+```
+
+**When to use this pattern**: When the barcode comes from a backend image service you don't control in tests — interception plus `BarcodeEncoder` gives you valid, deterministic barcodes without standing up the service.
+
+### Merging into a shared fixture file
+
+```typescript
+// fixtures/index.ts
+import { mergeExpects, mergeTests } from '@playwright/test';
+import {
+  expect as barcodeExpect,
+  test as barcodeTest,
+} from '@playwright-labs/fixture-barcode';
+
+export const test = mergeTests(barcodeTest);
+export const expect = mergeExpects(barcodeExpect);
+```
+
+## Integration with Other Best Practices
+
+- **Merge Tests and Expects** (`fixture-merge-tests-expects`): `fixture-barcode` exports `test`/`expect` designed for `mergeTests`/`mergeExpects` — merge once in a shared fixture file, import everywhere
+- **Generate Realistic Test Data** (`fixture-faker-realistic-data`): generate the *payload* (SKU, order number) with faker, encode it with `BarcodeEncoder`, and decode-assert it in the UI — one captured value flows through mock, render, and assertion
+- **API Mocking** (`advanced-api-mocking`): serve encoder-generated SVGs via `page.route` so barcode tests don't depend on a label-generation service
+- **Web-First Assertions** (`assertion-web-first`): `toHaveBarcode` is a custom matcher on a locator — pair it with web-first visibility assertions on the surrounding UI rather than manual screenshots and generic expects
+- **Scale considerations**: At dozens of barcode tests, keep one shared helper that maps business payloads to `(format, expectedTail)` so the EAN-13 leading-digit caveat is handled in exactly one place
+
+Reference: [@playwright-labs/fixture-barcode](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-barcode) and [@playwright-labs/barcode-core](https://github.com/vitalics/playwright-labs/tree/main/packages/barcode-core)
+
+---
+
+### 6.7. Generate Realistic Test Data with fixture-faker
 
 **Tags:** faker, test-data, fixtures, data-generation  
 **Impact:** MEDIUM (eliminates hardcoded data collisions and makes every test run generate unique, locale-aware inputs)
@@ -3140,7 +3711,7 @@ Reference: [@playwright-labs/fixture-faker](https://github.com/vitalics/playwrig
 
 ---
 
-### 6.6. Instrument Tests with Custom OTel Metrics, Spans, and Distributed Trace Propagation
+### 6.8. Instrument Tests with Custom OTel Metrics, Spans, and Distributed Trace Propagation
 
 **Tags:** opentelemetry, otel, metrics, spans, tracing, traceparent, counter, histogram, useSpan, withSpan, fixture-otel  
 **Impact:** MEDIUM (adds business-level telemetry to tests and connects Playwright spans with upstream service traces)
@@ -3419,7 +3990,7 @@ Reference: [@playwright-labs/fixture-otel](https://github.com/vitalics/playwrigh
 
 ---
 
-### 6.7. Instrument Tests with Custom Prometheus Counters, Gauges, and Histograms
+### 6.9. Instrument Tests with Custom Prometheus Counters, Gauges, and Histograms
 
 **Tags:** prometheus, metrics, counter, gauge, histogram, fixtures, monitoring  
 **Impact:** MEDIUM (turns test activity into queryable Prometheus metrics for CI dashboards and alerting)
@@ -3780,7 +4351,7 @@ Reference: [@playwright-labs/fixture-prometheus](https://github.com/vitalics/pla
 
 ---
 
-### 6.8. Manage Environment Variables with Type-Safe Validated Configuration
+### 6.10. Manage Environment Variables with Type-Safe Validated Configuration
 
 **Tags:** environment-variables, configuration, type-safe, validation, fixture-env, ajv-ts, zod  
 **Impact:** MEDIUM (prevents test failures caused by missing or misconfigured environment variables)
@@ -3955,7 +4526,7 @@ Reference: [@playwright-labs/fixture-env](https://github.com/vitalics/playwright
 
 ---
 
-### 6.9. Reuse Global Metrics Across Tests with useGlobalCounter and useGlobalHistogram
+### 6.11. Reuse Global Metrics Across Tests with useGlobalCounter and useGlobalHistogram
 
 **Tags:** global metrics, counter, histogram, fixtures, otel, prometheus, accumulation, worker  
 **Impact:** MEDIUM (aggregates run-wide counters and latency distributions across tests without manual bookkeeping)
@@ -4271,7 +4842,314 @@ Reference: [@playwright-labs/fixture-otel](https://github.com/vitalics/playwrigh
 
 ---
 
-### 6.10. Simulate Human-Like Input with ghost-cursor
+### 6.12. Run Automated Accessibility Checks with fixture-a11y
+
+**Tags:** a11y, accessibility, axe-core, fixtures, wcag  
+**Impact:** MEDIUM (catches WCAG violations (missing labels, contrast, landmarks) in CI with one assertion per page instead of manual audits)
+
+**Impact: MEDIUM (catches WCAG violations — missing labels, contrast, landmarks — in CI with one assertion per page instead of manual audits)**
+
+Accessibility regressions ship silently: a form loses its label association, a new component breaks color contrast, a modal traps focus — and no functional test notices because clicks and fills still work. The `@playwright-labs/fixture-a11y` package wraps `axe-core` (via `@axe-core/playwright`) in Playwright fixtures — the `a11y` fixture for a scan builder, `useA11y` for extra scans or pages, and a `toBeAccessible` matcher — so every page or component can be audited against WCAG rules as a normal assertion. Its twist over a plain `AxeBuilder`: `include`/`exclude` accept **locators**, not just selector strings, realized into CSS selectors right before the scan runs.
+
+## When to Use
+
+- **Use the `a11y` fixture when**: A test finishes on a page or state you want to audit — call `a11y.withTags([...]).analyze()` and assert `results.violations` is empty
+- **Use `toBeAccessible` when**: You want a one-liner — `await expect(page).toBeAccessible()` for a full-page scan, or `await expect(locator).toBeAccessible()` to scope the scan to a component
+- **Use `useA11y(page?)` when**: One test scans several states (before/after opening a dialog) or extra pages/tabs — each call returns a fresh `A11yBuilder`
+- **Pin scans to a standard when**: Running in CI — pass `tags: ["wcag2a", "wcag2aa"]` so results don't drift when axe adds or reclassifies best-practice rules
+- **Consider alternatives when**: You need full user-journey audits with keyboard navigation and screen readers — axe only finds statically detectable issues (roughly 30-50% of real-world problems); pair automated scans with manual testing for compliance-critical flows
+- **Required for**: Public-facing apps with WCAG/ADA obligations, design-system component tests, any page where a form or dialog ships
+
+## Guidelines
+
+### Do
+
+- Scan at the end of a realistic user flow, not on an empty page — axe finds issues in the DOM as users actually see it
+- Pin scans to WCAG levels with `withTags(["wcag2a", "wcag2aa"])` or `toBeAccessible({ tags: [...] })` for deterministic CI results
+- Scope scans to components with a locator — `expect(page.getByRole("form")).toBeAccessible()` — when auditing design-system pieces
+- Exclude genuinely third-party or legacy regions with `.exclude(locator)` or the `exclude` option, and document why each exclusion exists
+- Disable a specific rule with `disableRules: ["color-contrast"]` only as a tracked, temporary measure — never disable a rule category wholesale to make a scan pass
+- Merge the package's `test`/`expect` into your shared fixture file once with `mergeTests`/`mergeExpects`, then import from there everywhere
+
+### Don't
+
+- Don't run untagged scans in CI — default `axe.run` also enables best-practice rules (`region`, `landmark-*`), which change between axe releases and turn a dependency bump into a red build
+- Don't exclude or disable broadly to get to zero — an excluded `main` landmark or a disabled `color-contrast` rule is an audit hole that looks like compliance
+- Don't scan before the page settles — audit after the assertions that prove the state you care about is rendered
+- Don't treat an empty `violations` array as "the page is accessible" — axe cannot verify keyboard operability, focus order, or meaningful reading order
+- Don't build a new `A11yBuilder` per scan when the `a11y` fixture already gives you one for the default page — reach for `useA11y` only for extra scans or other pages
+
+### Tool Usage Patterns
+
+- **Install**: `npm i -D @playwright-labs/fixture-a11y` (peer dep: `@playwright/test`; powered by `@axe-core/playwright`)
+- **Fixtures**: `a11y` — a fresh `A11yBuilder` for the default page (one scan per test); `useA11y(page?)` — a synchronous factory returning a fresh builder per call
+- **Exports**: `test`, `expect` (with `toBeAccessible`), `A11yBuilder`, and the `Fixture` / `ToBeAccessibleOptions` types from `@playwright-labs/fixture-a11y`
+- **`A11yBuilder`**: an `AxeBuilder` subclass — everything `AxeBuilder` supports (`withTags`, `withRules`, `disableRules`, `options`, …), plus locator-aware `include(locator)` / `exclude(locator)`
+- **Matcher**: `expect(pageOrLocator).toBeAccessible(options?)` where options is `{ include?, exclude?, tags?, disableRules? }`; `include`/`exclude` accept a mix of locators and selector strings
+- **Failure output**: the matcher message lists every violation with rule id, impact, and the first offending targets, so a red build points at the offending elements directly
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Axe detects only statically analyzable issues — it cannot judge keyboard trap behavior, focus management, or whether alt text is *meaningful*, only whether it exists
+- Scans add real time (axe injects and runs a rule engine in the page); at suite scale, scan once per significant page state rather than after every test
+- Locator-based `include`/`exclude` are realized into CSS selectors at scan time — the elements must exist and be stable in the DOM when `analyze()` runs
+
+### Edge Cases
+
+1. **Include locator matching nothing**: `A11yBuilder` throws `a11y include locator matched no elements` instead of silently widening the scan to the whole page. If a region is optional, assert it is visible first, or use `toBeAccessible` on the page with an `exclude` instead.
+2. **Exclude locator matching nothing**: this is a no-op by design — safe for third-party widgets that may or may not render (ads, cookie banners).
+3. **Locator matching several elements**: every matched element is included/excluded — useful for auditing all cards in a grid at once.
+4. **Scanning a dialog or popover**: open it first, assert it is visible, then `expect(page.getByRole("dialog")).toBeAccessible()` — the scoped scan covers the overlay without re-auditing the page behind it.
+5. **Multiple pages/tabs**: `useA11y(otherPage)` returns a builder bound to that page, so a scan of a newly opened tab doesn't require a second `page` fixture.
+
+### What Breaks If Ignored
+
+- **Silent regressions**: a refactor removes a form's `<label>` association — every functional test still fills the field by CSS selector and passes; the violation reaches production
+- **CI surprise on dependency bumps**: untagged scans pick up new best-practice rules, so `npm update` turns a green suite red on rules you never opted into
+- **False confidence**: a "0 violations" badge on an untagged, broadly-excluded scan is treated as WCAG compliance by stakeholders
+- **Widened scans**: a stale include selector in a hand-rolled `AxeBuilder` silently scans the whole page instead of the component, mixing unrelated violations into component tests
+
+**Incorrect (untagged scan, string selectors, violations asserted loosely):**
+
+```typescript
+import { test, expect } from "@playwright/test";
+import { AxeBuilder } from "@axe-core/playwright";
+
+test("dashboard is accessible", async ({ page }) => {
+  await page.goto("/dashboard");
+
+  // ❌ No tags — picks up whatever best-practice rules this axe version ships;
+  //    results change between dependency releases
+  const results = await new AxeBuilder({ page })
+    // ❌ String selectors for scoping — a renamed class silently re-targets
+    //    or widens the scan with no error
+    .exclude(".third-party-ad")
+    .analyze();
+
+  // ❌ Soft-passing: logs violations but lets the build go green —
+  //    the audit exists only until someone stops reading logs
+  if (results.violations.length > 0) {
+    console.log("a11y violations:", results.violations.length);
+  }
+});
+```
+
+**Why this fails:**
+- Untagged scans are non-deterministic across axe releases — CI breaks on upgrades for rules nobody chose
+- String selectors give no type checking and no failure when the target disappears
+- Logging instead of asserting means violations never block a release
+
+**Correct (pinned WCAG tags, locator-scoped scan, hard assertion):**
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-a11y";
+
+test("dashboard is accessible", async ({ page, a11y }) => {
+  await page.goto("/dashboard");
+  // ✅ Scan the settled page, not a half-loaded shell
+  await expect(page.getByRole("main")).toBeVisible();
+
+  const results = await a11y
+    // ✅ Pinned to a standard — same rules on every run, every axe version
+    .withTags(["wcag2a", "wcag2aa"])
+    // ✅ Locator-based exclusion — typed, and empty matches are a safe no-op
+    .exclude(page.locator(".third-party-ad"))
+    .analyze();
+
+  // ✅ Hard failure listing rule id, impact, and offending targets
+  expect(results.violations).toEqual([]);
+});
+
+test("signup form is accessible", async ({ page }) => {
+  await page.goto("/signup");
+
+  // ✅ One-liner, scoped to the component under test
+  await expect(page.getByRole("form")).toBeAccessible({
+    tags: ["wcag2a", "wcag2aa"],
+  });
+});
+```
+
+**Why this works:**
+- WCAG tags make results reproducible — the suite only changes when the app or the pinned standard does
+- Locators keep scoping type-safe and refactored alongside the rest of the test
+- Violations fail the build with rule ids and target selectors in the message — actionable without re-running locally
+
+## Common Mistakes
+
+### Mistake 1: Scanning before the page has settled
+
+```typescript
+test("search results are accessible", async ({ page, a11y }) => {
+  await page.goto("/search");
+  await page.getByRole("button", { name: "Search" }).click();
+
+  // ❌ Results haven't rendered — axe audits the loading spinner
+  const results = await a11y.withTags(["wcag2a"]).analyze();
+  expect(results.violations).toEqual([]);
+});
+```
+
+**Why this is wrong**: Axe audits the DOM as it exists at `analyze()` time. Scanning mid-transition audits a skeleton state and either reports violations the user never sees or misses violations in the real content.
+
+**How to fix**:
+
+```typescript
+test("search results are accessible", async ({ page, a11y }) => {
+  await page.goto("/search");
+  await page.getByRole("button", { name: "Search" }).click();
+
+  // ✅ Web-first assertion proves the real content is rendered
+  await expect(page.getByRole("list")).toBeVisible();
+
+  const results = await a11y.withTags(["wcag2a"]).analyze();
+  expect(results.violations).toEqual([]);
+});
+```
+
+### Mistake 2: Broad exclusions to force a green scan
+
+```typescript
+test("checkout is accessible", async ({ page }) => {
+  await page.goto("/checkout");
+
+  // ❌ Excluding main content to silence violations — the scan proves nothing
+  await expect(page).toBeAccessible({
+    exclude: [page.getByRole("main"), page.getByRole("form")],
+    disableRules: ["color-contrast"],
+  });
+});
+```
+
+**Why this is wrong**: Excluding the landmarks under test and disabling a WCAG AA rule turns the assertion into theater — it always passes and documents nothing. Every exclusion should be third-party content you cannot fix, and every disabled rule should link to a tracked issue.
+
+**How to fix**:
+
+```typescript
+test("checkout is accessible", async ({ page }) => {
+  await page.goto("/checkout");
+
+  // ✅ Scan the real page; exclude only what you genuinely don't own
+  await expect(page).toBeAccessible({
+    tags: ["wcag2a", "wcag2aa"],
+    // Payment iframe rendered by the PSP — outside our control
+    exclude: [page.frameLocator("#psp-iframe").owner()],
+  });
+});
+```
+
+### Mistake 3: Reusing one builder for multiple scans
+
+```typescript
+test("dialog is accessible", async ({ page, a11y }) => {
+  await page.goto("/settings");
+  await a11y.analyze(); // scan 1: page
+
+  await page.getByRole("button", { name: "Edit" }).click();
+
+  // ❌ Reusing the same builder after analyze() — queued locators and
+  //    includes are already consumed; configuration leaks between scans
+  await a11y.include(page.getByRole("dialog")).analyze();
+});
+```
+
+**Why this is wrong**: The `a11y` fixture is documented as one scan per test — `analyze()` drains the queued locator includes/excludes, so chained state doesn't carry over predictably. A second scan needs a fresh builder.
+
+**How to fix**:
+
+```typescript
+test("dialog is accessible", async ({ page, a11y, useA11y }) => {
+  await page.goto("/settings");
+  await a11y.withTags(["wcag2a", "wcag2aa"]).analyze(); // ✅ page scan
+
+  await page.getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+
+  // ✅ Fresh builder per scan via the useA11y factory
+  const results = await useA11y()
+    .include(page.getByRole("dialog"))
+    .withTags(["wcag2a", "wcag2aa"])
+    .analyze();
+  expect(results.violations).toEqual([]);
+});
+```
+
+## Advanced Patterns
+
+### Auditing multiple pages or tabs in one test
+
+`useA11y(page?)` binds a builder to any page, so a flow spanning tabs stays auditable:
+
+```typescript
+import { test, expect } from "@playwright-labs/fixture-a11y";
+
+test("help center opened in a new tab is accessible", async ({ page, useA11y, context }) => {
+  await page.goto("/dashboard");
+
+  const [helpPage] = await Promise.all([
+    context.waitForEvent("page"),
+    page.getByRole("link", { name: "Help" }).click(),
+  ]);
+  await helpPage.waitForLoadState();
+
+  // ✅ Builder bound to the new tab, not the default page
+  const results = await useA11y(helpPage)
+    .withTags(["wcag2a", "wcag2aa"])
+    .analyze();
+  expect(results.violations).toEqual([]);
+});
+```
+
+### Baseline a legacy page with scoped scans
+
+When a full-page scan on legacy code is hopeless, ratchet: scan only the components your team owns.
+
+```typescript
+test("new checkout widget is accessible", async ({ page }) => {
+  await page.goto("/legacy-checkout");
+
+  // ✅ Audit the owned component only; expand scope as legacy regions get fixed
+  await expect(page.getByTestId("checkout-widget")).toBeAccessible({
+    tags: ["wcag2a", "wcag2aa"],
+  });
+});
+```
+
+**When to use this pattern**: Scoping is a migration strategy, not an end state — keep a tracking task to widen scans toward full-page coverage, or the scoped tests calcify into permanent blind spots.
+
+### Merging into a shared fixture file
+
+Compose `a11y` with your other fixtures once, following the merge pattern:
+
+```typescript
+// fixtures/index.ts
+import { mergeExpects, mergeTests } from "@playwright/test";
+import {
+  expect as a11yExpect,
+  test as a11yTest,
+} from "@playwright-labs/fixture-a11y";
+
+export const test = mergeTests(a11yTest);
+export const expect = mergeExpects(a11yExpect);
+```
+
+Every spec then imports `test`/`expect` from `fixtures` and gets `a11y`, `useA11y`, and `toBeAccessible` alongside page objects and other custom fixtures.
+
+## Integration with Other Best Practices
+
+- **Prefer Role-Based Locators** (`locator-role-based`): role-based locators and axe scans verify the same accessibility tree from opposite sides — if `getByRole` can't find your button, axe will usually flag why
+- **Web-First Assertions** (`assertion-web-first`): always assert the target state is rendered before calling `analyze()` — web-first assertions stabilize the DOM the scan depends on
+- **Merge Tests and Expects** (`fixture-merge-tests-expects`): `fixture-a11y` is designed for `mergeTests`/`mergeExpects` — merging is the intended way to combine it with other Playwright-labs fixture packages
+- **Enrich Test Reports with fixture-allure** (`fixture-allure`): attach violation JSON as an attachment on failure so a11y regressions are diagnosable from the report without re-running
+- **Scale considerations**: At 100+ tests, don't scan in every test — pick one audit test per significant page/state (a dedicated `a11y.spec.ts` per feature area works well) so scan time stays linear in page count, not test count
+
+Reference: [@playwright-labs/fixture-a11y](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-a11y)
+
+---
+
+### 6.13. Simulate Human-Like Input with ghost-cursor
 
 **Tags:** ghost-cursor, mouse, anti-bot, human-like, input  
 **Impact:** LOW (helps anti-bot-sensitive flows pass mouse-movement heuristics, but costs speed and reliability on ordinary tests)
@@ -4599,7 +5477,7 @@ Reference: [@playwright-labs/ghost-cursor](https://github.com/vitalics/playwrigh
 
 ---
 
-### 6.11. Test Against Real Services with fixture-testcontainers
+### 6.14. Test Against Real Services with fixture-testcontainers
 
 **Tags:** testcontainers, docker, integration, database, fixtures  
 **Impact:** MEDIUM (catches SQL, migration, and connection bugs that mocks hide, with automatic container cleanup after every test)
@@ -4953,7 +5831,296 @@ Reference: [@playwright-labs/fixture-testcontainers](https://github.com/vitalics
 
 ---
 
-### 6.12. Use Custom Fixtures for Reusable Test Setup and Teardown
+### 6.15. Upload Test Artifacts and Data to S3 with fixture-s3
+
+**Tags:** s3, fixtures, artifacts, test-data, storage  
+**Impact:** MEDIUM (keeps large test artifacts out of the report and centralizes them in durable, shareable S3 storage)
+
+**Impact: MEDIUM (keeps large test artifacts out of the report and centralizes them in durable, shareable S3 storage)**
+
+Test runs generate data worth keeping — CSV exports, downloaded files, computed payloads, run logs — but stuffing megabytes into HTML-report attachments or CI artifacts makes reports slow and ephemeral. The `@playwright-labs/fixture-s3` package gives tests a `useBucket()` fixture with two upload modes: **deferred** (default), where uploads are recorded as `s3:<bucket>:<name>` attachments and shipped at run end by `@playwright-labs/reporter-s3`, and **immediate**, where the fixture builds its own `@playwright-labs/s3-core` client and uploads during the test so the test itself can verify the object. It works against AWS S3, MinIO, Cloudflare R2, or any SigV4-compatible storage.
+
+## When to Use
+
+- **Use deferred mode when**: You already run `@playwright-labs/reporter-s3` and want uploads routed to S3 alongside the rest of the run's artifacts — one connection, one `prefix`, everything lands at run end
+- **Use immediate mode when**: The test needs to read the object back, assert on the returned key, or must guarantee the data is in S3 before the test ends — no reporter required
+- **Use a bucket argument when**: Different data classes belong in different buckets — `useBucket()` uses the default `bucket` option, `useBucket("pw-blobs")` overrides it per call
+- **Consider alternatives when**: Artifacts are small and only useful with the report (screenshots, traces) — plain `testInfo.attach()` plus reporter routing is enough
+- **Required for**: Suites producing large/binary artifacts, pipelines where S3 (or MinIO/R2) is the single artifact store, tests that verify what they uploaded
+
+## Guidelines
+
+### Do
+
+- Configure the fixture once with `createFixture({ bucket })` (or `createFixture({ mode: "immediate", ... })`) and reuse its `test`/`expect`, or merge them into your shared fixture file with `mergeTests`
+- Give every upload an explicit, descriptive `name` (`bucket.put(data, { name: "users.csv", contentType: "text/csv" })`) — names become attachment names and object-key suffixes
+- Let content types default correctly: `Buffer`/`Uint8Array` → `application/octet-stream`, `string` → `text/plain`, everything else is JSON-stringified to `application/json`
+- Use `putFile(path)` for files on disk — the name defaults to the basename
+- Use `createWriteStream()` for incrementally produced data (logs, streamed output); the upload happens on `end()`, and `await stream.done` tells you it landed
+- In immediate mode, capture the `PutResult` from `put()` and verify the object with an `S3Client` from `@playwright-labs/s3-core` — `put()` returns `{ bucket, name, key }`
+- Set `prefix` in immediate mode as a string or `(testInfo) => string` so objects from one run live under one key folder
+- Pass an `AbortSignal` via `options.signal` for uploads that must be cancellable (immediate mode)
+
+### Don't
+
+- Don't pass connection options (`endpoint`, credentials, `http`, …) in deferred mode — it throws a `TypeError` because the S3 connection belongs to the reporter, not the fixture
+- Don't expect `key` on the `PutResult` in deferred mode — the reporter assigns keys at run end, so `key` is only set in immediate mode
+- Don't assume the reporter is optional in deferred mode — `useBucket` throws early when `@playwright-labs/reporter-s3` is missing from `config.reporter`
+- Don't buffer huge payloads blindly — `putObject` and stream uploads are buffered in memory and sent as a single signed PUT (SigV4 signs the sha256 of the whole body); there is no multipart upload
+- Don't point immediate mode at production buckets by default — use a dedicated bucket (or MinIO locally) and lifecycle-expire old run prefixes
+
+### Tool Usage Patterns
+
+- **Install**: `npm install --save-dev @playwright-labs/fixture-s3` — deferred mode also needs `npm install --save-dev @playwright-labs/reporter-s3`
+- **Fixture factory**: `createFixture(options?)` returns `{ test, expect }`; the zero-config `import { test, expect } from "@playwright-labs/fixture-s3"` is equivalent to `createFixture().test`
+- **Fixture**: `useBucket(bucket?)` returns a handle with `put(data, options?)`, `putFile(file, options?)`, and `createWriteStream(options?)`; `put`/`putFile` resolve to `{ bucket, name, key? }`
+- **Immediate-mode options**: `endpoint` (env `AWS_S3_URL`), `accessKeyId` (env `AWS_ACCESS_KEY_ID`), `secretAccessKey` (env `AWS_SECRET_ACCESS_KEY`), `region` (env `AWS_REGION`, default `"us-east-1"`), `forcePathStyle` (default `true`, required by MinIO), `prefix`, `createBucket` (default `true`), `acl`, `http: { timeoutMs, retries }`
+- **Key layout**: immediate mode writes `[<prefix>/]<testId>/<retry>-<index>-<name>`; deferred mode lets the reporter write `<prefix>/attachments/<testId>/<retry>-<index>-<name>`
+- **Verification**: `new S3Client({ endpoint, accessKeyId, secretAccessKey })` from `@playwright-labs/s3-core` with `getObject`/`deleteObject`/`ensureBucket` for read-back assertions
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Deferred uploads are invisible until run end — a test cannot verify its own deferred uploads, and a crashed runner may never ship them
+- Streams are buffered in memory (SigV4 needs the full-body hash), so multi-gigabyte uploads are out of scope
+- Immediate mode creates its own S3 client per fixture setup — for suites with heavy immediate uploads, prefer fewer, larger objects over many tiny ones
+- Retries cover network errors, timeouts, and 5xx only; 4xx responses and caller aborts fail immediately (`S3Error` with `status` and `body`)
+
+### Edge Cases
+
+1. **MinIO/LocalStack locally**: keep `forcePathStyle: true` (the default) and point `endpoint` at `http://localhost:9000` — virtual-host style won't resolve against a local MinIO.
+2. **Missing buckets in immediate mode**: `createBucket: true` (the default) creates used buckets on the fly, so first runs against a fresh MinIO just work; disable it when buckets are provisioned externally and creation should fail loudly.
+3. **Cancelling a doomed upload**: pass `options.signal` — a caller abort destroys the stream without uploading and is never retried, which keeps a timed-out test from leaking a background upload.
+4. **Mixing modes in one suite**: nothing stops a spec from using a deferred fixture and another an immediate one (the `s3-stack` example does exactly this) — but don't use both fixtures in the same test file without merging via `mergeTests`, or fixture keys collide.
+
+### What Breaks If Ignored
+
+- **Connection options silently ignored**: passing `endpoint`/credentials to deferred mode is a `TypeError` — the error is intentional, fixing it means moving connection config to the reporter or switching to `mode: "immediate"`
+- **Missing reporter**: deferred mode without `@playwright-labs/reporter-s3` in `config.reporter` fails fast at fixture setup — uploads were never going anywhere
+- **Undefined keys in deferred mode**: asserting `ref.key` after a deferred `put()` fails — the key only exists after the reporter ships the attachment
+- **Memory pressure**: buffering multi-hundred-MB payloads in a worker process can OOM the test runner; chunk the data or upload to S3 outside the test process
+
+**Incorrect (deferred mode with connection options, and asserting a key that doesn't exist yet):**
+
+```typescript
+import { createFixture } from "@playwright-labs/fixture-s3";
+
+// ❌ Deferred mode + connection options = TypeError at fixture setup.
+//    The S3 connection belongs to reporter-s3, not the fixture.
+const { test, expect } = createFixture({
+  bucket: "pw-data",
+  endpoint: "http://localhost:9000", // ❌ not allowed in deferred mode
+  accessKeyId: "minioadmin",         // ❌ not allowed in deferred mode
+});
+
+test("collects data", async ({ useBucket }) => {
+  const ref = await useBucket().put({ users: 3 });
+
+  // ❌ key is undefined in deferred mode — the reporter assigns it at run end
+  expect(ref.key).toBeDefined();
+});
+```
+
+**Why this fails:**
+- Deferred mode deliberately throws on connection options instead of silently ignoring them
+- The object key is produced by the reporter after the run — no key exists while the test is executing
+- The test reads like immediate mode but behaves like deferred mode, so both failures look confusing
+
+**Correct (immediate mode when the test must verify; deferred mode with a reporter otherwise):**
+
+```typescript
+import { S3Client } from "@playwright-labs/s3-core";
+import { createFixture } from "@playwright-labs/fixture-s3";
+
+const S3 = {
+  endpoint: "http://localhost:9000", // ?? env AWS_S3_URL
+  accessKeyId: "minioadmin",         // ?? env AWS_ACCESS_KEY_ID
+  secretAccessKey: "minioadmin",     // ?? env AWS_SECRET_ACCESS_KEY
+};
+
+// ✅ Immediate mode: fixture owns the connection, uploads during the test
+const { test, expect } = createFixture({
+  mode: "immediate",
+  ...S3,
+  bucket: "pw-immediate",
+  prefix: "runs/latest", // string | (testInfo) => string
+  http: { timeoutMs: 30_000, retries: 2 },
+});
+
+test("upload is verifiable in the same test", async ({ useBucket }) => {
+  // ✅ put() returns { bucket, name, key } — the object is already in S3
+  const ref = await useBucket().put({ ok: true }, { name: "report.json" });
+  expect(ref.key).toBeDefined();
+
+  // ✅ Read it straight back with s3-core — impossible in deferred mode
+  const client = new S3Client(S3);
+  const body = await client.getObject(ref.bucket, ref.key!);
+  expect(JSON.parse(body.toString("utf8"))).toEqual({ ok: true });
+});
+```
+
+**Why this works:**
+- Immediate mode uploads synchronously during the test, so `key` is real and read-back assertions are meaningful
+- Connection options live where they belong — on the immediate fixture or the reporter, never on a deferred fixture
+- `http.timeoutMs`/`retries` make uploads resilient to flaky local MinIO without test-level try/catch
+
+## Common Mistakes
+
+### Mistake 1: Deferred mode without the reporter
+
+```typescript
+// playwright.config.ts
+export default defineConfig({
+  reporter: [["html"]], // ❌ no @playwright-labs/reporter-s3
+});
+
+// spec
+const { test } = createFixture({ bucket: "pw-data" }); // default deferred mode
+
+test("collects data", async ({ useBucket }) => {
+  // ❌ throws early: deferred mode requires reporter-s3 in config.reporter
+  await useBucket().put({ users: 3 });
+});
+```
+
+**Why this is wrong**: In deferred mode the fixture only records `s3:<bucket>:<name>` attachments; without the reporter nothing ever parses the markers and the uploads silently have no destination — so the fixture fails fast instead.
+
+**How to fix**:
+
+```typescript
+// playwright.config.ts
+export default defineConfig({
+  reporter: [
+    ["html"],
+    [
+      "@playwright-labs/reporter-s3",
+      {
+        endpoint: "http://localhost:9000",
+        accessKeyId: "minioadmin",
+        secretAccessKey: "minioadmin",
+        bucket: "pw-artifacts", // default bucket for plain attachments + summary.json
+      },
+    ],
+  ],
+});
+```
+
+### Mistake 2: Writing a stream but never awaiting the upload
+
+```typescript
+test("log upload", async ({ useBucket }) => {
+  const log = useBucket().createWriteStream({ name: "run.log", contentType: "text/plain" });
+  log.write("step 1\n");
+  log.end("step 2\n");
+  // ❌ test ends without awaiting — upload may fail unnoticed
+});
+```
+
+**Why this is wrong**: `createWriteStream` uploads on `end()`, but the result is only observable via `.done` (and a failed upload rejects it). Dropping the promise hides upload errors.
+
+**How to fix**:
+
+```typescript
+test("log upload", async ({ useBucket }) => {
+  const log = useBucket().createWriteStream({ name: "run.log", contentType: "text/plain" });
+  log.write("step 1\n");
+  log.end("step 2\n");
+
+  const ref = await log.done; // ✅ resolves after upload/attach; rejects on failure
+  expect(ref.name).toBe("run.log");
+});
+```
+
+### Mistake 3: Expecting per-run isolation without a prefix
+
+```typescript
+const { test } = createFixture({
+  mode: "immediate",
+  ...S3,
+  bucket: "pw-immediate", // ❌ no prefix — every run mixes into the same key space
+});
+```
+
+**Why this is wrong**: Keys are `<testId>/<retry>-<index>-<name>`, so two runs of the same suite write the same keys — later runs overwrite earlier artifacts and old objects can't be attributed to a run.
+
+**How to fix**:
+
+```typescript
+const { test } = createFixture({
+  mode: "immediate",
+  ...S3,
+  bucket: "pw-immediate",
+  // ✅ one folder per run; a (testInfo) => string callback works too
+  prefix: `runs/${new Date().toISOString()}`,
+});
+```
+
+## Advanced Patterns
+
+### Deferred mode with bucket routing via the reporter
+
+Deferred uploads are attachments named `s3:<bucket>:<name>` (helpers `formatS3AttachmentName`/`parseS3AttachmentName` live in `@playwright-labs/s3-core`). The marker takes precedence over the reporter's `attachmentBucket` resolver, so fixture uploads always land in their named bucket while plain `testInfo.attach()` files follow the resolver:
+
+```typescript
+import { createFixture } from "@playwright-labs/fixture-s3";
+
+const { test, expect } = createFixture({ bucket: "pw-data" });
+
+test("routes by marker, not by resolver", async ({ useBucket }, testInfo) => {
+  // → bucket "pw-data" (marker wins)
+  await useBucket().put("a,b,c", { name: "t.csv", contentType: "text/csv" });
+  // → bucket "pw-blobs" (explicit bucket argument)
+  await useBucket("pw-blobs").putFile("./artifacts/photo.jpg");
+  // → whatever reporter's attachmentBucket resolver says for image/*
+  await testInfo.attach("pixel.png", {
+    body: Buffer.from("…"),
+    contentType: "image/png",
+  });
+});
+```
+
+### Cancelling an upload with AbortSignal
+
+Immediate mode forwards `options.signal` to every HTTP call, including bucket creation:
+
+```typescript
+test("bail out of a doomed upload", async ({ useBucket }) => {
+  const controller = new AbortController();
+  controller.abort(); // test decided to stop early
+
+  await expect(
+    useBucket().put("never lands", { signal: controller.signal }),
+  ).rejects.toThrow(/abort/i);
+});
+```
+
+### Merging into a shared fixture file
+
+```typescript
+// fixtures/index.ts
+import { mergeTests } from "@playwright/test";
+import { createFixture } from "@playwright-labs/fixture-s3";
+
+export const test = mergeTests(createFixture({ bucket: "pw-data" }).test, myTest);
+export { expect } from "@playwright/test";
+```
+
+**When to use this pattern**: merge once when several specs share the same default bucket; create a second immediate-mode fixture only for the specs that verify uploads in-test.
+
+## Integration with Other Best Practices
+
+- **Compose Fixtures with mergeTests and mergeExpects** (`fixture-merge-tests-expects`): `createFixture().test` is designed to be merged — one shared fixture file exposes `useBucket` alongside page objects and other fixtures
+- **Cancel Async Operations with AbortSignal Fixtures** (`fixture-abort-cancel`): pair the `signal` option on `put`/`putFile` with an abort-fixture controller so timed-out tests cancel in-flight uploads instead of leaking them
+- **Enrich Test Reports with fixture-allure** (`fixture-allure-rich-reporting`): deferred uploads still appear as attachments (`s3:<bucket>:<name>` markers), so report-based debugging works while the heavy bytes live in S3
+- **Test Against Real Services with fixture-testcontainers** (`fixture-testcontainers-real-services`): run MinIO in a container for immediate-mode read-back assertions in CI, exactly like the `s3-stack` example does with Docker Compose
+- **Scale considerations**: at 100+ tests prefer deferred mode for bulk artifacts (one reporter-managed connection, uploads batched at run end) and reserve immediate mode for the few tests that must verify their uploads
+
+Reference: [@playwright-labs/fixture-s3](https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-s3)
+
+---
+
+### 6.16. Use Custom Fixtures for Reusable Test Setup and Teardown
 
 **Tags:** fixtures, reusability, custom-fixtures, merge, test-organization  
 **Impact:** MEDIUM (Reduces code duplication by 60-80% and improves test maintainability)
@@ -5774,7 +6941,7 @@ Reference: [Playwright Custom Fixtures](https://playwright.dev/docs/test-fixture
 
 ---
 
-### 6.13. Use test.describe for Logical Test Grouping
+### 6.17. Use test.describe for Logical Test Grouping
 
 **Tags:** organization, fixtures, describe, maintainability  
 **Impact:** MEDIUM (Improves test organization and makes test reports more readable)
@@ -7899,7 +9066,492 @@ Reference: [@playwright-labs/reporter-email](https://github.com/vitalics/playwri
 
 ---
 
-### 8.7. Type-Safe SQL in Tests with fixture-sql and ts-plugin-sql
+### 8.7. Stand Up a Full Local Observability Stack for Tests with Docker Compose, Jaeger, Prometheus, and Grafana
+
+**Tags:** observability, opentelemetry, prometheus, grafana, jaeger, docker-compose, global-setup, debugging, ci  
+**Impact:** LOW (turns opaque CI failures into queryable traces and metrics without changing a single test)
+
+**Impact: LOW (turns opaque CI failures into queryable traces and metrics without changing a single test)**
+
+Individual reporters and fixtures (`reporter-otel`, `reporter-prometheus-remote-write`, `fixture-otel`, `fixture-prometheus`) emit traces and metrics, but they are only useful when something is listening on the other end. The missing piece is infrastructure: an OTel Collector that receives OTLP data, Jaeger for trace storage and visualization, Prometheus for metrics, and Grafana as a unified dashboard. Running this stack locally via Docker Compose — started from Playwright's `globalSetup` and stopped in `globalTeardown` — gives every engineer the same debugging environment that production services enjoy. The full working setups live in `examples/otel-stack` and `examples/grafana-stack`.
+
+## When to Use
+
+- **Use the full OTel stack** (`examples/otel-stack`: collector + Jaeger + Prometheus + Grafana) when: You want both distributed traces *and* metrics from the same run — the collector fans out OTLP to both backends
+- **Use the lighter Grafana stack** (`examples/grafana-stack`: Prometheus + Grafana only) when: You only need metrics — `reporter-prometheus-remote-write` pushes straight into Prometheus's remote-write endpoint, no collector needed
+- **Stand the stack up when**: Debugging flaky or slow tests that the HTML report cannot explain, establishing performance baselines (test/step duration trends), or building dashboards for suite health over time
+- **Skip the stack when**: Your suite is small and stable, or you only need pass/fail notifications — use `reporter-slack` / `reporter-email` instead
+- **Required for**: Teams running suites large enough that "which test got slower last month?" or "what exactly happened inside this flaky test?" are recurring questions
+
+## Guidelines
+
+### Do
+
+- Start the stack in `globalSetup` with `docker compose up -d --wait` and poll each service's health endpoint before letting tests run — containers report "up" before they can actually accept data
+- Stop (or intentionally keep) the stack in `globalTeardown` — keeping it up after the run lets engineers explore the UIs
+- Provision Grafana datasources and dashboards as code (`grafana/provisioning/`, `grafana/dashboards/`) so the stack is useful immediately after `docker compose up` with no manual clicking
+- Enable anonymous, no-login access for local Grafana (`GF_AUTH_ANONYMOUS_ENABLED=true`) — this is a throwaway local stack, not production
+- Run the OTLP pipeline on the default ports (collector `4318`, Jaeger UI `16686`, Prometheus `9090`, Grafana `3000`) so configs stay copy-pasteable between projects
+- Add a `verify` Playwright project with `dependencies: ["generate"]` that queries the Jaeger/Prometheus HTTP APIs to prove the pipeline works end-to-end — this catches "stack up but misconfigured" failures in CI
+
+### Don't
+
+- Don't run the observability stack in CI unless you archive dashboards or export data — containers disappear with the runner; for CI, point the same reporters at a central collector or use the HTML report
+- Don't duplicate per-package configuration details here — fixture APIs (`useSpan`, `useCounter`, `useCounterMetric`, `useGaugeMetric`) and reporter options are covered by their own rules; this rule is about the *infrastructure* they talk to
+- Don't hand-build Grafana dashboards through the UI — they vanish with the container volume; define them as JSON and provision them
+- Don't hardcode `sleep` delays after `docker compose up` — poll health endpoints (`/api/health`, `/-/ready`) instead
+- Don't expose these ports publicly or reuse the stack for application monitoring — it is ephemeral test infrastructure
+
+### Tool Usage Patterns
+
+- **Traces + metrics (full stack)**: `docker-compose.yml` with `otel/opentelemetry-collector-contrib` (OTLP/HTTP receiver on `4318`, Prometheus exporter on `8889`), `jaegertracing/all-in-one`, `prom/prometheus`, `grafana/grafana` — Playwright sends OTLP to the collector, which fans out to Jaeger and Prometheus
+- **Metrics only (light stack)**: `prom/prometheus` started with `--enable-feature=remote-write-receiver` plus `grafana/grafana` — `reporter-prometheus-remote-write` POSTs to `/api/v1/write` directly
+- **Reporter side**: `["@playwright-labs/reporter-otel", { host: "localhost", port: 4318, exportIntervalMillis: 5_000 }]` or `["@playwright-labs/reporter-prometheus-remote-write", { serverUrl: "http://localhost:9090/api/v1/write" }]`
+- **Fixture side**: `fixture-otel` / `fixture-prometheus` in test workers emit JSON to stdout; the reporter's `onStdOut` bridges it into the OTel meter/tracer or Prometheus registry — no extra wiring needed
+- **Configuration**: `globalSetup` / `globalTeardown` in `playwright.config.ts` own the container lifecycle
+- **Helper utilities**: a `waitForUrl(url, timeoutMs)` polling helper in `global-setup.ts` (see `examples/otel-stack/global-setup.ts`)
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Requires Docker with the Compose plugin on every machine that runs the suite — a hard prerequisite, not an optional convenience
+- The OTel Collector image is distroless: no shell or `wget`, so Docker-level `healthcheck` blocks don't work — readiness must be polled from `global-setup.ts` via the collector's HTTP health port (`13133`)
+- Metrics are scraped/pushed on an interval — very short runs may end before the first scrape; use a short `exportIntervalMillis` and verify with a `verify` project rather than assuming data arrived
+- Prometheus is ephemeral unless you add a volume — container restart wipes metric history (usually fine for local debugging)
+
+### Edge Cases
+
+1. **Port collisions**: `3000`, `9090`, or `16686` already in use by another local service. Handling: remap host ports in `docker-compose.yml` and update reporter options and health-check URLs together.
+2. **Stack left running**: `globalTeardown` skips teardown so engineers can explore UIs; the next run's `docker compose up -d` reuses it — safe, but document `infra:down` script for cleanup.
+3. **CI runners without Docker**: `docker compose up` fails inside `globalSetup`, failing the whole run before any test executes. Handling: gate the stack behind an env flag and fall back to a stdout/html reporter when unset.
+4. **Traces arrive but metrics don't** (or vice versa): the collector pipelines are independent — check `otel-collector-config.yaml` for both exporters, and confirm Prometheus actually scrapes the collector's `8889` endpoint.
+
+### What Breaks If Ignored
+
+- **Without health polling**: the first tests' spans and metrics are silently dropped while containers are still booting — Jaeger shows a partial trace list and Prometheus shows gaps
+- **Without provisioning as code**: every engineer rebuilds datasources and dashboards by hand; dashboards drift between machines and are lost on `docker compose down -v`
+- **Without the stack entirely**: reporter/fixture instrumentation has nowhere to go — you get the HTML report only, and slow-test or flaky-test investigations revert to guesswork and `console.log`
+
+**Incorrect (no readiness checks, manual dashboards, no verification):**
+
+```typescript
+// global-setup.ts
+import { execSync } from "node:child_process";
+
+export default async function globalSetup() {
+  execSync("docker compose up -d", { stdio: "inherit" });
+  // ❌ Containers report "up" before they can accept data
+  await new Promise((r) => setTimeout(r, 10_000)); // ❌ blind sleep — too short on cold pulls, wasted time otherwise
+}
+```
+
+```typescript
+// playwright.config.ts
+export default defineConfig({
+  globalSetup: "./global-setup.ts",
+  reporter: [
+    ["@playwright-labs/reporter-otel", { host: "localhost", port: 4318 }],
+    // ❌ no verify project — a misconfigured collector fails silently;
+    //    you find out only when Jaeger is empty
+  ],
+});
+```
+
+**Why this fails:**
+- Early spans/metrics are dropped while the collector, Jaeger, and Prometheus are still starting
+- A 10s sleep is both flaky (cold image pulls take minutes) and wasteful (warm starts take 2s)
+- Nothing asserts the pipeline works, so "the stack is running" is confused with "data is flowing"
+- Grafana is a blank page until someone manually wires datasources
+
+**Correct (compose lifecycle in global setup/teardown with health polling):**
+
+```typescript
+// global-setup.ts — adapted from examples/otel-stack
+import { execSync } from "node:child_process";
+import path from "node:path";
+
+const EXAMPLE_DIR = path.resolve(import.meta.dirname);
+
+async function waitForUrl(url: string, timeoutMs = 60_000): Promise<void> {
+  const start = Date.now();
+  for (;;) {
+    try {
+      const r = await fetch(url);
+      if (r.ok || r.status < 500) return;
+    } catch { /* not ready yet */ }
+    if (Date.now() - start > timeoutMs) {
+      throw new Error(`Timed out waiting for ${url}`);
+    }
+    await new Promise((r) => setTimeout(r, 1_000));
+  }
+}
+
+export default async function globalSetup() {
+  // ✅ --wait blocks until healthchecks pass where available
+  execSync("docker compose up -d --wait", { cwd: EXAMPLE_DIR, stdio: "inherit" });
+
+  // ✅ Poll real health endpoints — works even for distroless images
+  await waitForUrl("http://localhost:13133/");            // OTel Collector
+  await waitForUrl("http://localhost:16686/");            // Jaeger UI
+  await waitForUrl("http://localhost:9090/-/ready");      // Prometheus
+  await waitForUrl("http://localhost:3000/api/health");   // Grafana
+}
+```
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  globalSetup: "./global-setup.ts",
+  globalTeardown: "./global-teardown.ts",
+  reporter: [
+    ["list"],
+    [
+      "@playwright-labs/reporter-otel",
+      {
+        host: "localhost",
+        port: 4318,
+        // ✅ Short interval so metrics are visible during/soon after the run
+        exportIntervalMillis: 5_000,
+      },
+    ],
+  ],
+  projects: [
+    { name: "generate", testMatch: "tests/sample.spec.ts" },
+    // ✅ Prove the pipeline end-to-end: query Jaeger + Prometheus HTTP APIs
+    { name: "verify", testMatch: "tests/verify.spec.ts", dependencies: ["generate"] },
+  ],
+});
+```
+
+**Why this works:**
+- `docker compose up -d --wait` plus per-service health polling guarantees backends accept data before the first test starts
+- Provisioned Grafana datasources (`grafana/provisioning/datasources/`) and dashboards (`grafana/dashboards/`) make the stack useful the moment it boots — no manual setup
+- The `verify` project turns observability itself into a tested contract: if the collector config breaks, CI fails loudly instead of silently losing data
+- The same `docker-compose.yml` works on every engineer's machine, so "works on my machine" debugging sessions share one source of truth
+
+## Common Mistakes
+
+### Mistake 1: Scraping the Playwright process directly with Prometheus
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: playwright
+    static_configs:
+      - targets: ["host.docker.internal:9464"] # ❌ no such endpoint exists
+```
+
+**Why this is wrong**: Neither `reporter-otel` nor `reporter-prometheus-remote-write` exposes a scrape endpoint on the Playwright process. Metrics reach Prometheus either through the OTel Collector's Prometheus exporter (`:8889`) or via remote write to `/api/v1/write` (which requires `--enable-feature=remote-write-receiver`).
+
+**How to fix**:
+
+```yaml
+# prometheus.yml — scrape the collector's exporter, not Playwright
+scrape_configs:
+  - job_name: otel-collector
+    static_configs:
+      - targets: ["otel-collector:8889"] # ✅ collector fans out OTLP metrics here
+```
+
+### Mistake 2: Tearing the stack down before anyone can look at it
+
+```typescript
+// global-teardown.ts
+export default async function globalTeardown() {
+  execSync("docker compose down -v", { stdio: "inherit" }); // ❌ always
+}
+```
+
+**Why this is wrong**: The main value of a local stack is post-run exploration. Unconditional teardown (especially with `-v`, which wipes Prometheus data) means Jaeger and Grafana are gone exactly when an engineer wants to inspect a failure.
+
+**How to fix**: Make teardown opt-out (e.g. skip when `KEEP_INFRA=1`) and provide explicit `infra:up` / `infra:down` package scripts, as the examples do:
+
+```json
+{
+  "scripts": {
+    "infra:up": "docker compose up -d --wait",
+    "infra:down": "docker compose down"
+  }
+}
+```
+
+## Integration with Other Best Practices
+
+- **reporter-otel / reporter-prometheus-remote-write rules**: Those rules cover reporter options and emitted metric names; this rule provides the infrastructure they export to. Configure the reporter per its rule, then stand up the matching stack from this one.
+- **fixture-otel / fixture-prometheus rules**: Custom spans, counters, and gauges created in tests flow through the same pipeline — worker stdout → reporter → collector/Prometheus. Instrument tests with the fixtures; the stack makes the data visible in Jaeger/Grafana.
+- **Global setup/teardown patterns**: The stack lifecycle is a standard Playwright `globalSetup`/`globalTeardown` concern — the same pattern used for seeding databases or starting test servers.
+- **Scale considerations**: At 500+ tests, keep `exportIntervalMillis` small enough to see progress live but avoid per-step custom metrics with unbounded label cardinality (test titles as labels) — Prometheus memory grows with unique label sets.
+
+Reference: [examples/otel-stack and examples/grafana-stack](https://github.com/vitalics/playwright-labs/tree/main/examples)
+
+---
+
+### 8.8. Test Internationalization with Locale Projects, test.use, and Locale-Agnostic Locators
+
+**Tags:** i18n, localization, locale, timezone, projects, test.use, getByRole, testid, intl, l10n  
+**Impact:** LOW (catches locale-specific rendering bugs and prevents tests from breaking on translated text)
+
+**Impact: LOW (catches locale-specific rendering bugs and prevents tests from breaking on translated text)**
+
+Apps served in multiple languages fail in locale-specific ways: truncated German button labels, RTL layout breakage, wrong decimal separators (`1.234,56` vs `1,234.56`), or localized routes like `/fr/produits`. Playwright emulates locale and timezone per project or per test via the `locale` and `timezoneId` options — no third-party tooling required. The strategy: run the same suite across locale projects, navigate to localized routes explicitly, and never depend on translated visible text in locators — use roles, labels, and `data-testid` attributes that stay stable across translations.
+
+## When to Use
+
+- **Use locale projects when**: Your app ships in 2+ languages and you want the full suite (or a smoke subset) running per locale in CI
+- **Use `test.use({ locale })` when**: Only a handful of tests exercise locale-sensitive behavior (formatting, RTL, translations) — cheaper than duplicating the whole suite
+- **Use `timezoneId` when**: The app renders dates/times in the user's timezone (booking, calendars, schedulers) and you must verify both formatting and timezone correctness
+- **Consider alternatives when**: You only need to verify that the right language files load — a single API-level check of the translation bundle may be enough without browser tests per locale
+- **Required for**: E-commerce, SaaS, and content platforms with localized routes, pricing, or legal content per region
+
+## Guidelines
+
+### Do
+
+- Define one Playwright **project per locale** in `playwright.config.ts` with `use: { locale, timezoneId, baseURL }` so the same specs run against each language
+- Use **role-based locators and `getByTestId()`** for anything with translated text — `getByRole('button', { name: 'Submit' })` breaks in French (`Envoyer`); `getByTestId('submit-order')` does not
+- Navigate to **localized routes explicitly** (`/fr/checkout`, `/de/kasse`) and assert the URL, not the page language attribute alone
+- Assert number/date/currency output against **`Intl.NumberFormat` / `Intl.DateTimeFormat`** computed with the same locale — never hardcode `'1,234.56'`
+- Test **both LTR and RTL** locales (e.g., `ar-EG`, `he-IL`) if your app supports them — layout bugs only appear in RTL
+- Run a **smoke subset** (`grep` tag like `@i18n`) across all locales in CI instead of the full suite to keep pipeline time bounded
+
+### Don't
+
+- Don't use `getByText('Add to cart')` or `getByRole('button', { name: 'Add to cart' })` in tests that run across locales — visible text changes with every translation update
+- Don't hardcode formatted values like `'$1,234.56'` or `'12/31/2026'` — separators, digit grouping, and date order differ per locale
+- Don't set locale by clicking the app's language switcher inside every test — it's slow and tests the switcher, not your page; set `locale` in config instead
+- Don't assume `locale` changes your app's content — Playwright's `locale` option only sets `Accept-Language` headers and `Intl` behavior in the browser; your app must actually respond to it
+- Don't run every test in every locale by default — execution time multiplies by the number of locales
+
+### Tool Usage Patterns
+
+- **Locale emulation**: `use: { locale: 'fr-FR' }` in config or `test.use({ locale: 'fr-FR' })` in a spec — sets `Accept-Language` and JS `Intl` defaults
+- **Timezone emulation**: `use: { timezoneId: 'Europe/Paris' }` — controls `Date` and `Intl.DateTimeFormat` output
+- **Per-locale projects**: `projects: [{ name: 'fr', use: { locale: 'fr-FR', baseURL: 'https://example.com/fr' } }]`
+- **Locale-agnostic locators**: `getByTestId()`, `getByRole()` without `name`, `getByLabel()` only if labels are not translated (rare — prefer testids)
+- **Formatting assertions**: Node's built-in `Intl.NumberFormat(locale, { style: 'currency', currency })` and `Intl.DateTimeFormat(locale, options)` to compute expected strings
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- The `locale` option does not translate your app — it only changes browser-level signals (`Accept-Language`, `navigator.language`, `Intl` defaults). If locale selection is cookie/account-based, you must set that state instead (or in addition)
+- `timezoneId` accepts only IANA names (`'America/New_York'`, not `'EST'`)
+- Multiplying the full suite by N locales multiplies CI time by N — budget for it or scope to a smoke subset
+- Fonts for CJK/Arabic scripts must exist on CI runners or text rendering assertions (screenshots) will differ from local runs
+
+### Edge Cases
+
+1. **Route-based vs. header-based localization**: If the app picks language from the URL (`/fr/...`), set `baseURL` per project. If it uses `Accept-Language`, `locale` alone is enough. If it uses cookies/localStorage, seed them in a `storageState` or fixture — `locale` won't do it.
+2. **RTL locales**: `ar-*` and `he-*` flip layout direction. Assert on testids, not coordinates or pixel positions, and include at least one RTL project if supported.
+3. **Pseudo-localization**: Some teams test with a pseudo-locale (`en-XA`) that pads strings to catch truncation before real translations exist — treat it as just another project.
+4. **Ambiguous date formats**: `01/02/2026` means Jan 2 in `en-US` but Feb 1 in `en-GB`. Always derive expectations via `Intl.DateTimeFormat` with the project's locale instead of picking one convention.
+
+### What Breaks If Ignored
+
+- **Hardcoded translated text in locators**: Every translation update breaks N tests at once; adding a new locale requires rewriting locators instead of adding a project
+- **Hardcoded formatted values**: Tests pass in `en-US` CI and fail for `de-DE` (`1.234,56 €`), producing false failures that mask real i18n bugs
+- **No per-locale runs**: Locale-only regressions (truncated labels, broken plural rules, untranslated keys shown as `checkout.title`) ship to production unnoticed
+
+**Incorrect (hardcoded English text and formatted values in a test meant to run per-locale):**
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+// ❌ This spec silently runs only in the runner's default locale
+test('checkout shows total', async ({ page }) => {
+  await page.goto('/checkout');
+
+  // ❌ Breaks in every non-English locale: 'Envoyer la commande', 'Bestellung absenden', ...
+  await page.getByRole('button', { name: 'Place order' }).click();
+
+  // ❌ Breaks for de-DE ('1.234,56 €') and fr-FR ('1 234,56 €')
+  await expect(page.getByText('$1,234.56')).toBeVisible();
+
+  // ❌ Ambiguous format — fails or misreads in en-GB ('31/12/2026')
+  await expect(page.getByText('Delivery by 12/31/2026')).toBeVisible();
+});
+```
+
+**Why this fails:**
+- Locators keyed to English visible text make the test impossible to reuse across locales
+- Hardcoded currency/date strings only match one locale's `Intl` formatting
+- Nothing actually sets a locale — the test doesn't verify i18n at all
+
+**Correct (locale projects + testids + Intl-derived expectations):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+  projects: [
+    {
+      name: 'en-US',
+      use: {
+        locale: 'en-US',
+        timezoneId: 'America/New_York',
+        baseURL: 'https://example.com/en',
+      },
+    },
+    {
+      name: 'de-DE',
+      use: {
+        locale: 'de-DE',
+        timezoneId: 'Europe/Berlin',
+        baseURL: 'https://example.com/de',
+      },
+    },
+    {
+      name: 'ar-EG',
+      use: {
+        locale: 'ar-EG',
+        timezoneId: 'Africa/Cairo',
+        baseURL: 'https://example.com/ar',
+      },
+    },
+  ],
+});
+```
+
+```typescript
+// tests/checkout.spec.ts — same spec runs in every locale project
+import { test, expect } from '@playwright/test';
+
+test('checkout shows localized total', async ({ page }, testInfo) => {
+  await page.goto('/checkout');
+
+  // ✅ testid is identical in every translation
+  await page.getByTestId('place-order').click();
+
+  // ✅ Compute the expected string with the project's own locale
+  const locale = testInfo.project.use.locale ?? 'en-US';
+  const expected = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(1234.56);
+
+  await expect(page.getByTestId('order-total')).toHaveText(expected);
+});
+```
+
+**Why this works:**
+- One spec, N locales: adding a language is a 6-line project entry, not a rewritten suite
+- `getByTestId` and URL assertions never break when translations change
+- Expected currency/date strings come from the same `Intl` engine the browser uses, so they match in every locale
+
+## Common Mistakes
+
+### Mistake 1: Switching language via the UI in every test
+
+```typescript
+// ❌ Slow, tests the language switcher instead of your page
+test('german checkout', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('language-switcher').click();
+  await page.getByText('Deutsch').click();
+  await page.goto('/checkout');
+});
+```
+
+**Why this is wrong**: Adds UI round-trips per test, couples every test to the switcher's markup, and doesn't set `Accept-Language` — server-rendered content may still come back in English.
+
+**How to fix**:
+
+```typescript
+// ✅ Emulate locale at the browser level; navigate straight to the page under test
+test.use({ locale: 'de-DE' });
+
+test('german checkout', async ({ page }) => {
+  await page.goto('/de/checkout');
+});
+```
+
+### Mistake 2: Asserting untranslated keys count as "localized"
+
+```typescript
+// ❌ Passes even if the whole page shows raw i18n keys
+test('page is localized', async ({ page }) => {
+  await page.goto('/fr');
+  await expect(page).toHaveURL(/\/fr/);
+});
+```
+
+**Why this is wrong**: The URL says nothing about content — missing translation keys render as `checkout.title` or fallback English.
+
+**How to fix**:
+
+```typescript
+// ✅ Assert a stable element exists AND contains no untranslated key pattern
+test('page is localized', async ({ page }) => {
+  await page.goto('/fr');
+  const main = page.getByRole('main');
+  await expect(main).toBeVisible();
+  await expect(main).not.toContainText(/\b[a-z]+\.[a-z.]+(\.\w+)+\b/); // e.g. "checkout.title"
+});
+```
+
+### Mistake 3: Duplicating specs per locale
+
+```typescript
+// ❌ checkout.en.spec.ts, checkout.de.spec.ts, checkout.fr.spec.ts — drift guaranteed
+test('french total', async ({ page }) => { /* copy of english test with french strings */ });
+```
+
+**Why this is wrong**: N copies of the same logic diverge with every change; adding a locale means copy-pasting a whole file.
+
+**How to fix**: Use locale **projects** (config example above) so one spec file runs in every locale. For the rare truly locale-specific assertion, gate it on `testInfo.project.name` or put it in a `test.describe` with its own `test.use`.
+
+## Advanced Patterns
+
+Parametrize a smoke subset across locales without touching the main suite by combining projects with `grep`:
+
+```typescript
+// playwright.config.ts — run only @i18n-tagged tests in every locale
+export default defineConfig({
+  projects: [
+    { name: 'en-US', grep: /@i18n/, use: { locale: 'en-US', timezoneId: 'America/New_York' } },
+    { name: 'fr-FR', grep: /@i18n/, use: { locale: 'fr-FR', timezoneId: 'Europe/Paris' } },
+    { name: 'ja-JP', grep: /@i18n/, use: { locale: 'ja-JP', timezoneId: 'Asia/Tokyo' } },
+    { name: 'regression', use: { locale: 'en-US' } }, // full suite, default locale
+  ],
+});
+```
+
+```typescript
+// tests/i18n.spec.ts
+import { test, expect } from '@playwright/test';
+
+test('dates render in the project timezone @i18n', async ({ page }, testInfo) => {
+  await page.goto('/orders');
+
+  const locale = testInfo.project.use.locale ?? 'en-US';
+  const timeZone = testInfo.project.use.timezoneId ?? 'UTC';
+  const expected = new Intl.DateTimeFormat(locale, {
+    dateStyle: 'medium',
+    timeZone,
+  }).format(new Date('2026-08-28T12:00:00Z'));
+
+  await expect(page.getByTestId('order-date').first()).toHaveText(expected);
+});
+```
+
+**When to use this pattern**: Large suites where the full run per locale is too expensive — tag the ~10% of tests that touch formatting, routing, or translated content and run only those across locales.
+
+## Integration with Other Best Practices
+
+- **Role-based locators (3.1)**: Role/testid locators are a prerequisite — text-based locators cannot survive localization
+- **Page Object Model (2.1)**: Centralize testids in page objects so a locale project never touches locator internals
+- **Sharding (5.2)**: Locale projects multiply test count — shard per-locale projects across CI machines to keep wall time flat
+- **test.step (7.1)**: Wrap locale-specific assertions in `test.step(locale)` so failures clearly identify the failing language
+
+Reference: [Playwright Locale and Timezone Emulation](https://playwright.dev/docs/emulation#locale--timezone)
+
+---
+
+### 8.9. Type-Safe SQL in Tests with fixture-sql and ts-plugin-sql
 
 **Tags:** sql, sqlite, postgres, mysql, type-safety, fixtures, ts-plugin  
 **Impact:** LOW-MEDIUM (catches SQL mistakes at compile time and eliminates leaked connections in database-backed tests)
@@ -8215,7 +9867,208 @@ Reference: [@playwright-labs/sql-core](https://github.com/vitalics/playwright-la
 
 ---
 
-### 8.8. Use API Mocking for Reliable and Fast Tests
+### 8.10. Upload Test Results and Artifacts to S3 with reporter-s3
+
+**Tags:** s3, reporter, artifacts, screenshots, traces, minio, cloudflare-r2, ci, attachments  
+**Impact:** LOW (preserves screenshots, videos, and traces beyond CI artifact retention without AWS SDK)
+
+**Impact: LOW (preserves screenshots, videos, and traces beyond CI artifact retention without AWS SDK)**
+
+CI artifact storage is ephemeral and tied to the CI provider — logs expire, links break, and sharing a failing trace with a colleague requires CI access. The `@playwright-labs/reporter-s3` package uploads test attachments (screenshots, videos, traces) and a machine-readable `summary.json` to any S3-compatible storage (AWS S3, MinIO, Cloudflare R2) at the end of the run. It has zero AWS SDK dependency — signing is done via `@playwright-labs/s3-core` (SigV4 over `fetch`), keeping install size and cold-start time small.
+
+## When to Use
+
+- **Use this reporter when**: You need durable, shareable artifact storage independent of the CI provider, or you run tests against self-hosted infrastructure (MinIO) with no CI artifact support
+- **Use bucket routing when**: Different artifact types have different retention/access needs — e.g. videos in a short-retention bucket, screenshots in a long-retention one
+- **Use `fixture-s3` together when**: Tests need to upload arbitrary data (HAR files, custom exports) from inside the test via `useBucket()` — the reporter recognises the `s3:<bucket>:<name>` attachment marker and routes it automatically
+- **Consider alternatives when**: Your CI artifacts (GitHub Actions, GitLab) already cover retention needs and team access — S3 adds an infrastructure dependency that must be maintained
+
+## Guidelines
+
+### Do
+
+- Read credentials from environment variables (`AWS_S3_URL`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) or CI secrets — never hardcode keys in `playwright.config.ts`
+- Keep the default `prefix` (`runs/<ISO start timestamp>`) or set an explicit prefix per pipeline so runs never overwrite each other
+- Keep `createBucket: true` (default) for local MinIO setups; disable it in production where buckets are provisioned by infrastructure
+- Keep `forcePathStyle: true` (default) for MinIO and other S3-compatible services; AWS S3 works with either style
+- Use `attachmentBucket` resolver to route large artifacts (videos) separately from small ones (screenshots)
+- Keep `uploadSummary: true` (default) — `summary.json` is the index that links run status, per-test outcomes, and uploaded attachment keys
+
+### Don't
+
+- Don't commit access keys or secrets to the repository — use env vars and CI secret storage
+- Don't disable `uploadAttachments` on failure-focused debugging workflows — traces and videos are the primary debugging payload
+- Don't point multiple parallel runs at the same fixed `prefix` — objects will collide and overwrite each other
+- Don't assume uploads are per-test — uploads happen once in `onEnd`, so killing the runner process loses everything
+
+### Tool Usage Patterns
+
+- **Install**: `npm install --save-dev @playwright-labs/reporter-s3`
+- **Reporter entry**: `["@playwright-labs/reporter-s3", { bucket, endpoint, ... }]` alongside your usual reporters (`list`, `html`)
+- **Object layout**: `<prefix>/summary.json` and `<prefix>/attachments/<testId>/<retry>-<index>-<name>`
+- **Env fallbacks**: `endpoint` ← `AWS_S3_URL`, `region` ← `AWS_REGION` (default `us-east-1`), `accessKeyId` ← `AWS_ACCESS_KEY_ID`, `secretAccessKey` ← `AWS_SECRET_ACCESS_KEY`
+- **Toggles**: `uploadSummary` and `uploadAttachments` (both default `true`), `acl` for canned ACLs like `private` or `public-read`
+
+## Edge Cases and Constraints
+
+### Limitations
+
+- Uploads happen once in `onEnd` — a crashed or force-killed runner (`SIGKILL`, CI timeout) never uploads anything
+- Very large attachments (full-size videos, traces) are uploaded sequentially at run end, adding wall-clock time to the pipeline
+- MinIO and other non-AWS services require path-style URLs — the default `forcePathStyle: true` covers this; only change it if your provider mandates virtual-hosted style
+- `summary.json` references attachments by `bucket` + `key` — consumers must have read access to the same buckets
+
+### Edge Cases
+
+1. **Parallel sharded runs**: Each shard uploads under its own timestamped prefix. Merge summaries downstream by listing objects under `runs/` for the run window.
+2. **Retries producing duplicate attachment names**: Keys include `<retry>-<index>-<name>`, so retry attempts never overwrite each other.
+3. **Mixed artifact retention**: Use the `attachmentBucket` resolver — videos to a lifecycle-expiring bucket, screenshots and traces to the default bucket. Return `undefined` from the resolver to fall back to the default `bucket`.
+4. **Missing bucket in production**: `createBucket: true` will silently create a misnamed bucket instead of failing. Set `createBucket: false` in production to surface typos as errors.
+
+### What Breaks If Ignored
+
+- **Hardcoded credentials**: Keys leak into git history and any fork/PR build can exfiltrate them
+- **Fixed shared prefix**: Concurrent pipelines overwrite each other's `summary.json`, making run history unusable
+- **CI timeout before `onEnd`**: The run's artifacts are lost entirely — budget pipeline time for the upload phase
+- **Wrong URL style**: MinIO returns signature/404 errors if path style is disabled
+
+**Incorrect (hardcoded credentials, shared prefix, local-only artifacts):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  reporter: [
+    ["html"],
+    [
+      "@playwright-labs/reporter-s3",
+      {
+        // ❌ Credentials committed to source control
+        endpoint: "https://s3.company.com",
+        accessKeyId: "AKIAIOSFODNN7EXAMPLE",
+        secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+        bucket: "artifacts",
+        // ❌ Fixed prefix — every run overwrites the previous one
+        prefix: "latest",
+      },
+    ],
+  ],
+});
+```
+
+**Why this fails:**
+- Secrets in git history are a security incident requiring key rotation
+- `prefix: "latest"` means parallel pipelines and reruns clobber each other's objects
+- No environment separation — local runs upload to the production bucket
+
+**Correct (env-driven credentials, default timestamped prefix, failure-ready config):**
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  // ✅ Capture everything needed for debugging failures
+  use: {
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
+    trace: "retain-on-failure",
+  },
+  reporter: [
+    ["list"],
+    ["html"],
+    [
+      "@playwright-labs/reporter-s3",
+      {
+        // ✅ All credentials from CI secrets / env
+        endpoint: process.env.AWS_S3_URL,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        bucket: "pw-artifacts",
+        // ✅ Default prefix (runs/<ISO timestamp>) keeps runs isolated
+        // ✅ Route large videos to a short-retention bucket
+        attachmentBucket: ({ contentType }) =>
+          contentType.startsWith("video/")
+            ? "pw-videos-ephemeral"
+            : undefined, // screenshots, traces → default bucket
+        // ✅ Fail loudly on bucket typos in production
+        createBucket: process.env.CI ? false : true,
+      },
+    ],
+  ],
+});
+```
+
+**Why this works:**
+- Credentials never touch source code; rotation happens in CI secret storage
+- Timestamped default prefix means every run (including shards and reruns) gets its own key space
+- Videos — the largest artifacts — land in a bucket with lifecycle expiry, controlling storage cost
+- `createBucket: false` in CI turns misconfiguration into an immediate, visible error
+
+## Common Mistakes
+
+### Mistake 1: Uploading on local development runs
+
+```typescript
+// ❌ Bad: every local `npx playwright test` uploads to shared storage
+export default defineConfig({
+  reporter: [
+    ["@playwright-labs/reporter-s3", { bucket: "pw-artifacts" }],
+  ],
+});
+```
+
+**Why this is wrong**: Local runs pollute the bucket with hundreds of throwaway objects and require credentials on every developer machine.
+
+**How to fix**:
+
+```typescript
+// ✅ Good: enable S3 upload only in CI
+const reporters: ReporterDescription[] = [["list"], ["html"]];
+if (process.env.CI) {
+  reporters.push([
+    "@playwright-labs/reporter-s3",
+    { bucket: "pw-artifacts" },
+  ]);
+}
+export default defineConfig({ reporter: reporters });
+```
+
+### Mistake 2: Assuming failed runs always upload
+
+```typescript
+// ❌ Bad: global timeout kills the process before onEnd completes
+export default defineConfig({
+  globalTimeout: 10 * 60 * 1000, // exactly the CI job limit
+  reporter: [["@playwright-labs/reporter-s3", { bucket: "pw-artifacts" }]],
+});
+```
+
+**Why this is wrong**: Uploads happen in `onEnd`; if the runner is terminated by a timeout or `kill`, attachments and summary are lost — exactly when you need them most (a hung run).
+
+**How to fix**: Leave headroom between `globalTimeout` and the CI job timeout, and keep artifact capture (`trace: "retain-on-failure"`) so the upload phase has content worth the extra seconds.
+
+### Mistake 3: Disabling path style against MinIO
+
+```typescript
+// ❌ Bad: virtual-hosted style against a local MinIO
+{
+  endpoint: "http://localhost:9000",
+  bucket: "pw-artifacts",
+  forcePathStyle: false, // requests hit pw-artifacts.localhost:9000 → DNS failure
+}
+```
+
+**Why this is wrong**: Non-AWS endpoints cannot resolve virtual-hosted bucket subdomains.
+
+**How to fix**: Keep the default `forcePathStyle: true` for MinIO/R2; only disable it for providers that require virtual-hosted URLs.
+
+Reference: [@playwright-labs/reporter-s3](https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-s3)
+
+---
+
+### 8.11. Use API Mocking for Reliable and Fast Tests
 
 **Tags:** api, mocking, performance, reliability, advanced  
 **Impact:** LOW (Improves test reliability and reduces execution time by 40-60% for API-dependent tests)
@@ -8827,7 +10680,7 @@ Reference: [Playwright Network Mocking](https://playwright.dev/docs/network)
 
 ---
 
-### 8.9. Validate API Response JSON Schemas with toMatchSchema Custom Matcher
+### 8.12. Validate API Response JSON Schemas with toMatchSchema Custom Matcher
 
 **Tags:** schema, validation, api-testing, json-schema, ajv-ts, toMatchSchema, fixtures  
 **Impact:** MEDIUM (catches contract regressions instantly without writing per-field assertions)
@@ -9028,8 +10881,18 @@ Reference: [@playwright-labs/fixture-ajv-ts](https://github.com/vitalics/playwri
 - https://github.com/vitalics/playwright-labs/tree/main/packages/sql-core
 - https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-sql
 - https://github.com/vitalics/playwright-labs/tree/main/packages/ts-plugin-sql
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-a11y
+- https://github.com/vitalics/playwright-labs/tree/main/packages/barcode-core
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-barcode
+- https://github.com/vitalics/playwright-labs/tree/main/packages/qrcode-core
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-qrcode
+- https://github.com/vitalics/playwright-labs/tree/main/packages/s3-core
+- https://github.com/vitalics/playwright-labs/tree/main/packages/fixture-s3
+- https://github.com/vitalics/playwright-labs/tree/main/packages/reporter-s3
+- https://github.com/vitalics/playwright-labs/tree/main/examples/otel-stack
+- https://github.com/vitalics/playwright-labs/tree/main/examples/grafana-stack
 
 ---
 
 *This document was automatically generated from individual rule files.*  
-*Last updated: 2026-07-21*
+*Last updated: 2026-08-28*
