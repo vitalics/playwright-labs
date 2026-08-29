@@ -748,6 +748,9 @@ importers:
 
   packages/selectors-angular:
     dependencies:
+      '@playwright-labs/locators-extra':
+        specifier: workspace:*
+        version: link:../locators-extra
       '@playwright-labs/selectors-core':
         specifier: workspace:*
         version: link:../selectors-core
@@ -777,6 +780,9 @@ importers:
 
   packages/selectors-vue:
     dependencies:
+      '@playwright-labs/locators-extra':
+        specifier: workspace:*
+        version: link:../locators-extra
       '@playwright-labs/selectors-core':
         specifier: workspace:*
         version: link:../selectors-core
