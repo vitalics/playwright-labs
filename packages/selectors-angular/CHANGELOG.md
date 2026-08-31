@@ -1,5 +1,20 @@
 # @playwright-labs/selectors-angular
 
+## 1.2.0
+
+### Minor Changes
+
+- 59d65cf: `AngularRealizer` — realize any locator into an `angular=<host-tag-name>` selector via `@playwright-labs/locators-extra`.
+
+  Importing the package registers the `"angular"` realizer (side effect) and augments `KnownSelectorKinds`, so `selectorRealization(locator, "angular")` gets autocomplete and works out of the box. The realized selector identifies the component type (its host element tag), not the instance — narrow with props or `.nth()`.
+
+  Also fixes `AngularEngine` selector queries throwing `ReferenceError: parseAttributeSelector is not defined` in the browser: the attribute-selector helpers are now inlined into the engine factory (Playwright serializes the factory via `.toString()`, so Node.js closure imports are unavailable in the page — same approach as the react/vue engines).
+
+### Patch Changes
+
+- Updated dependencies [5b2e8a6]
+  - @playwright-labs/locators-extra@1.0.0
+
 ## 1.1.1
 
 ### Patch Changes
