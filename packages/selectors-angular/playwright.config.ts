@@ -19,7 +19,7 @@ export default defineConfig({
 
   webServer: process.env.CI ? undefined : {
     command:
-      "pnpm --filter selectors-angular-example run dev",
+      "pnpm --dir ../../examples/selectors-angular run dev",
     url: "http://localhost:4200",
     reuseExistingServer: true,
     timeout: 120_000,
