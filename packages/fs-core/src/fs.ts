@@ -1,3 +1,4 @@
+import { FSImplementation } from "node:fs";
 import type { Readable } from "node:stream";
 
 /**
@@ -6,11 +7,7 @@ import type { Readable } from "node:stream";
  * anyway (the virtual FS literally; the real FS for a single `write` call).
  */
 export type FileContent =
-  | string
-  | Buffer
-  | Uint8Array
-  | Readable
-  | ReadableStream<Uint8Array>;
+  string | Buffer | Uint8Array | Readable | ReadableStream<Uint8Array>;
 
 /** Options for {@link FileSystem.write}. */
 export type WriteOptions = {
@@ -30,15 +27,51 @@ export type FileStat = {
   isDirectory: boolean;
 };
 
+class FSWalker {
+  filter(
+    root: string | Path | Directory | FileSystem,
+    filter: (element: File | Directory) => boolean,
+  ) {}
+  firstChild() {}
+  lastChild() {}
+  nextNode() {}
+  prevNode() {}
+  nextSibling() {}
+}
+
+export const WALKER = {
+  SHOW_ALL: (_elem: File | Directory) => true,
+  SHOW_ALL_DIRECTORIES: (elem: File | Directory) => elem instanceof Directory,
+  SHOW_ALL_FILES: (elem: File | Directory) => elem instanceof File,
+  SHOW_ALL_FILES_CTIME_BETWEEN: () => (elem: File | Directory) => elem instanceof File && elem.,
+  SHOW_ALL_FILES_MTIME_BETWEEN: () => (elem: File | Directory) => ,
+};
+
+
+export class Path {}
+
 /** A file entry returned by {@link FileSystem.entries}. */
 export class File {
   readonly isDirectory = false as const;
-  constructor(
-    /** Entry name (not a full path). */
-    readonly name: string,
-    /** Content size in bytes. */
-    readonly size: number,
-  ) {}
+  #parent: Directory | FileSystem | null = null;
+  #content: Buffer = Buffer.alloc(0);
+  constructor() {}
+
+  get parent(): Directory | FileSystem {}
+
+  /** Create at time: */
+  get ctime(): bigint { }
+
+  /** Modification date */
+  get mtime(): bigint { }
+
+
+  get name(): string {
+    return this.name;
+  }
+  get size(): number {
+    return this.#content.length;
+  }
 }
 
 /**
