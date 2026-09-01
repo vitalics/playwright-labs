@@ -4,6 +4,7 @@ import {
   type FileContent,
   type FileStat,
   type FileSystem,
+  type FsEntry,
   type WriteOptions,
 } from "./fs.js";
 
@@ -131,6 +132,28 @@ export class VirtualFileSystem implements FileSystem {
       if (rest && rest.length > 0) names.add(rest.split("/")[0]);
     }
     return [...names].sort();
+  }
+
+  async entries(path: string = "."): Promise<FsEntry[]> {
+    const absolute = this.#resolve(path);
+    const names = await this.list(path); // also throws ENOENT/ENOTDIR
+    return names.map((name) => {
+      const child = absolute === "/" ? `/${name}` : `${absolute}/${name}`;
+      if (this.#files.has(child)) {
+        return { name, isDirectory: false, size: this.#files.get(child)!.content.length };
+      }
+      return { name, isDirectory: true, size: this.#dirSize(child) };
+    });
+  }
+
+  /** Recursive total size of every file inside a directory, in bytes. */
+  #dirSize(absolute: string): number {
+    const prefix = absolute + "/";
+    let total = 0;
+    for (const [key, entry] of this.#files) {
+      if (key.startsWith(prefix)) total += entry.content.length;
+    }
+    return total;
   }
 
   /** Tracks explicitly created (possibly empty) directories. */

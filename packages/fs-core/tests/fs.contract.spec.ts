@@ -142,6 +142,28 @@ for (const [name, create] of backends) {
       expect((error as NodeJS.ErrnoException).code).toBe("ENOENT");
     });
 
+    test("entries returns File and Directory entries with size", async () => {
+      await fsx.write("e/one.txt", "1234"); // 4 bytes
+      await fsx.write("e/sub/three.txt", "abc"); // 3 bytes
+      await fsx.write("e/sub/deep/four.txt", "xy"); // 2 bytes
+      await fsx.mkdir("e/empty");
+
+      const entries = await fsx.entries("e");
+      const byName = new Map(entries.map((entry) => [entry.name, entry]));
+
+      expect([...byName.keys()].sort()).toEqual(["empty", "one.txt", "sub"]);
+      expect(byName.get("one.txt")).toMatchObject({ isDirectory: false, size: 4 });
+      // directory size is the recursive total of the files inside
+      expect(byName.get("sub")).toMatchObject({ isDirectory: true, size: 5 });
+      expect(byName.get("empty")).toMatchObject({ isDirectory: true, size: 0 });
+    });
+
+    test("entries throws for a missing directory and a file path", async () => {
+      await fsx.write("file.txt", "x");
+      await expect(fsx.entries("missing")).rejects.toThrow();
+      await expect(fsx.entries("file.txt")).rejects.toThrow();
+    });
+
     test("escaping the root via '..' throws", async () => {
       await expect(fsx.write("../evil.txt", "x")).rejects.toThrow();
       await expect(fsx.read("a/../../evil.txt")).rejects.toThrow();

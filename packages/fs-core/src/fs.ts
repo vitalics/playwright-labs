@@ -30,6 +30,18 @@ export type FileStat = {
   isDirectory: boolean;
 };
 
+/** A directory entry with type and size, returned by {@link FileSystem.entries}. */
+export type FsEntry = {
+  /** Entry name (not a full path). */
+  name: string;
+  isDirectory: boolean;
+  /**
+   * Size in bytes. For a file — its content length; for a directory —
+   * the recursive total of every file inside (`0` for an empty directory).
+   */
+  size: number;
+};
+
 /**
  * Filesystem abstraction shared by {@link RealFileSystem} and
  * {@link VirtualFileSystem}.
@@ -74,6 +86,13 @@ export interface FileSystem {
    * @param path @default "."
    */
   list(path?: string): Promise<string[]>;
+  /**
+   * Entries of a directory with type and size — like {@link list}, but each
+   * {@link FsEntry} carries `isDirectory` and `size` (for a directory the
+   * size is the recursive total of the files inside).
+   * @param path @default "."
+   */
+  entries(path?: string): Promise<FsEntry[]>;
 }
 
 /** Collects a {@link FileContent} into a single Buffer. */

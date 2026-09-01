@@ -12,5 +12,6 @@ export {
   type FileSystem,
   type FileContent,
   type FileStat,
+  type FsEntry,
   type WriteOptions,
 } from "@playwright-labs/fs-core";

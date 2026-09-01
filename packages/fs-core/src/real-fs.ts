@@ -5,8 +5,22 @@ import {
   type FileContent,
   type FileStat,
   type FileSystem,
+  type FsEntry,
   type WriteOptions,
 } from "./fs.js";
+
+/** Recursive total size of every file inside a directory, in bytes. */
+async function dirSize(absolute: string): Promise<number> {
+  let total = 0;
+  const dirents = await fs.readdir(absolute, { withFileTypes: true });
+  for (const dirent of dirents) {
+    const child = nodePath.join(absolute, dirent.name);
+    total += dirent.isDirectory()
+      ? await dirSize(child)
+      : (await fs.stat(child)).size;
+  }
+  return total;
+}
 
 /**
  * {@link FileSystem} over `node:fs/promises`, rooted at a directory
@@ -81,6 +95,23 @@ export class RealFileSystem implements FileSystem {
 
   async list(path: string = "."): Promise<string[]> {
     return fs.readdir(this.#resolve(path));
+  }
+
+  async entries(path: string = "."): Promise<FsEntry[]> {
+    const absolute = this.#resolve(path);
+    const dirents = await fs.readdir(absolute, { withFileTypes: true });
+    return Promise.all(
+      dirents.map(async (dirent) => {
+        const isDirectory = dirent.isDirectory();
+        return {
+          name: dirent.name,
+          isDirectory,
+          size: isDirectory
+            ? await dirSize(nodePath.join(absolute, dirent.name))
+            : (await fs.stat(nodePath.join(absolute, dirent.name))).size,
+        };
+      }),
+    );
   }
 
   /** Resolves a POSIX-style path against {@link root}; throws on `..` escape. */

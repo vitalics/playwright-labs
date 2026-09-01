@@ -4,6 +4,7 @@ export {
   type FileContent,
   type FileStat,
   type FileSystem,
+  type FsEntry,
   type WriteOptions,
 } from "./fs.js";
 export { RealFileSystem } from "./real-fs.js";
