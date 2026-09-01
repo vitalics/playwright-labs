@@ -7,6 +7,8 @@ export {
 } from "./fixture";
 
 export {
+  Directory,
+  File,
   RealFileSystem,
   VirtualFileSystem,
   type FileSystem,

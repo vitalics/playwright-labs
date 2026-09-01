@@ -1,5 +1,7 @@
 export {
   collectContent,
+  Directory,
+  File,
   fsError,
   type FileContent,
   type FileStat,

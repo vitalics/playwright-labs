@@ -53,7 +53,7 @@ no-op); reading a missing file throws an `Error` with `code: "ENOENT"`.
 | `mkdir(path)` | Creates a directory recursively; existing dirs are fine |
 | `remove(path)` | Removes a file or directory recursively; missing paths are a no-op |
 | `list(path?)` | Entry names (not full paths) of a directory; `path` defaults to `"."` |
-| `entries(path?)` | `FsEntry[]` — `{ name, isDirectory, size }` per entry; a file's `size` is its byte length, a directory's `size` is the recursive total of the files inside |
+| `entries(path?)` | `(File \| Directory)[]` — entry classes with `name`/`size`; a directory's `size` is the recursive total of the files inside, and `Directory` supports `Symbol.iterator` over its children |
 
 ### Implementations
 

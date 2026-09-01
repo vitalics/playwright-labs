@@ -30,17 +30,56 @@ export type FileStat = {
   isDirectory: boolean;
 };
 
-/** A directory entry with type and size, returned by {@link FileSystem.entries}. */
-export type FsEntry = {
-  /** Entry name (not a full path). */
-  name: string;
-  isDirectory: boolean;
-  /**
-   * Size in bytes. For a file — its content length; for a directory —
-   * the recursive total of every file inside (`0` for an empty directory).
-   */
-  size: number;
-};
+/** A file entry returned by {@link FileSystem.entries}. */
+export class File {
+  readonly isDirectory = false as const;
+  constructor(
+    /** Entry name (not a full path). */
+    readonly name: string,
+    /** Content size in bytes. */
+    readonly size: number,
+  ) {}
+}
+
+/**
+ * A directory entry returned by {@link FileSystem.entries}.
+ *
+ * `size` is the recursive total of every file inside (`0` when empty).
+ * Supports `Symbol.iterator` — iterating yields the immediate children
+ * (files and subdirectories):
+ *
+ * ```ts
+ * for (const entry of dir) {
+ *   console.log(entry.name, entry.size);
+ * }
+ * ```
+ */
+export class Directory {
+  readonly isDirectory = true as const;
+  /** Immediate children (files and subdirectories). */
+  readonly children: readonly (File | Directory)[];
+  constructor(
+    /** Entry name (not a full path). */
+    readonly name: string,
+    children: readonly (File | Directory)[] = [],
+  ) {
+    this.children = children;
+  }
+
+  /** Recursive total size of every file inside, in bytes. */
+  get size(): number {
+    let total = 0;
+    for (const child of this.children) total += child.size;
+    return total;
+  }
+
+  *[Symbol.iterator](): IterableIterator<File | Directory> {
+    yield* this.children;
+  }
+}
+
+/** Union of directory entries — narrow via `isDirectory`. */
+export type FsEntry = File | Directory;
 
 /**
  * Filesystem abstraction shared by {@link RealFileSystem} and
@@ -87,9 +126,10 @@ export interface FileSystem {
    */
   list(path?: string): Promise<string[]>;
   /**
-   * Entries of a directory with type and size — like {@link list}, but each
-   * {@link FsEntry} carries `isDirectory` and `size` (for a directory the
-   * size is the recursive total of the files inside).
+   * Entries of a directory — like {@link list}, but each entry is a
+   * {@link File} or {@link Directory} instance carrying `size` (for a
+   * directory the size is the recursive total of the files inside, and the
+   * children are iterable via `Symbol.iterator`).
    * @param path @default "."
    */
   entries(path?: string): Promise<FsEntry[]>;

@@ -6,7 +6,7 @@ Initial release — filesystem abstraction with one `FileSystem` interface and t
 
 - `RealFileSystem(root?)` — real FS on `node:fs/promises`, rooted at `process.cwd()` by default; paths are POSIX-style, escaping the root via `..` throws, `write` creates parent directories
 - `VirtualFileSystem(root?)` — in-memory FS (`Map`-backed) with the same semantics: implicit directories, Node-style `ENOENT` errors, `mtimeMs` on write
-- Shared interface: `write`/`read`/`readText`/`append`/`exists`/`stat`/`mkdir`/`remove` (`rm -rf` semantics)/`list`/`entries` (`FsEntry` — `name`, `isDirectory`, `size`; directory size is the recursive total of the files inside)
+- Shared interface: `write`/`read`/`readText`/`append`/`exists`/`stat`/`mkdir`/`remove` (`rm -rf` semantics)/`list`/`entries` (`File`/`Directory` entry classes — `name`, `isDirectory`, `size`; directory size is the recursive total of the files inside, `Directory` is iterable over its children via `Symbol.iterator`)
 - `collectContent` — buffers `string`/`Buffer`/`Uint8Array`/`Readable`/`ReadableStream` into a `Buffer`
 
 Used by `@playwright-labs/fixture-fs`.

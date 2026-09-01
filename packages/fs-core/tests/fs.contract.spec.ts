@@ -4,6 +4,8 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import nodePath from "node:path";
 import {
+  Directory,
+  File,
   RealFileSystem,
   VirtualFileSystem,
   type FileSystem,
@@ -142,7 +144,7 @@ for (const [name, create] of backends) {
       expect((error as NodeJS.ErrnoException).code).toBe("ENOENT");
     });
 
-    test("entries returns File and Directory entries with size", async () => {
+    test("entries returns File and Directory instances with size", async () => {
       await fsx.write("e/one.txt", "1234"); // 4 bytes
       await fsx.write("e/sub/three.txt", "abc"); // 3 bytes
       await fsx.write("e/sub/deep/four.txt", "xy"); // 2 bytes
@@ -152,10 +154,27 @@ for (const [name, create] of backends) {
       const byName = new Map(entries.map((entry) => [entry.name, entry]));
 
       expect([...byName.keys()].sort()).toEqual(["empty", "one.txt", "sub"]);
-      expect(byName.get("one.txt")).toMatchObject({ isDirectory: false, size: 4 });
+
+      const file = byName.get("one.txt");
+      expect(file).toBeInstanceOf(File);
+      expect(file).toMatchObject({ isDirectory: false, size: 4 });
+
       // directory size is the recursive total of the files inside
-      expect(byName.get("sub")).toMatchObject({ isDirectory: true, size: 5 });
+      const dir = byName.get("sub");
+      expect(dir).toBeInstanceOf(Directory);
+      expect(dir).toMatchObject({ isDirectory: true, size: 5 });
+
       expect(byName.get("empty")).toMatchObject({ isDirectory: true, size: 0 });
+
+      // Directory supports Symbol.iterator over its immediate children
+      const children = [...(dir as Directory)];
+      expect(children.map((child) => child.name).sort()).toEqual([
+        "deep",
+        "three.txt",
+      ]);
+      for (const child of children) {
+        expect(child instanceof File || child instanceof Directory).toBe(true);
+      }
     });
 
     test("entries throws for a missing directory and a file path", async () => {

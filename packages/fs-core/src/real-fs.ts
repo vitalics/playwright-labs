@@ -2,6 +2,8 @@ import * as fs from "node:fs/promises";
 import nodePath from "node:path";
 import {
   collectContent,
+  Directory,
+  File,
   type FileContent,
   type FileStat,
   type FileSystem,
@@ -9,17 +11,18 @@ import {
   type WriteOptions,
 } from "./fs.js";
 
-/** Recursive total size of every file inside a directory, in bytes. */
-async function dirSize(absolute: string): Promise<number> {
-  let total = 0;
+/** Builds the entry tree of a directory: files with sizes, directories with children. */
+async function buildEntries(absolute: string): Promise<FsEntry[]> {
   const dirents = await fs.readdir(absolute, { withFileTypes: true });
-  for (const dirent of dirents) {
-    const child = nodePath.join(absolute, dirent.name);
-    total += dirent.isDirectory()
-      ? await dirSize(child)
-      : (await fs.stat(child)).size;
-  }
-  return total;
+  return Promise.all(
+    dirents.map(async (dirent) => {
+      const child = nodePath.join(absolute, dirent.name);
+      if (dirent.isDirectory()) {
+        return new Directory(dirent.name, await buildEntries(child));
+      }
+      return new File(dirent.name, (await fs.stat(child)).size);
+    }),
+  );
 }
 
 /**
@@ -98,20 +101,7 @@ export class RealFileSystem implements FileSystem {
   }
 
   async entries(path: string = "."): Promise<FsEntry[]> {
-    const absolute = this.#resolve(path);
-    const dirents = await fs.readdir(absolute, { withFileTypes: true });
-    return Promise.all(
-      dirents.map(async (dirent) => {
-        const isDirectory = dirent.isDirectory();
-        return {
-          name: dirent.name,
-          isDirectory,
-          size: isDirectory
-            ? await dirSize(nodePath.join(absolute, dirent.name))
-            : (await fs.stat(nodePath.join(absolute, dirent.name))).size,
-        };
-      }),
-    );
+    return buildEntries(this.#resolve(path));
   }
 
   /** Resolves a POSIX-style path against {@link root}; throws on `..` escape. */

@@ -1,5 +1,7 @@
 import {
   collectContent,
+  Directory,
+  File,
   fsError,
   type FileContent,
   type FileStat,
@@ -140,20 +142,31 @@ export class VirtualFileSystem implements FileSystem {
     return names.map((name) => {
       const child = absolute === "/" ? `/${name}` : `${absolute}/${name}`;
       if (this.#files.has(child)) {
-        return { name, isDirectory: false, size: this.#files.get(child)!.content.length };
+        return new File(name, this.#files.get(child)!.content.length);
       }
-      return { name, isDirectory: true, size: this.#dirSize(child) };
+      return new Directory(name, this.#childEntries(child));
     });
   }
 
-  /** Recursive total size of every file inside a directory, in bytes. */
-  #dirSize(absolute: string): number {
+  /** Builds the entry tree of a directory: files with sizes, directories with children. */
+  #childEntries(absolute: string): FsEntry[] {
     const prefix = absolute + "/";
-    let total = 0;
-    for (const [key, entry] of this.#files) {
-      if (key.startsWith(prefix)) total += entry.content.length;
+    const names = new Set<string>();
+    for (const key of this.#files.keys()) {
+      const rest = key.startsWith(prefix) ? key.slice(prefix.length) : null;
+      if (rest && rest.length > 0) names.add(rest.split("/")[0]);
     }
-    return total;
+    for (const dir of this.#dirs) {
+      const rest = dir.startsWith(prefix) ? dir.slice(prefix.length) : null;
+      if (rest && rest.length > 0) names.add(rest.split("/")[0]);
+    }
+    return [...names].sort().map((name) => {
+      const child = `${absolute}/${name}`;
+      if (this.#files.has(child)) {
+        return new File(name, this.#files.get(child)!.content.length);
+      }
+      return new Directory(name, this.#childEntries(child));
+    });
   }
 
   /** Tracks explicitly created (possibly empty) directories. */
