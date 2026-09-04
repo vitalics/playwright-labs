@@ -1,21 +1,30 @@
-import { FSImplementation } from "node:fs";
-import type { Readable } from "node:stream";
+import type { EventEmitter } from "node:events";
+import type { Readable, Writable } from "node:stream";
+import type { FileContent, WriteOptions } from "./content.js";
+import type { FsEntry } from "./entry.js";
+import type { FileSystemEvents } from "./events.js";
+import type { PathInput } from "./path.js";
 
-/**
- * Anything {@link FileSystem.write} can store. Streams are buffered in
- * memory before writing — both backends keep the whole payload in memory
- * anyway (the virtual FS literally; the real FS for a single `write` call).
- */
-export type FileContent =
-  string | Buffer | Uint8Array | Readable | ReadableStream<Uint8Array>;
-
-/** Options for {@link FileSystem.write}. */
-export type WriteOptions = {
-  /**
-   * Encoding used when `content` is a string.
-   * @default "utf8"
-   */
+/** Options for {@link FileSystem.createReadStream}. */
+export type ReadStreamOptions = {
+  /** Emit strings in this encoding instead of `Buffer` chunks. */
   encoding?: BufferEncoding;
+  /** First byte to read. @default 0 */
+  start?: number;
+  /** Last byte to read, inclusive — like `node:fs`. @default end of file */
+  end?: number;
+  highWaterMark?: number;
+};
+
+/** Options for {@link FileSystem.createWriteStream}. */
+export type WriteStreamOptions = {
+  /** Encoding used to decode string chunks. @default "utf8" */
+  encoding?: BufferEncoding;
+  /**
+   * `"w"` truncates, `"a"` appends.
+   * @default "w"
+   */
+  flags?: "w" | "a";
 };
 
 /** A minimal stat snapshot shared by both backends. */
@@ -24,104 +33,31 @@ export type FileStat = {
   size: number;
   /** Modification time, milliseconds since the Unix epoch. */
   mtimeMs: number;
+  /**
+   * Creation time, milliseconds since the Unix epoch. On a real POSIX
+   * filesystem this is `ctime` (inode change time); in the virtual filesystem
+   * it is the time the file was first written.
+   */
+  ctimeMs: number;
   isDirectory: boolean;
 };
-
-class FSWalker {
-  filter(
-    root: string | Path | Directory | FileSystem,
-    filter: (element: File | Directory) => boolean,
-  ) {}
-  firstChild() {}
-  lastChild() {}
-  nextNode() {}
-  prevNode() {}
-  nextSibling() {}
-}
-
-export const WALKER = {
-  SHOW_ALL: (_elem: File | Directory) => true,
-  SHOW_ALL_DIRECTORIES: (elem: File | Directory) => elem instanceof Directory,
-  SHOW_ALL_FILES: (elem: File | Directory) => elem instanceof File,
-  SHOW_ALL_FILES_CTIME_BETWEEN: () => (elem: File | Directory) => elem instanceof File && elem.,
-  SHOW_ALL_FILES_MTIME_BETWEEN: () => (elem: File | Directory) => ,
-};
-
-
-export class Path {}
-
-/** A file entry returned by {@link FileSystem.entries}. */
-export class File {
-  readonly isDirectory = false as const;
-  #parent: Directory | FileSystem | null = null;
-  #content: Buffer = Buffer.alloc(0);
-  constructor() {}
-
-  get parent(): Directory | FileSystem {}
-
-  /** Create at time: */
-  get ctime(): bigint { }
-
-  /** Modification date */
-  get mtime(): bigint { }
-
-
-  get name(): string {
-    return this.name;
-  }
-  get size(): number {
-    return this.#content.length;
-  }
-}
-
-/**
- * A directory entry returned by {@link FileSystem.entries}.
- *
- * `size` is the recursive total of every file inside (`0` when empty).
- * Supports `Symbol.iterator` — iterating yields the immediate children
- * (files and subdirectories):
- *
- * ```ts
- * for (const entry of dir) {
- *   console.log(entry.name, entry.size);
- * }
- * ```
- */
-export class Directory {
-  readonly isDirectory = true as const;
-  /** Immediate children (files and subdirectories). */
-  readonly children: readonly (File | Directory)[];
-  constructor(
-    /** Entry name (not a full path). */
-    readonly name: string,
-    children: readonly (File | Directory)[] = [],
-  ) {
-    this.children = children;
-  }
-
-  /** Recursive total size of every file inside, in bytes. */
-  get size(): number {
-    let total = 0;
-    for (const child of this.children) total += child.size;
-    return total;
-  }
-
-  *[Symbol.iterator](): IterableIterator<File | Directory> {
-    yield* this.children;
-  }
-}
-
-/** Union of directory entries — narrow via `isDirectory`. */
-export type FsEntry = File | Directory;
 
 /**
  * Filesystem abstraction shared by {@link RealFileSystem} and
  * {@link VirtualFileSystem}.
  *
  * All paths are POSIX-style, separated by `/`, and resolved against
- * {@link root}. Resolving outside the root (via `..`) throws.
+ * {@link root}. Resolving outside the root (via `..`) throws. Every path
+ * argument also accepts a {@link Path}.
+ *
+ * It is also an `EventEmitter` typed with {@link FileSystemEvents}, so every
+ * operation that goes through it can be observed:
+ *
+ * ```ts
+ * fs.on("directory.create", (dir) => console.log("dir:", `${dir.path}`));
+ * ```
  */
-export interface FileSystem {
+export interface FileSystem extends EventEmitter<FileSystemEvents> {
   /** Absolute root directory every path is resolved against. */
   readonly root: string;
   /**
@@ -129,66 +65,87 @@ export interface FileSystem {
    * Streams are buffered in memory first — see {@link collectContent}.
    */
   write(
-    path: string,
+    path: PathInput,
     content: FileContent,
     options?: WriteOptions,
   ): Promise<void>;
   /** Reads the whole file into a `Buffer`. Throws `ENOENT` when missing. */
-  read(path: string): Promise<Buffer>;
+  read(path: PathInput): Promise<Buffer>;
   /**
    * Reads the whole file as a string. Throws `ENOENT` when missing.
    * @param encoding @default "utf8"
    */
-  readText(path: string, encoding?: BufferEncoding): Promise<string>;
+  readText(path: PathInput, encoding?: BufferEncoding): Promise<string>;
   /** Appends to an existing file or creates it (parent dirs included). */
-  append(path: string, content: string | Buffer | Uint8Array): Promise<void>;
+  append(path: PathInput, content: string | Buffer | Uint8Array): Promise<void>;
   /** Whether a file or directory exists at `path`. */
-  exists(path: string): Promise<boolean>;
+  exists(path: PathInput): Promise<boolean>;
   /** Stats for a file or directory. Throws `ENOENT` when missing. */
-  stat(path: string): Promise<FileStat>;
+  stat(path: PathInput): Promise<FileStat>;
   /** Creates a directory recursively; existing directories are fine. */
-  mkdir(path: string): Promise<void>;
+  mkdir(path: PathInput): Promise<void>;
   /**
    * Removes a file or directory recursively (`rm -rf` semantics) —
    * removing a missing path is a no-op.
    */
-  remove(path: string): Promise<void>;
+  remove(path: PathInput): Promise<void>;
   /**
    * Entry names (not full paths) of a directory.
    * @param path @default "."
    */
-  list(path?: string): Promise<string[]>;
+  list(path?: PathInput): Promise<string[]>;
   /**
    * Entries of a directory — like {@link list}, but each entry is a
-   * {@link File} or {@link Directory} instance carrying `size` (for a
-   * directory the size is the recursive total of the files inside, and the
-   * children are iterable via `Symbol.iterator`).
+   * {@link File} or {@link Directory} instance carrying `size` and times, and
+   * bound to this filesystem, so `file.toBuffer()` and `directory.refresh()`
+   * read through it. A directory's `size` is the recursive total of the files
+   * inside; its children are iterable via `Symbol.iterator`.
    * @param path @default "."
    */
-  entries(path?: string): Promise<FsEntry[]>;
+  entries(path?: PathInput): Promise<FsEntry[]>;
+  /**
+   * Streaming read. A missing file fails through the stream's `error` event
+   * (with `code: "ENOENT"`), like `node:fs`. Emits `file.read` on `end`.
+   */
+  createReadStream(path: PathInput, options?: ReadStreamOptions): Readable;
+  /**
+   * Streaming write, creating parent directories. Emits `file.write` (or
+   * `file.append` with `flags: "a"`) once the stream finishes.
+   */
+  createWriteStream(path: PathInput, options?: WriteStreamOptions): Writable;
 }
 
-/** Collects a {@link FileContent} into a single Buffer. */
-export async function collectContent(content: FileContent): Promise<Buffer> {
-  if (typeof content === "string") return Buffer.from(content, "utf8");
-  if (Buffer.isBuffer(content)) return content;
-  if (content instanceof Uint8Array) return Buffer.from(content);
-  // node Readable and web ReadableStream are both async-iterable
-  const chunks: Buffer[] = [];
-  for await (const chunk of content as AsyncIterable<string | Uint8Array>) {
-    chunks.push(
-      typeof chunk === "string"
-        ? Buffer.from(chunk, "utf8")
-        : Buffer.from(chunk),
-    );
-  }
-  return Buffer.concat(chunks);
-}
-
-/**
- * Builds an `Error` with a Node-style `code` property, e.g. `ENOENT`.
- * Used by {@link VirtualFileSystem} to match `node:fs` error semantics.
- */
-export function fsError(code: string, message: string): Error {
-  return Object.assign(new Error(message), { code });
-}
+export {
+  collectContent,
+  collectContentSync,
+  fsError,
+  isSyncContent,
+  type FileContent,
+  type SyncFileContent,
+  type WriteOptions,
+} from "./content.js";
+export {
+  Directory,
+  File,
+  type DirectoryInit,
+  type EntryInit,
+  type FileInit,
+  type FsEntry,
+} from "./entry.js";
+export {
+  FileSystemEmitter,
+  type FileSystemEvent,
+  type FileSystemEvents,
+} from "./events.js";
+export {
+  FILTER,
+  WALKER,
+  filterAction,
+  type EntryFilter,
+  type FilterAction,
+  type TimeInput,
+  type WalkerFilter,
+} from "./filter.js";
+export { FSWalker } from "./walker.js";
+export { DEFAULT_MIME_TYPE, MIME_BY_EXTENSION, mimeType } from "./mime.js";
+export { Path, type PathInput } from "./path.js";
