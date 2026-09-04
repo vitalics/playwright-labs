@@ -311,6 +311,19 @@ importers:
         specifier: 1.57.0
         version: 1.57.0
 
+  packages/fixture-fs:
+    dependencies:
+      '@playwright-labs/fs-core':
+        specifier: workspace:*
+        version: link:../fs-core
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   packages/fixture-ghost-cursor:
     dependencies:
       '@playwright-labs/ghost-cursor':
@@ -467,6 +480,12 @@ importers:
       vite:
         specifier: 8.1.5
         version: 8.1.5(@types/node@25.0.9)(esbuild@0.28.1)(jiti@2.4.2)(sass@1.71.1)(tsx@4.21.0)(yaml@2.8.3)
+
+  packages/fs-core:
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
 
   packages/ghost-cursor:
     dependencies:
