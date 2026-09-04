@@ -40,11 +40,11 @@
   "license": "MIT",
   "packageManager": "pnpm@10.11.0",
   "devDependencies": {
-    "@faker-js/faker": "10.2.0",
+    "@faker-js/faker": "10.5.0",
     "@playwright/test": "1.57.0"
   },
   "peerDependencies": {
-    "@faker-js/faker": "10.2.0",
+    "@faker-js/faker": "10.5.0",
     "@playwright/test": "1.57.0"
   },
   "dependencies": {

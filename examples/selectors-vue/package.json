@@ -19,7 +19,8 @@
   "pnpm": {
     "overrides": {
       "postcss": "8.5.23",
-      "brace-expansion@2": "2.1.2"
+      "brace-expansion@2": "2.1.4",
+      "nanoid@3": "3.3.18"
     }
   }
 }

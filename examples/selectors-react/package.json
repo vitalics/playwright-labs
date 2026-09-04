@@ -21,8 +21,10 @@
   "pnpm": {
     "overrides": {
       "postcss": "8.5.23",
-      "brace-expansion@2": "2.1.2",
-      "@babel/core": "7.29.6"
+      "brace-expansion@2": "2.1.4",
+      "@babel/core": "7.29.6",
+      "nanoid@3": "3.3.18",
+      "browserslist": "4.28.7"
     }
   }
 }
