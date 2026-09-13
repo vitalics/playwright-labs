@@ -26,6 +26,22 @@ test("another test", async ({ useLock }) => {
 
 The first resource to acquire an `id` with `data` publishes it to the lock backend (first writer wins), where it survives `release()`. Any later test — in another worker or even another process — that locks the same `id` can omit `data` and gets the published copy back.
 
+### Typing shared data
+
+`useLock` is generic. When `data` is passed inline, the type is inferred from it; when reading data back by `id`, pass the type explicitly — otherwise `T` falls back to `unknown`:
+
+```ts
+type SharedAccount = { email: string };
+
+test("typed readback", async ({ useLock }) => {
+  const account = await useLock<SharedAccount>("account-1");
+  // account.data: Readonly<SharedAccount> | undefined
+  await page.locator(".accountId").fill(account.data!.email);
+});
+```
+
+`.data` is `Readonly<T> | undefined` — `undefined` when nothing was published under that `id` — so use `!`, `?.`, or a guard before reading fields.
+
 ## Same `id` in multiple tests
 
 When several tests call `useLock` with the same `id` — in one worker or across many — the calls **serialize**: only one test holds the lock at a time, the rest wait inside `acquire()` until it is free.
