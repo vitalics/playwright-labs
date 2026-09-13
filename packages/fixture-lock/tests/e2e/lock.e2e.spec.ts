@@ -59,7 +59,7 @@ test("each worker sees its own data once it holds the lock", async ({
         id: "shared-account",
         data: { seat: i },
       });
-      seen.push(account.data.seat);
+      seen.push(account.data!.seat);
       await account.release();
     }),
   );
