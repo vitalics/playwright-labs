@@ -7,7 +7,8 @@ import { createLockClientFromEnv } from "./env.js";
  */
 export class Resource<T> implements AsyncDisposable {
   readonly id: string;
-  readonly #data: T;
+  #data: T | undefined;
+  readonly #hasOwnData: boolean;
   readonly #workerId: string;
   readonly #staleMs: number;
   readonly #client: LockClient;
@@ -26,7 +27,10 @@ export class Resource<T> implements AsyncDisposable {
 
     this.id = id;
     // freeze the data
-    this.#data = Object.freeze(structuredClone(data));
+    this.#hasOwnData = data !== undefined;
+    if (this.#hasOwnData) {
+      this.#data = Object.freeze(structuredClone(data));
+    }
     this.#workerId = workerId || `worker-${process.env.TEST_WORKER_INDEX ?? 0}`;
     this.#staleMs = staleMs;
 
@@ -38,7 +42,7 @@ export class Resource<T> implements AsyncDisposable {
   /**
    * get data when unlocked
    */
-  get data(): Readonly<T> {
+  get data(): Readonly<T> | undefined {
     if (!this.#isLocked) {
       throw new Error(
         `Cannot read data of resource [${this.id}] without acquiring a lock.`,
@@ -67,10 +71,18 @@ export class Resource<T> implements AsyncDisposable {
         this.id,
         this.#workerId,
         this.#staleMs,
+        this.#data,
       );
 
       if (success) {
         this.#isLocked = true;
+        if (!this.#hasOwnData) {
+          // no own data — pull whatever was published under this id
+          const data = await this.#client.getData(this.id);
+          if (data !== undefined) {
+            this.#data = Object.freeze(structuredClone(data)) as T;
+          }
+        }
         return;
       }
 

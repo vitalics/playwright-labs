@@ -7,10 +7,44 @@ test("uses the shared account", async ({ useLock }) => {
   const account = await useLock({ id: "account-1", data: { email: "a@b.c" } });
   // account.data is only readable once the lock is acquired
   await login(page, account.data.email);
+  // released automatically after the test — or free it early:
+  await account.release();
 });
 ```
 
-The lock is released automatically after the test, even if it fails.
+The lock is released automatically after the test, even if it fails. If you are done with the resource before the test ends, call `await resource.release()` yourself — the automatic release then becomes a no-op, and other waiting tests (or workers) can acquire the same `id` sooner:
+
+```ts
+test("another test", async ({ useLock }) => {
+  // waits until the lock on "account-1" is free again — no need to pass
+  // data again, it is read back from the backend by id
+  const sameAccount = await useLock("account-1");
+  await page.goto("/login");
+  await page.locator(".accountId").fill(sameAccount.data.email);
+});
+```
+
+The first resource to acquire an `id` with `data` publishes it to the lock backend (first writer wins), where it survives `release()`. Any later test — in another worker or even another process — that locks the same `id` can omit `data` and gets the published copy back.
+
+## Same `id` in multiple tests
+
+When several tests call `useLock` with the same `id` — in one worker or across many — the calls **serialize**: only one test holds the lock at a time, the rest wait inside `acquire()` until it is free.
+
+```ts
+// test A (worker 1)                     // test B (worker 2)
+const a = await useLock({               const b = await useLock("shared-account");
+  id: "shared-account",                 // ...waits until A releases,
+  data: { email: "a@b.c" },             // then gets data back by id
+});                                     b.data; // { email: "a@b.c" }
+```
+
+Rules to keep in mind:
+
+- **Mutual exclusion** — at most one holder per `id` at any moment, no matter how many tests/workers/machines ask for it.
+- **Waiting has a limit** — a waiting `useLock` throws after `timeoutMs` (default `30s`). If a shared resource can be held longer than that, pass a bigger timeout via `resource.acquire({ timeoutMs })`, or split the resource into more `id`s.
+- **First writer wins for `data`** — only the first acquire that carries `data` publishes it; later calls with the same `id` and their own `data` do **not** overwrite it. Prefer publishing data in exactly one place (e.g. a single setup test) and reading it by `id` everywhere else.
+- **Early release unblocks others sooner** — `await resource.release()` inside the test hands the lock to the next waiter immediately instead of at test teardown.
+- **Crashed holders don't block forever** — a lock older than `staleMs` (default `30s`) is treated as abandoned and can be stolen by a waiter.
 
 ## Installation
 
@@ -28,7 +62,7 @@ yarn add -D @playwright/test @playwright-labs/fixture-lock
 
 ## How it works
 
-A `Resource<T>` wraps a piece of data (`T`) behind a named lock (`id`). `acquire()` polls a lock backend until it gets the lock (or times out); `release()` frees it. The backend is pluggable via a `LockClient` transport, selected from `process.env` by `createLockClientFromEnv()`:
+A `Resource<T>` wraps a piece of data (`T`) behind a named lock (`id`). `acquire()` polls a lock backend until it gets the lock (or times out); `release()` frees it. When a resource acquires a lock with `data`, the backend stores that data under the lock `id` — first writer wins, and the data survives `release()`. A resource constructed without `data` reads the stored data back from the backend after acquiring (`.data` is `undefined` if nothing was published). The fs transport keeps data in a `{id}.data.json` file next to the lock file; the server transports keep it in memory alongside the locks. The backend is pluggable via a `LockClient` transport, selected from `process.env` by `createLockClientFromEnv()`:
 
 | Env var           | Transport             | Needs a server? |
 | ------------------ | ---------------------- | ---------------- |
@@ -56,7 +90,7 @@ export default defineConfig({
 
 ## Fixture
 
-- `useLock<T>(options: { id, data, staleMs?, client?, workerId? }): Promise<Resource<T>>` — creates a `Resource`, acquires its lock, and releases it after the test.
+- `useLock<T>(options: { id?, data?, staleMs?, client?, workerId? }): Promise<Resource<T>>` — creates a `Resource`, acquires its lock, and releases it after the test. Call `resource.release()` inside the test to free the lock early. `data` is optional: omit it to read back data published under the same `id` by another test or process. A bare string is shorthand for `{ id }`: `useLock("account-1")`.
 
 ```ts
 import { test, expect } from "@playwright-labs/fixture-lock";
@@ -70,10 +104,10 @@ test("two locks, different resources", async ({ useLock }) => {
 
 ## API
 
-### `new Resource<T>({ id, data, client?, workerId?, staleMs? })`
+### `new Resource<T>({ id, data?, client?, workerId?, staleMs? })`
 
 - `id` — lock name; concurrent `acquire()` calls with the same `id` serialize against each other.
-- `data` — frozen (`structuredClone` + `Object.freeze`) and only readable via `.data` once locked.
+- `data` — optional. When given, it is frozen (`structuredClone` + `Object.freeze`) and published to the backend on acquire (first writer wins — an `id` that already has data keeps the original). When omitted, the resource pulls the data stored under its `id` from the backend after acquiring. Only readable via `.data` once locked; `undefined` when nothing was published.
 - `client` — a `LockClient`; defaults to `createLockClientFromEnv()`.
 - `staleMs` (default `30000`) — a lock older than this is treated as abandoned and can be stolen.
 
@@ -83,7 +117,7 @@ Polls the backend until the lock is acquired, throwing after `timeoutMs` (defaul
 
 ### `resource.release(): Promise<void>`
 
-Frees the lock. Also available via `Symbol.asyncDispose`, so `await using` works:
+Frees the lock — but not the data published under its `id`, which stays in the backend for later acquirers. Safe to call multiple times and safe to call mid-test — the fixture's automatic release after the test then does nothing. Also available via `Symbol.asyncDispose`, so `await using` works:
 
 ```ts
 await using account = new Resource({ id: "account-1", data });

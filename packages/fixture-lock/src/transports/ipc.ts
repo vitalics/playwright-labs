@@ -8,15 +8,23 @@ export class IpcLockClient implements LockClient {
     id: string,
     workerId: string,
     staleMs: number,
+    data?: unknown,
   ): Promise<boolean> {
-    return this.#send({ action: "ACQUIRE", id, workerId, staleMs });
+    const response = await this.#send({ action: "ACQUIRE", id, workerId, staleMs, data });
+    return Boolean(response?.success);
   }
 
   async release(id: string, workerId: string): Promise<boolean> {
-    return this.#send({ action: "RELEASE", id, workerId });
+    const response = await this.#send({ action: "RELEASE", id, workerId });
+    return Boolean(response?.success);
   }
 
-  #send(payload: object): Promise<boolean> {
+  async getData(id: string): Promise<unknown> {
+    const response = await this.#send({ action: "GET_DATA", id });
+    return response?.success ? response.data : undefined;
+  }
+
+  #send(payload: object): Promise<any> {
     return new Promise((resolve) => {
       const socket = net.createConnection(this.socketPath, () => {
         socket.write(JSON.stringify(payload) + "\n");
@@ -25,10 +33,10 @@ export class IpcLockClient implements LockClient {
       socket.on("data", (data) => {
         const res = JSON.parse(data.toString());
         socket.destroy();
-        resolve(res.success);
+        resolve(res);
       });
 
-      socket.on("error", () => resolve(false));
+      socket.on("error", () => resolve(null));
     });
   }
 }

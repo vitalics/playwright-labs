@@ -13,6 +13,8 @@ export class HttpLockServer
     string,
     { workerId: string; acquiredAt: number; staleMs: number }
   >();
+  // data survives release() — releasing frees the lock, not the data
+  #dataStore = new Map<string, unknown>();
 
   start(): Promise<StartInfo> {
     return new Promise((resolve, reject) => {
@@ -61,7 +63,7 @@ export class HttpLockServer
     res: http.ServerResponse,
     payload: any,
   ) {
-    const { id, workerId, staleMs } = payload;
+    const { id, workerId, staleMs, data } = payload;
 
     if (req.url === "/api/locks/acquire" && req.method === "POST") {
       const existing = this.#locks.get(id);
@@ -79,6 +81,10 @@ export class HttpLockServer
         acquiredAt: Date.now(),
         staleMs: staleMs || 30000,
       });
+      // first writer wins
+      if (data !== undefined && !this.#dataStore.has(id)) {
+        this.#dataStore.set(id, data);
+      }
       res.writeHead(200);
       return res.end(JSON.stringify({ success: true }));
     }
@@ -87,6 +93,11 @@ export class HttpLockServer
       this.#locks.delete(id);
       res.writeHead(200);
       return res.end(JSON.stringify({ success: true }));
+    }
+
+    if (req.url === "/api/locks/data" && req.method === "POST") {
+      res.writeHead(200);
+      return res.end(JSON.stringify({ success: true, data: this.#dataStore.get(id) }));
     }
 
     res.writeHead(404);
