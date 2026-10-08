@@ -62,3 +62,32 @@ test("defaults to a directory under the OS tmpdir", async () => {
     await defaultClient.release(id);
   }
 });
+
+test("acquire with data stores it in a {id}.data.json file", async () => {
+  await client.acquire("res-1", "w1", 5000, { email: "a@b.c" });
+
+  const raw = await fs.readFile(path.join(dir, "res-1.data.json"), "utf8");
+  expect(JSON.parse(raw)).toEqual({ email: "a@b.c" });
+});
+
+test("getData returns undefined when no data was published", async () => {
+  await expect(client.getData("never-published")).resolves.toBeUndefined();
+});
+
+test("data survives release and is readable by id afterwards", async () => {
+  await client.acquire("res-1", "w1", 5000, { seat: 1 });
+  await client.release("res-1");
+
+  await expect(fs.stat(path.join(dir, "res-1.lock"))).rejects.toMatchObject({
+    code: "ENOENT",
+  });
+  await expect(client.getData("res-1")).resolves.toEqual({ seat: 1 });
+});
+
+test("first writer wins — later acquires do not overwrite stored data", async () => {
+  await client.acquire("res-1", "w1", 5000, { v: 1 });
+  await client.release("res-1");
+  await client.acquire("res-1", "w2", 5000, { v: 2 });
+
+  await expect(client.getData("res-1")).resolves.toEqual({ v: 1 });
+});

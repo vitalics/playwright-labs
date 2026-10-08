@@ -24,7 +24,7 @@ test.describe("S3Reporter × MinIO", () => {
   let endpoint: string;
 
   test.beforeAll(async () => {
-    container = await new GenericContainer("minio/minio:latest")
+    container = await new GenericContainer("quay.io/minio/minio:latest")
       .withCommand(["server", "/data"])
       .withEnvironment({
         MINIO_ROOT_USER: "minioadmin",

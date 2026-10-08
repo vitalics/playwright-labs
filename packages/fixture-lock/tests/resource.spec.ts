@@ -5,28 +5,38 @@ import type { LockClient } from "../src/transport";
 
 type Call =
   | { method: "acquire"; id: string; workerId: string; staleMs: number }
-  | { method: "release"; id: string; workerId: string };
+  | { method: "release"; id: string; workerId: string }
+  | { method: "getData"; id: string };
 
 class FakeLockClient implements LockClient {
   readonly calls: Call[] = [];
+  readonly store = new Map<string, unknown>();
   #acquireResults: boolean[];
 
   constructor(acquireResults: boolean[] = [true]) {
     this.#acquireResults = acquireResults;
   }
 
-  async acquire(id: string, workerId: string, staleMs: number): Promise<boolean> {
+  async acquire(id: string, workerId: string, staleMs: number, data?: unknown): Promise<boolean> {
     this.calls.push({ method: "acquire", id, workerId, staleMs });
     const result =
       this.#acquireResults.length > 1
         ? this.#acquireResults.shift()
         : this.#acquireResults[0];
+    if (result && data !== undefined && !this.store.has(id)) {
+      this.store.set(id, data);
+    }
     return Boolean(result);
   }
 
   async release(id: string, workerId: string): Promise<boolean> {
     this.calls.push({ method: "release", id, workerId });
     return true;
+  }
+
+  async getData(id: string): Promise<unknown> {
+    this.calls.push({ method: "getData", id });
+    return this.store.get(id);
   }
 }
 
@@ -75,6 +85,52 @@ test.describe("data", () => {
     const resource = new Resource({ id: "res-1", data: { a: 1 }, client });
 
     expect(() => resource.data).toThrow(/without acquiring a lock/);
+  });
+
+  test("publishes constructor data to the backend on acquire", async () => {
+    const client = new FakeLockClient();
+    const resource = new Resource({ id: "res-1", data: { a: 1 }, client });
+
+    await resource.acquire();
+
+    expect(client.store.get("res-1")).toEqual({ a: 1 });
+    expect(client.calls.some((c) => c.method === "getData")).toBe(false);
+  });
+
+  test("pulls data from the backend when no constructor data was given", async () => {
+    const client = new FakeLockClient();
+    const writer = new Resource({ id: "res-1", data: { email: "a@b.c" }, client });
+    await writer.acquire();
+    await writer.release();
+
+    const reader = new Resource({ id: "res-1", client });
+    await reader.acquire();
+
+    expect(reader.data).toEqual({ email: "a@b.c" });
+    expect(Object.isFrozen(reader.data)).toBe(true);
+  });
+
+  test("returns undefined when neither constructor nor backend has data", async () => {
+    const client = new FakeLockClient();
+    const resource = new Resource({ id: "res-1", client });
+
+    await resource.acquire();
+
+    expect(resource.data).toBeUndefined();
+  });
+
+  test("first writer wins — backend data is not overwritten", async () => {
+    const client = new FakeLockClient();
+    const first = new Resource({ id: "res-1", data: { v: 1 }, client });
+    await first.acquire();
+    await first.release();
+
+    const second = new Resource({ id: "res-1", data: { v: 2 }, client });
+    await second.acquire();
+
+    expect(client.store.get("res-1")).toEqual({ v: 1 });
+    // the resource itself keeps its own constructor data
+    expect(second.data).toEqual({ v: 2 });
   });
 });
 

@@ -11,15 +11,23 @@ export class WebSocketLockClient implements LockClient {
     id: string,
     workerId: string,
     staleMs: number,
+    data?: unknown,
   ): Promise<boolean> {
-    return this.#sendMessage({ action: "ACQUIRE", id, workerId, staleMs });
+    const response = await this.#send({ action: "ACQUIRE", id, workerId, staleMs, data });
+    return Boolean(response?.success);
   }
 
   async release(id: string, workerId: string): Promise<boolean> {
-    return this.#sendMessage({ action: "RELEASE", id, workerId });
+    const response = await this.#send({ action: "RELEASE", id, workerId });
+    return Boolean(response?.success);
   }
 
-  #sendMessage(payload: object): Promise<boolean> {
+  async getData(id: string): Promise<unknown> {
+    const response = await this.#send({ action: "GET_DATA", id });
+    return response?.success ? response.data : undefined;
+  }
+
+  #send(payload: object): Promise<any> {
     return new Promise((resolve) => {
       const ws = new WebSocket(this.#wsUrl);
 
@@ -31,15 +39,15 @@ export class WebSocketLockClient implements LockClient {
         try {
           const response = JSON.parse(event.data.toString());
           ws.close();
-          resolve(Boolean(response.success));
+          resolve(response);
         } catch {
           ws.close();
-          resolve(false);
+          resolve(null);
         }
       };
 
       ws.onerror = () => {
-        resolve(false);
+        resolve(null);
       };
     });
   }

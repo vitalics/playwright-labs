@@ -15,16 +15,35 @@ export class FsLockClient implements LockClient {
     id: string,
     workerId: string,
     staleMs: number,
+    data?: unknown,
   ): Promise<boolean> {
     await fs.mkdir(this.#lockDir, { recursive: true });
     const lockFilePath = path.join(this.#lockDir, `${id}.lock`);
 
-    if (await this.#tryCreate(lockFilePath, workerId)) return true;
+    if (await this.#tryCreate(lockFilePath, workerId)) {
+      await this.#publishData(id, data);
+      return true;
+    }
 
     // stale lock: clean it up and retry once, so a single acquire() call
     // can steal it — matching the http/ws/ipc transports' behavior
     await this.#cleanIfStale(lockFilePath, staleMs);
-    return this.#tryCreate(lockFilePath, workerId);
+    const acquired = await this.#tryCreate(lockFilePath, workerId);
+    if (acquired) await this.#publishData(id, data);
+    return acquired;
+  }
+
+  async getData(id: string): Promise<unknown> {
+    try {
+      const raw = await fs.readFile(
+        path.join(this.#lockDir, `${id}.data.json`),
+        "utf8",
+      );
+      return JSON.parse(raw);
+    } catch (error: any) {
+      if (error.code === "ENOENT") return undefined;
+      throw error;
+    }
   }
 
   async release(id: string): Promise<boolean> {
@@ -36,6 +55,22 @@ export class FsLockClient implements LockClient {
       // already unlocked is not a failure — matches the http/ws/ipc servers,
       // which report success for releasing a lock nobody holds
       return error.code === "ENOENT";
+    }
+  }
+
+  // first writer wins: "wx" fails when a {id}.data.json already exists,
+  // and the file is intentionally not removed on release()
+  async #publishData(id: string, data: unknown): Promise<void> {
+    if (data === undefined) return;
+    try {
+      const handle = await fs.open(
+        path.join(this.#lockDir, `${id}.data.json`),
+        "wx",
+      );
+      await handle.writeFile(JSON.stringify(data));
+      await handle.close();
+    } catch (error: any) {
+      if (error.code !== "EEXIST") throw error;
     }
   }
 

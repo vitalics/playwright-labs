@@ -22,6 +22,8 @@ export class WebSocketLockServer
     string,
     { workerId: string; acquiredAt: number; staleMs: number }
   >();
+  // data survives release() — releasing frees the lock, not the data
+  #dataStore = new Map<string, unknown>();
 
   constructor() {
     super();
@@ -102,8 +104,8 @@ export class WebSocketLockServer
     });
   }
 
-  #processMessage(data: any): { success: boolean } {
-    const { action, id, workerId, staleMs } = data;
+  #processMessage(data: any): { success: boolean; data?: unknown } {
+    const { action, id, workerId, staleMs, data: payloadData } = data;
 
     if (action === "ACQUIRE") {
       const existing = this.#locks.get(id);
@@ -116,12 +118,20 @@ export class WebSocketLockServer
         acquiredAt: Date.now(),
         staleMs: staleMs || 30000,
       });
+      // first writer wins
+      if (payloadData !== undefined && !this.#dataStore.has(id)) {
+        this.#dataStore.set(id, payloadData);
+      }
       return { success: true };
     }
 
     if (action === "RELEASE") {
       this.#locks.delete(id);
       return { success: true };
+    }
+
+    if (action === "GET_DATA") {
+      return { success: true, data: this.#dataStore.get(id) };
     }
 
     return { success: false };
@@ -150,10 +160,23 @@ export class WebSocketLockServer
 
   #buildWsFrame(message: string): Buffer {
     const byteLength = Buffer.byteLength(message);
-    const frame = Buffer.alloc(2 + byteLength);
+    let headerLength = 2;
+    if (byteLength > 65535) headerLength = 10;
+    else if (byteLength > 125) headerLength = 4;
+
+    const frame = Buffer.alloc(headerLength + byteLength);
     frame[0] = 0x81; // Text frame + FIN
-    frame[1] = byteLength; // Unmasked frame length
-    frame.write(message, 2);
+    if (byteLength > 65535) {
+      frame[1] = 127;
+      frame.writeUInt32BE(0, 2);
+      frame.writeUInt32BE(byteLength, 6);
+    } else if (byteLength > 125) {
+      frame[1] = 126;
+      frame.writeUInt16BE(byteLength, 2);
+    } else {
+      frame[1] = byteLength;
+    }
+    frame.write(message, headerLength);
     return frame;
   }
   async [Symbol.asyncDispose]() {

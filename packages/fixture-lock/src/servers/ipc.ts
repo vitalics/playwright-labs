@@ -20,6 +20,8 @@ export class IpcLockServer
     string,
     { workerId: string; acquiredAt: number; staleMs: number }
   >();
+  // data survives release() — releasing frees the lock, not the data
+  #dataStore = new Map<string, unknown>();
 
   constructor(socketPath: string) {
     super();
@@ -80,8 +82,8 @@ export class IpcLockServer
     });
   }
 
-  #processMessage(data: any): { success: boolean } {
-    const { action, id, workerId, staleMs } = data;
+  #processMessage(data: any): { success: boolean; data?: unknown } {
+    const { action, id, workerId, staleMs, data: payloadData } = data;
 
     if (action === "ACQUIRE") {
       const existing = this.#locks.get(id);
@@ -94,12 +96,20 @@ export class IpcLockServer
         acquiredAt: Date.now(),
         staleMs: staleMs || 30000,
       });
+      // first writer wins
+      if (payloadData !== undefined && !this.#dataStore.has(id)) {
+        this.#dataStore.set(id, payloadData);
+      }
       return { success: true };
     }
 
     if (action === "RELEASE") {
       this.#locks.delete(id);
       return { success: true };
+    }
+
+    if (action === "GET_DATA") {
+      return { success: true, data: this.#dataStore.get(id) };
     }
 
     return { success: false };
