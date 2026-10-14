@@ -1,5 +1,18 @@
 # @playwright-labs/selectors-react
 
+## 2.1.0
+
+### Minor Changes
+
+- 5b2e8a6: `ReactRealizer` — realize any locator into a `react=ComponentName` selector via `@playwright-labs/locators-extra`.
+
+  Importing the package registers the `"react"` realizer (side effect) and augments `KnownSelectorKinds`, so `selectorRealization(locator, "react")` gets autocomplete and works out of the box. The realized selector identifies the component type, not the instance — narrow with props or `.nth()`.
+
+### Patch Changes
+
+- Updated dependencies [5b2e8a6]
+  - @playwright-labs/locators-extra@1.0.0
+
 ## 2.0.0
 
 ### Major Changes

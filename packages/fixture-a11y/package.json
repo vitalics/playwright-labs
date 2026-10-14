@@ -1,6 +1,6 @@
 {
   "name": "@playwright-labs/fixture-a11y",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Accessibility testing fixture and toBeAccessible matcher for Playwright, powered by axe-core",
   "main": "dist/index.cjs",
   "types": "dist/index.d.ts",

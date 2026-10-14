@@ -1,6 +1,6 @@
 {
   "name": "lock-example",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "Example project demonstrating @playwright-labs/fixture-lock — exclusive access to shared resources across parallel workers",
   "type": "module",
