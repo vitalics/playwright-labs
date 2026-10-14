@@ -42,6 +42,37 @@ test("typed readback", async ({ useLock }) => {
 
 `.data` is `Readonly<T> | undefined` — `undefined` when nothing was published under that `id` — so use `!`, `?.`, or a guard before reading fields.
 
+## Callback form and `AsyncLocalStorage`
+
+Pass a callback to hold the lock only while it runs. The lock is released right after the callback — even if it throws — and `useLock` resolves with the callback's return value:
+
+```ts
+test("scoped lock", async ({ page, useLock }) => {
+  await useLock<Account>("account-1", async (account) => {
+    await login(page, account.data!.email);
+  });
+  // lock is already free here — other workers can take "account-1"
+  await page.goto("/public");
+});
+```
+
+Inside the callback — and in everything it calls, sync or async — the held resource is reachable through `AsyncLocalStorage`, so helpers don't need it passed in:
+
+```ts
+import { currentLock, currentLockIds } from "@playwright-labs/fixture-lock";
+
+async function login(page: Page) {
+  const account = currentLock<Account>("account-1"); // undefined outside a callback
+  await page.fill("#email", account!.data!.email);
+}
+
+await useLock("account-1", () => login(page));
+```
+
+- `currentLock<T>(id)` — the `Resource<T>` held under `id` by an enclosing callback, or `undefined`.
+- `currentLockIds()` — ids of all locks held by enclosing callbacks; nested callbacks see the outer ones too.
+- **Re-entrant** — calling `useLock` with an id an enclosing callback already holds returns the held resource instead of waiting on itself (no deadlock). Only the outermost call acquires and releases. A `release()` on the returned resource releases the outer lock too.
+
 ## Same `id` in multiple tests
 
 When several tests call `useLock` with the same `id` — in one worker or across many — the calls **serialize**: only one test holds the lock at a time, the rest wait inside `acquire()` until it is free.
@@ -107,6 +138,7 @@ export default defineConfig({
 ## Fixture
 
 - `useLock<T>(options: { id?, data?, staleMs?, client?, workerId? }): Promise<Resource<T>>` — creates a `Resource`, acquires its lock, and releases it after the test. Call `resource.release()` inside the test to free the lock early. `data` is optional: omit it to read back data published under the same `id` by another test or process. A bare string is shorthand for `{ id }`: `useLock("account-1")`.
+- `useLock<T, R>(options, callback: (resource) => R | Promise<R>): Promise<R>` — holds the lock only while `callback` runs, then releases it. See [Callback form and `AsyncLocalStorage`](#callback-form-and-asynclocalstorage).
 
 ```ts
 import { test, expect } from "@playwright-labs/fixture-lock";

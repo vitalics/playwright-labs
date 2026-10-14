@@ -11,6 +11,7 @@ A runnable example showing how `@playwright-labs/fixture-lock` gives parallel Pl
 | Proof of mutual exclusion — an exclusive (`wx`) marker file per holder | `tests/shared-account.spec.ts` |
 | Publish data once, read it back by `id` only | `tests/readback-and-early-release.spec.ts` |
 | Early `release()` to unblock waiters before test teardown | `tests/readback-and-early-release.spec.ts` |
+| Callback form — lock held for one step, read in helpers via `currentLock()` (AsyncLocalStorage) | `tests/callback.spec.ts` |
 | `useLock("id")` for an id nobody published → `data` is `undefined` | `tests/readback-and-early-release.spec.ts` |
 
 ## Quick start
@@ -38,5 +39,6 @@ lock/
 ├── global-setup.ts                      # re-exports @playwright-labs/fixture-lock/global-setup
 └── tests/
     ├── shared-account.spec.ts           # contention on one id across workers
-    └── readback-and-early-release.spec.ts
+    ├── readback-and-early-release.spec.ts
+    └── callback.spec.ts                 # callback form + currentLock()
 ```

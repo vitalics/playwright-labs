@@ -1,5 +1,6 @@
 export { expect, test, type Fixture, type UseLock } from "./fixture.js";
 export { Resource } from "./resource.js";
+export { currentLock, currentLockIds } from "./context.js";
 export type { LockClient, ResourceOptions } from "./transport.js";
 export { createLockClientFromEnv } from "./env.js";
 
