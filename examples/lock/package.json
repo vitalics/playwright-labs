@@ -1,0 +1,17 @@
+{
+  "name": "lock-example",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Example project demonstrating @playwright-labs/fixture-lock — exclusive access to shared resources across parallel workers",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "@playwright-labs/fixture-lock": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0",
+    "typescript": "^5.7.0"
+  }
+}
