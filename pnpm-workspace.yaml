@@ -7,6 +7,7 @@ packages:
   - examples/ghost-cursor
   - examples/s3-stack
   - examples/webauthn-login
+  - examples/lock
   - '!packages/playwright-best-practices'
   - '!packages/playwright-best-practices-build'
 

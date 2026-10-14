@@ -77,6 +77,19 @@ importers:
         specifier: 1.57.0
         version: 1.57.0
 
+  examples/lock:
+    dependencies:
+      '@playwright-labs/fixture-lock':
+        specifier: workspace:*
+        version: link:../../packages/fixture-lock
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.57.0
+        version: 1.57.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   examples/reporter-email:
     dependencies:
       '@playwright-labs/reporter-email':

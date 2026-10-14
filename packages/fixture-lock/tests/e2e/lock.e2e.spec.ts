@@ -7,13 +7,18 @@ import { HttpLockServer } from "../../src/servers/http";
 // LOCK_SERVER_URL (no fakes, no injected `client`), racing real concurrent
 // workers for the same resource id through the public `useLock` fixture.
 let stopServer: () => Promise<void>;
+let originalLockServerUrl: string | undefined;
 
 test.beforeAll(async () => {
+  originalLockServerUrl = process.env.LOCK_SERVER_URL;
   stopServer = await createGlobalSetup(new HttpLockServer());
 });
 
 test.afterAll(async () => {
   await stopServer();
+  // Don't leak the dead server's URL into later specs in the same worker.
+  if (originalLockServerUrl === undefined) delete process.env.LOCK_SERVER_URL;
+  else process.env.LOCK_SERVER_URL = originalLockServerUrl;
 });
 
 test("concurrent workers serialize access to the same locked resource", async ({
